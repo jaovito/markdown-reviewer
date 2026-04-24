@@ -31,11 +31,18 @@ impl GhClient for GhCli {
             text.lines()
                 .find_map(|line| line.split("account").nth(1))
                 .and_then(|s| s.split_whitespace().next())
-                .map(|s| s.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '-').to_string())
+                .map(|s| {
+                    s.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+                        .to_string()
+                })
                 .filter(|s| !s.is_empty())
         } else {
             None
         };
-        Ok(GhAuthReport { authenticated, username, detail: text.trim().to_string() })
+        Ok(GhAuthReport {
+            authenticated,
+            username,
+            detail: text.trim().to_string(),
+        })
     }
 }

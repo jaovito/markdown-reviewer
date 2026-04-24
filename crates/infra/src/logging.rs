@@ -7,7 +7,8 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 /// Initializes tracing with a rolling file appender and a console layer.
 /// Returns the `WorkerGuard` — keep it alive for the lifetime of the process.
 pub fn init(logs_dir: &Path) -> WorkerGuard {
-    let file_appender = RollingFileAppender::new(Rotation::DAILY, logs_dir, "markdown-reviewer.log");
+    let file_appender =
+        RollingFileAppender::new(Rotation::DAILY, logs_dir, "markdown-reviewer.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     let filter = EnvFilter::try_from_default_env()

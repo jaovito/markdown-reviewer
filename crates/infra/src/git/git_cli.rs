@@ -14,9 +14,7 @@ impl GitClient for GitCli {
     async fn version(&self) -> AppResult<String> {
         match run_ok("git", &["--version"], None, TIMEOUT_MS).await {
             Ok(out) => Ok(out.stdout.trim().to_string()),
-            Err(AppError::MissingTool { .. }) => {
-                Err(AppError::MissingTool { name: "git".into() })
-            }
+            Err(AppError::MissingTool { .. }) => Err(AppError::MissingTool { name: "git".into() }),
             Err(e) => Err(e),
         }
     }

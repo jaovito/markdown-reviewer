@@ -16,6 +16,10 @@ impl Paths {
         let db_path = data_dir.join("markdown-reviewer.sqlite");
         std::fs::create_dir_all(&data_dir).map_err(AppError::io)?;
         std::fs::create_dir_all(&logs_dir).map_err(AppError::io)?;
-        Ok(Self { data_dir, logs_dir, db_path })
+        Ok(Self {
+            data_dir,
+            logs_dir,
+            db_path,
+        })
     }
 }

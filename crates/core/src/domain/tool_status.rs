@@ -19,7 +19,9 @@ pub enum ToolCheck {
 
 impl ToolCheck {
     pub fn ok(detail: impl Into<String>) -> Self {
-        Self::Ok { detail: detail.into() }
+        Self::Ok {
+            detail: detail.into(),
+        }
     }
     pub fn missing(hint: impl Into<String>) -> Self {
         Self::Missing { hint: hint.into() }
@@ -28,7 +30,9 @@ impl ToolCheck {
         Self::NotAuthenticated { hint: hint.into() }
     }
     pub fn error(message: impl Into<String>) -> Self {
-        Self::Error { message: message.into() }
+        Self::Error {
+            message: message.into(),
+        }
     }
     pub fn is_ok(&self) -> bool {
         matches!(self, Self::Ok { .. })

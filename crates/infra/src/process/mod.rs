@@ -35,14 +35,18 @@ pub async fn run(
     if let Some(dir) = cwd {
         cmd.current_dir(dir);
     }
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
 
     let fut = cmd.output();
     let out = match timeout(Duration::from_millis(timeout_ms), fut).await {
         Ok(Ok(o)) => o,
         Ok(Err(e)) => {
             if e.kind() == std::io::ErrorKind::NotFound {
-                return Err(AppError::MissingTool { name: program.to_string() });
+                return Err(AppError::MissingTool {
+                    name: program.to_string(),
+                });
             }
             return Err(AppError::process(redact(&e.to_string())));
         }

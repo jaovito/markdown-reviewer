@@ -39,15 +39,23 @@ pub enum AppError {
 
 impl AppError {
     pub fn io(err: impl std::fmt::Display) -> Self {
-        Self::Io { message: err.to_string() }
+        Self::Io {
+            message: err.to_string(),
+        }
     }
     pub fn db(err: impl std::fmt::Display) -> Self {
-        Self::Db { message: err.to_string() }
+        Self::Db {
+            message: err.to_string(),
+        }
     }
     pub fn process(err: impl std::fmt::Display) -> Self {
-        Self::Process { message: err.to_string() }
+        Self::Process {
+            message: err.to_string(),
+        }
     }
     pub fn unexpected(err: impl std::fmt::Display) -> Self {
-        Self::Unexpected { message: err.to_string() }
+        Self::Unexpected {
+            message: err.to_string(),
+        }
     }
 }

@@ -11,7 +11,10 @@ pub type Db = Arc<Mutex<Connection>>;
 
 const MIGRATIONS: &[(&str, &str)] = &[
     ("0001_recents", include_str!("migrations/0001_recents.sql")),
-    ("0002_ui_state", include_str!("migrations/0002_ui_state.sql")),
+    (
+        "0002_ui_state",
+        include_str!("migrations/0002_ui_state.sql"),
+    ),
 ];
 
 pub fn open_and_migrate(path: &Path) -> AppResult<Db> {
@@ -19,8 +22,10 @@ pub fn open_and_migrate(path: &Path) -> AppResult<Db> {
         std::fs::create_dir_all(parent).map_err(AppError::io)?;
     }
     let conn = Connection::open(path).map_err(AppError::db)?;
-    conn.pragma_update(None, "journal_mode", "WAL").map_err(AppError::db)?;
-    conn.pragma_update(None, "foreign_keys", "ON").map_err(AppError::db)?;
+    conn.pragma_update(None, "journal_mode", "WAL")
+        .map_err(AppError::db)?;
+    conn.pragma_update(None, "foreign_keys", "ON")
+        .map_err(AppError::db)?;
     run_migrations(&conn)?;
     Ok(Arc::new(Mutex::new(conn)))
 }

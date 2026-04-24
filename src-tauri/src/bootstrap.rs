@@ -16,10 +16,7 @@ pub(crate) fn run() {
 
     builder
         .setup(|app| {
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("resolve app data dir");
+            let data_dir = app.path().app_data_dir().expect("resolve app data dir");
             let paths = Paths::from_data_dir(&data_dir)?;
 
             // Keep the guard alive for the lifetime of the app.

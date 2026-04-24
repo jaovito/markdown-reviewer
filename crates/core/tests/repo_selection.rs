@@ -56,7 +56,11 @@ impl GhClient for FakeGh {
     async fn auth_status(&self) -> markdown_reviewer_core::AppResult<GhAuthReport> {
         Ok(GhAuthReport {
             authenticated: self.auth,
-            username: if self.auth { Some("octocat".into()) } else { None },
+            username: if self.auth {
+                Some("octocat".into())
+            } else {
+                None
+            },
             detail: String::new(),
         })
     }
@@ -109,7 +113,10 @@ async fn validate_ok() {
             remote: Some("git@github.com:weqora/markdown-reviewer.git".into()),
             branch: Some("main".into()),
         },
-        FakeGh { version_ok: true, auth: true },
+        FakeGh {
+            version_ok: true,
+            auth: true,
+        },
     );
     let repo = validate_repository(&svc, "/tmp/x").await.unwrap();
     assert_eq!(repo.owner, "weqora");
@@ -120,8 +127,15 @@ async fn validate_ok() {
 #[tokio::test]
 async fn validate_not_a_repo() {
     let svc = svc_with(
-        FakeGit { is_repo: false, remote: None, branch: None },
-        FakeGh { version_ok: true, auth: true },
+        FakeGit {
+            is_repo: false,
+            remote: None,
+            branch: None,
+        },
+        FakeGh {
+            version_ok: true,
+            auth: true,
+        },
     );
     let err = validate_repository(&svc, "/tmp/x").await.unwrap_err();
     assert!(matches!(err, AppError::NotAGitRepo { .. }));
@@ -135,7 +149,10 @@ async fn validate_no_github_remote() {
             remote: Some("git@gitlab.com:foo/bar.git".into()),
             branch: None,
         },
-        FakeGh { version_ok: true, auth: true },
+        FakeGh {
+            version_ok: true,
+            auth: true,
+        },
     );
     let err = validate_repository(&svc, "/tmp/x").await.unwrap_err();
     assert!(matches!(err, AppError::NoGithubRemote { .. }));
@@ -144,8 +161,15 @@ async fn validate_no_github_remote() {
 #[tokio::test]
 async fn check_tools_missing_gh() {
     let svc = svc_with(
-        FakeGit { is_repo: true, remote: None, branch: None },
-        FakeGh { version_ok: false, auth: false },
+        FakeGit {
+            is_repo: true,
+            remote: None,
+            branch: None,
+        },
+        FakeGh {
+            version_ok: false,
+            auth: false,
+        },
     );
     let status = check_tools(&svc).await.unwrap();
     assert!(status.git.is_ok());
@@ -160,7 +184,10 @@ async fn recents_round_trip() {
             remote: Some("https://github.com/a/b".into()),
             branch: None,
         },
-        FakeGh { version_ok: true, auth: true },
+        FakeGh {
+            version_ok: true,
+            auth: true,
+        },
     );
     let repo = validate_repository(&svc, "/tmp/x").await.unwrap();
     recents::add(&svc, &repo).await.unwrap();

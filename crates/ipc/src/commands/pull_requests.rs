@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_pull_requests(
     state: State<'_, AppState>,
     repo_path: String,
@@ -15,7 +15,7 @@ pub async fn list_pull_requests(
     list_uc(&state.pull_requests, &repo_path).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn load_pull_request(
     state: State<'_, AppState>,
     repo_path: String,

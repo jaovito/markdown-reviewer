@@ -8,7 +8,7 @@ alwaysApply: true
 
 Desktop app for reviewing Markdown documentation inside GitHub Pull Requests, offering a Google Docs / Notion-like commenting experience while preserving the Git/GitHub flow. Target users: product, engineering, QA, and non-technical stakeholders.
 
-Full details about phases, entities, Tauri commands, and acceptance criteria live in `IMPLEMENTATION_PLAN.md`. Always consult it before starting a phase or changing scope.
+Phases, deliverables, and acceptance criteria are tracked as **GitHub issues** grouped by milestone (Phase 1 → Phase 7) at [`github.com/jaovito/markdown-reviewer/milestones`](https://github.com/jaovito/markdown-reviewer/milestones). Three tracking issues (`risk`, `tracking`) hold the product principles, risks, and manual acceptance checklist. Before starting work, check the relevant milestone and the feature issues it contains.
 
 How the pieces fit together (folder layout, dependency rules, IPC contract, persistence, testing) lives in `ARCHITECTURE.md`. Consult it before adding a new feature, crate, or command — and update it in the same commit when you change a decision it documents.
 
@@ -45,11 +45,11 @@ How the pieces fit together (folder layout, dependency rules, IPC contract, pers
 
 ## Expected Tauri commands
 
-See `IMPLEMENTATION_PLAN.md` for the full list. Highlights: `select_repository`, `validate_repository`, `check_tools`, `list_pull_requests`, `load_pull_request`, `read_markdown_file`, `load_file_diff`, `create_local_comment`, `submit_review`, `refresh_remote_comments`.
+The full command surface lives in the per-phase issues (see milestones). Highlights: `select_repository`, `validate_repository`, `check_tools`, `list_pull_requests`, `load_pull_request`, `read_markdown_file`, `load_file_diff`, `create_local_comment`, `submit_review`, `refresh_remote_comments`.
 
 ## Comment states
 
-`draft`, `submitted`, `hidden`, `resolved`, `deleted`. Semantics defined in `IMPLEMENTATION_PLAN.md`.
+`draft`, `submitted`, `hidden`, `resolved`, `deleted`. Semantics defined in the Phase 3/4 issues.
 
 ## Phases
 

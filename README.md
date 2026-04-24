@@ -2,7 +2,7 @@
 
 Desktop app for reviewing Markdown documentation inside GitHub Pull Requests, offering a Google Docs / Notion-like commenting experience while preserving the Git/GitHub flow. Target users: product, engineering, QA, and non-technical stakeholders.
 
-> **Status:** early development. Phase 1 (repository selection + tool validation + local persistence) is implemented. Phases 2–6 are the MVP roadmap. See [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).
+> **Status:** early development. Phase 1 (repository selection + tool validation + local persistence) is implemented. Phases 2–6 are the MVP roadmap — tracked in [GitHub milestones](https://github.com/jaovito/markdown-reviewer/milestones).
 
 ## Table of contents
 
@@ -125,6 +125,22 @@ The app opens on the **Select Repository** screen:
 | Run `gh auth logout`, refresh | **GitHub auth** badge turns yellow with "not authenticated" |
 | Run the app with `gh` missing from `PATH` | **GitHub CLI** badge turns red with the install hint |
 
+## Roadmap
+
+Work is tracked as GitHub issues grouped by phase milestone:
+
+| Milestone | Scope |
+|---|---|
+| [Phase 1 — Setup & Repository Selection](https://github.com/jaovito/markdown-reviewer/milestone/1) | Bootstrap + repo selection + tool status. **Implemented.** |
+| [Phase 2 — Main Visualization](https://github.com/jaovito/markdown-reviewer/milestone/2) | Open a PR, browse files, render baseline preview. |
+| [Phase 3 — Local-First Comments](https://github.com/jaovito/markdown-reviewer/milestone/3) | Create / edit / delete local comments, submit batch. |
+| [Phase 4 — Advanced Comments](https://github.com/jaovito/markdown-reviewer/milestone/4) | Many per line, hide, resolve, long ranges. |
+| [Phase 5 — GitHub-parity Preview](https://github.com/jaovito/markdown-reviewer/milestone/5) | GFM, Shiki, Mermaid, sanitization, images. |
+| [Phase 6 — GitHub Sync](https://github.com/jaovito/markdown-reviewer/milestone/6) | Fetch remote comments, reply/resolve, cache. |
+| [Phase 7 — Repo Cloning](https://github.com/jaovito/markdown-reviewer/milestone/7) | Search + clone repos from inside the app (post-MVP). |
+
+Cross-cutting tracking issues live under the [`tracking`](https://github.com/jaovito/markdown-reviewer/labels/tracking) label (risks, product principles, manual acceptance suite).
+
 ### Runtime files
 
 The app writes its local state under the OS-standard app-data directory:
@@ -178,7 +194,7 @@ markdown-reviewer/
 ├── .vscode/                    # recommended extensions + workspace settings
 ├── CLAUDE.md                   # guardrails for AI collaborators
 ├── ARCHITECTURE.md             # how the pieces fit together — read this
-└── IMPLEMENTATION_PLAN.md      # phase-by-phase roadmap
+└── (roadmap lives in GitHub milestones / issues)
 ```
 
 [`ARCHITECTURE.md`](./ARCHITECTURE.md) is the document to read before adding a new feature, command, crate, or migration.
@@ -296,7 +312,7 @@ This project is pre-alpha and the surface area will change frequently. If you wa
 
 1. Read [`CLAUDE.md`](./CLAUDE.md) — the product principles and mandatory stack rules.
 2. Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) — how to add a new feature, command, crate, or migration.
-3. Read [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — the phase roadmap. Pick an open acceptance-criterion item that isn't checked, confirm it's in scope with an issue, then open a PR.
+3. Check the [GitHub milestones](https://github.com/jaovito/markdown-reviewer/milestones) — the phase roadmap. Pick an open issue (start with `good first issue` or the current phase), comment to claim it, then open a PR that closes it.
 4. Before pushing: `bun run check && bun run typecheck && bun run rust:fmt:check && bun run rust:lint && cargo test --workspace`.
 
 Editor setup: the workspace ships `.vscode/extensions.json` with recommended extensions (Biome, rust-analyzer, Tauri, Tailwind). VSCode/Cursor will prompt to install them on first open. `settings.json` enables format-on-save via Biome (TS/CSS/JSON) and rust-analyzer (Rust).
@@ -305,7 +321,7 @@ Editor setup: the workspace ships `.vscode/extensions.json` with recommended ext
 
 - [`CLAUDE.md`](./CLAUDE.md) — project context and technical guardrails.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — module boundaries, dependency rules, IPC contract, persistence, testing.
-- [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — Phase 1 through Phase 7, with acceptance criteria.
+- [GitHub milestones](https://github.com/jaovito/markdown-reviewer/milestones) — Phase 1 through Phase 7, with acceptance criteria on each issue.
 - [Tauri v2 docs](https://tauri.app) · [Bun docs](https://bun.sh/docs) · [Vite docs](https://vitejs.dev) · [Tailwind v4 docs](https://tailwindcss.com) · [GitHub CLI docs](https://cli.github.com/manual/).
 
 ## License

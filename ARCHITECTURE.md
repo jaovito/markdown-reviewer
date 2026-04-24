@@ -22,7 +22,7 @@ markdown-reviewer/
 ├── rustfmt.toml · clippy.toml
 ├── tsconfig.json
 ├── .vscode/            # editor defaults
-└── CLAUDE.md · IMPLEMENTATION_PLAN.md · ARCHITECTURE.md
+└── CLAUDE.md · ARCHITECTURE.md
 ```
 
 **Known friction:** the repo root mixes frontend config (`vite.config.ts`, `index.html`, `biome.json`, `tsconfig.json`) with Rust config (`Cargo.toml`, `rustfmt.toml`, `clippy.toml`). This is deliberate — it follows the `create-tauri-app` convention and keeps paths short for contributors. If this becomes painful we can move `Cargo.toml` + crates under `rust/` and point `src-tauri` at it, but that fights Tauri CLI defaults. Revisit if contributor confusion outweighs the cost.
@@ -257,5 +257,5 @@ CI (when added) must run: `bun run check`, `bun run typecheck`, `bun run build:w
 - When a decision above changes: update the relevant section in the same commit.
 - When a new feature family appears: add a subfolder entry and list its use cases briefly.
 - When a new table ships: add it to the persistence section.
-- Keep it scan-friendly: if a section grows past ~25 lines, split it or move detail to `IMPLEMENTATION_PLAN.md`.
-- Don't duplicate `CLAUDE.md` (guardrails/stack) or `IMPLEMENTATION_PLAN.md` (phase-by-phase work). This doc explains *how the pieces fit together*.
+- Keep it scan-friendly: if a section grows past ~25 lines, split it or move detail into a per-phase GitHub issue.
+- Don't duplicate `CLAUDE.md` (guardrails/stack) or the GitHub milestones (phase-by-phase work). This doc explains *how the pieces fit together*.

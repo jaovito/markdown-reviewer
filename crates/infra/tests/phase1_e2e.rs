@@ -34,6 +34,20 @@ impl GhClient for StubGh {
             detail: String::new(),
         })
     }
+    async fn list_pull_requests(
+        &self,
+        _repo_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Vec<markdown_reviewer_core::domain::PullRequestSummary>>
+    {
+        Ok(Vec::new())
+    }
+    async fn load_pull_request(
+        &self,
+        _repo_path: &str,
+        number: u64,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::PullRequestDetail> {
+        Err(AppError::PrNotFound { number })
+    }
 }
 
 fn svc(db_dir: &std::path::Path, authed: bool) -> RepoSelection {

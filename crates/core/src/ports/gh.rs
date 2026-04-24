@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::{PullRequestDetail, PullRequestSummary};
 use crate::AppResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -16,4 +17,7 @@ pub struct GhAuthReport {
 pub trait GhClient: Send + Sync {
     async fn version(&self) -> AppResult<String>;
     async fn auth_status(&self) -> AppResult<GhAuthReport>;
+    async fn list_pull_requests(&self, repo_path: &str) -> AppResult<Vec<PullRequestSummary>>;
+    async fn load_pull_request(&self, repo_path: &str, number: u64)
+        -> AppResult<PullRequestDetail>;
 }

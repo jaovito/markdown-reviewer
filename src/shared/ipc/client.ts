@@ -36,4 +36,8 @@ export const ipc = {
     add: (repo: Repository) => call("add_recent_repository", { repo }),
     remove: (path: string) => call("remove_recent_repository", { path }),
   },
+  pullRequests: {
+    list: (repoPath: string) => call("list_pull_requests", { repoPath }),
+    load: (repoPath: string, prNumber: number) => call("load_pull_request", { repoPath, prNumber }),
+  },
 };

@@ -4,7 +4,6 @@ use markdown_reviewer_core::ports::RecentRepository;
 use markdown_reviewer_core::AppError;
 use tauri::State;
 
-use crate::dto::PathArgs;
 use crate::state::AppState;
 
 #[tauri::command]
@@ -25,7 +24,7 @@ pub async fn add_recent_repository(
 #[tauri::command]
 pub async fn remove_recent_repository(
     state: State<'_, AppState>,
-    args: PathArgs,
+    path: String,
 ) -> Result<(), AppError> {
-    recents::remove(&state.repo_selection, &args.path).await
+    recents::remove(&state.repo_selection, &path).await
 }

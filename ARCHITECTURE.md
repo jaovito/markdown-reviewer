@@ -92,6 +92,19 @@ Tauri binary. `bootstrap::run()` builds `Paths`, opens the SQLite DB, runs migra
 6. Mirror the contract on the frontend (`src/shared/ipc/contract.ts`) and add the client helper.
 7. If the command needs permissions, extend `src-tauri/capabilities/default.json` (never grant `shell:allow-execute`).
 
+**Command argument convention.** Tauri v2 derives each argument key from the Rust parameter name. For commands taking 0 or 1 fields, pass scalars directly:
+
+```rust
+#[tauri::command]
+pub async fn validate_repository(state: State<'_, AppState>, path: String) -> Result<Repository, AppError> { … }
+```
+
+```ts
+invoke("validate_repository", { path });
+```
+
+Only introduce a DTO struct in `crates/ipc/src/dto.rs` when a command takes multiple fields that belong together — and in that case pass them as named parameters, not wrapped in an `args` struct, unless you also send `{ args: {...} }` from the frontend.
+
 ---
 
 ## Frontend — feature-first React

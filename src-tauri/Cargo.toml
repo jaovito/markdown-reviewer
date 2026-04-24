@@ -1,0 +1,33 @@
+[package]
+name = "markdown-reviewer-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Markdown Reviewer — desktop app for reviewing Markdown PRs"
+default-run = "markdown-reviewer"
+
+[lib]
+name = "markdown_reviewer_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "markdown-reviewer"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+markdown-reviewer-core = { workspace = true }
+markdown-reviewer-infra = { workspace = true }
+markdown-reviewer-ipc = { workspace = true }
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

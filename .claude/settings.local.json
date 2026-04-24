@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"print\\(open\\('/Users/jaovito/.claude/projects/-Users-jaovito-www-markdown-reviewer/9532a2b4-151a-4ccd-97b7-68b0f55faa68/tool-results/mcp-pencil-batch_get-1777062148652.txt'\\).read\\(\\)[0:80000]\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)"
+    ]
+  }
+}

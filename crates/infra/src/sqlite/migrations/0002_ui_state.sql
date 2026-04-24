@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS ui_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);

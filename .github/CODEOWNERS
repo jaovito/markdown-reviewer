@@ -1,0 +1,6 @@
+# Code owners for this repository.
+# Combined with the `main` branch ruleset ("Require review from Code Owners"),
+# this ensures every PR needs an approval from one of the listed owners
+# before it can be merged.
+
+* @jaovito

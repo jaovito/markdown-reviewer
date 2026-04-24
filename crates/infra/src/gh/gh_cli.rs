@@ -8,7 +8,9 @@ use crate::process::{run, run_ok};
 
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
-const PR_LIST_LIMIT: &str = "50";
+// `gh pr list` defaults to 30; bump to a value high enough to cover the
+// largest realistic open-PR backlog without paginating ourselves.
+const PR_LIST_LIMIT: &str = "200";
 
 const SUMMARY_FIELDS: &str =
     "number,title,author,baseRefName,headRefName,state,isDraft,updatedAt,url";
@@ -54,10 +56,12 @@ struct GhDetail {
 }
 
 fn parse_state(raw: &str) -> PullRequestState {
-    match raw.to_ascii_uppercase().as_str() {
-        "MERGED" => PullRequestState::Merged,
-        "CLOSED" => PullRequestState::Closed,
-        _ => PullRequestState::Open,
+    if raw.eq_ignore_ascii_case("MERGED") {
+        PullRequestState::Merged
+    } else if raw.eq_ignore_ascii_case("CLOSED") {
+        PullRequestState::Closed
+    } else {
+        PullRequestState::Open
     }
 }
 
@@ -78,13 +82,17 @@ fn into_summary(g: GhSummary) -> PullRequestSummary {
     }
 }
 
+fn is_pr_not_found(stderr_lower: &str) -> bool {
+    stderr_lower.contains("could not resolve to a pullrequest")
+        || stderr_lower.contains("could not resolve to pullrequest")
+        || stderr_lower.contains("no pull requests found")
+        || stderr_lower.contains("no pull request found")
+}
+
 fn map_gh_error(stderr: &str, number: Option<u64>) -> AppError {
     let lower = stderr.to_ascii_lowercase();
     if let Some(n) = number {
-        if lower.contains("could not resolve to a pullrequest")
-            || lower.contains("no pull requests found")
-            || lower.contains("not found")
-        {
+        if is_pr_not_found(&lower) {
             return AppError::PrNotFound { number: n };
         }
     }
@@ -178,14 +186,23 @@ impl GhClient for GhCli {
 
         let detail: GhDetail = serde_json::from_str(out.stdout.trim())
             .map_err(|e| AppError::process(format!("gh pr view: invalid JSON: {e}")))?;
+        let GhDetail {
+            summary,
+            body,
+            head_ref_oid,
+            base_ref_oid,
+            additions,
+            deletions,
+            changed_files,
+        } = detail;
         Ok(PullRequestDetail {
-            head_sha: detail.head_ref_oid.clone(),
-            base_sha: detail.base_ref_oid.clone(),
-            additions: detail.additions,
-            deletions: detail.deletions,
-            changed_files: detail.changed_files,
-            body: detail.body.clone(),
-            summary: into_summary(detail.summary),
+            head_sha: head_ref_oid,
+            base_sha: base_ref_oid,
+            additions,
+            deletions,
+            changed_files,
+            body,
+            summary: into_summary(summary),
         })
     }
 }

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use markdown_reviewer_core::domain::{
     ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
 };
-use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
+use markdown_reviewer_core::ports::{GhAuthReport, GhClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;
 
@@ -11,6 +11,8 @@ use crate::process::{redact, run, run_ok};
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
 const PR_FILES_TIMEOUT_MS: u64 = 30_000;
+const REVIEW_SUBMIT_TIMEOUT_MS: u64 = 30_000;
+const REVIEW_COMMENT_TIMEOUT_MS: u64 = 15_000;
 // `gh pr list` defaults to 30; bump to a value high enough to cover the
 // largest realistic open-PR backlog without paginating ourselves.
 const PR_LIST_LIMIT: &str = "200";
@@ -320,6 +322,124 @@ impl GhClient for GhCli {
             .map_err(|e| AppError::process(format!("gh api contents: invalid base64: {e}")))?;
         String::from_utf8(bytes)
             .map_err(|e| AppError::process(format!("gh api contents: invalid UTF-8: {e}")))
+    }
+
+    async fn submit_review_batch(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comments: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        if comments.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // We assemble the call as `gh api -X POST <endpoint> -f field=value`
+        // (string) and `-F field=value` (raw / numeric). gh CLI translates
+        // bracketed names like `comments[0][path]` into a nested JSON body.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews");
+        let commit_arg = format!("commit_id={head_sha}");
+
+        // Pre-compute every -f / -F string with stable lifetimes so the &str
+        // slice we hand to `run` stays valid for the whole call.
+        let mut owned: Vec<String> = Vec::with_capacity(4 + comments.len() * 8);
+        for (idx, c) in comments.iter().enumerate() {
+            owned.push(format!("comments[{idx}][path]={}", c.path));
+            owned.push(format!("comments[{idx}][line]={}", c.line));
+            owned.push(format!("comments[{idx}][side]=RIGHT"));
+            owned.push(format!("comments[{idx}][body]={}", c.body));
+        }
+
+        let mut args: Vec<&str> = vec!["api", "-X", "POST", &endpoint];
+        args.push("-f");
+        args.push(&commit_arg);
+        args.push("-f");
+        args.push("event=COMMENT");
+
+        // Alternate flags: -f (string) for path/side/body, -F (typed) for
+        // line so it lands as a JSON number.
+        for (idx, c) in comments.iter().enumerate() {
+            let path_idx = idx * 4;
+            let line_idx = path_idx + 1;
+            let side_idx = path_idx + 2;
+            let body_idx = path_idx + 3;
+            args.push("-f");
+            args.push(&owned[path_idx]);
+            args.push("-F");
+            args.push(&owned[line_idx]);
+            args.push("-f");
+            args.push(&owned[side_idx]);
+            args.push("-f");
+            args.push(&owned[body_idx]);
+            let _ = c; // silence unused warning if any
+        }
+
+        // `--jq '.comments | map(.id)'` extracts the ids in submission order.
+        args.push("--jq");
+        args.push(".comments | map(.id)");
+
+        let out = run("gh", &args, Some(repo_path), REVIEW_SUBMIT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+
+        let ids: Vec<i64> = serde_json::from_str(out.stdout.trim()).map_err(|e| {
+            AppError::process(format!("gh api pulls/{pr_number}/reviews: invalid JSON: {e}"))
+        })?;
+        if ids.len() != comments.len() {
+            return Err(AppError::process(format!(
+                "gh api pulls/{pr_number}/reviews: expected {} comment ids, got {}",
+                comments.len(),
+                ids.len()
+            )));
+        }
+        Ok(ids)
+    }
+
+    async fn submit_review_comment(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comment: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments");
+        let commit_arg = format!("commit_id={head_sha}");
+        let path_arg = format!("path={}", comment.path);
+        let line_arg = format!("line={}", comment.line);
+        let body_arg = format!("body={}", comment.body);
+
+        let args: Vec<&str> = vec![
+            "api",
+            "-X",
+            "POST",
+            &endpoint,
+            "-f",
+            &commit_arg,
+            "-f",
+            &path_arg,
+            "-F",
+            &line_arg,
+            "-f",
+            "side=RIGHT",
+            "-f",
+            &body_arg,
+            "--jq",
+            ".id",
+        ];
+
+        let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+
+        let id: i64 = out.stdout.trim().parse().map_err(|e| {
+            AppError::process(format!(
+                "gh api pulls/{pr_number}/comments: invalid id: {e}"
+            ))
+        })?;
+        Ok(id)
     }
 }
 

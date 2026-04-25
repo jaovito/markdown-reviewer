@@ -93,6 +93,49 @@ export interface FileDiff {
   hunks: DiffHunk[];
 }
 
+export type CommentState = "draft" | "submitted" | "hidden" | "resolved" | "deleted";
+
+export type CommentAnchor =
+  | { kind: "singleLine"; line: number }
+  | { kind: "lineRange"; startLine: number; endLine: number }
+  | { kind: "codeBlock"; startLine: number; endLine: number; codeStartLine: number };
+
+export interface ReviewComment {
+  id: number;
+  prNumber: number;
+  filePath: string;
+  headSha: string;
+  body: string;
+  author: string | null;
+  state: CommentState;
+  anchor: CommentAnchor;
+  createdAt: number;
+  updatedAt: number;
+  githubId: number | null;
+  submitError: string | null;
+}
+
+export interface CommentUpdate {
+  body?: string;
+  state?: CommentState;
+  anchor?: CommentAnchor;
+}
+
+export interface SubmittedReviewComment {
+  localId: number;
+  githubId: number | null;
+  /** When the comment was published successfully. */
+  submitted: boolean;
+  /** Populated when the comment failed; cleared on success. */
+  error: string | null;
+}
+
+export interface ReviewSubmissionResult {
+  comments: SubmittedReviewComment[];
+  /** True when every requested comment was submitted. */
+  allSubmitted: boolean;
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -108,6 +151,7 @@ export type AppError =
 
 export interface Commands {
   check_tools: { args: undefined; result: ToolStatus };
+  get_gh_user: { args: undefined; result: string | null };
   select_repository: { args: undefined; result: string | null };
   validate_repository: { args: { path: string }; result: Repository };
   list_recent_repositories: { args: undefined; result: RecentRepository[] };
@@ -129,6 +173,37 @@ export interface Commands {
   load_file_diff: {
     args: { repoPath: string; prNumber: number; filePath: string };
     result: FileDiff;
+  };
+  list_local_comments: {
+    args: { prNumber: number };
+    result: ReviewComment[];
+  };
+  list_local_comments_for_file: {
+    args: { prNumber: number; filePath: string };
+    result: ReviewComment[];
+  };
+  create_local_comment: {
+    args: {
+      prNumber: number;
+      filePath: string;
+      headSha: string;
+      body: string;
+      author: string | null;
+      anchor: CommentAnchor;
+    };
+    result: ReviewComment;
+  };
+  update_local_comment: {
+    args: { id: number; patch: CommentUpdate };
+    result: ReviewComment;
+  };
+  delete_local_comment: {
+    args: { id: number };
+    result: null;
+  };
+  submit_review: {
+    args: { repoPath: string; prNumber: number; commentIds: number[] };
+    result: ReviewSubmissionResult;
   };
 }
 

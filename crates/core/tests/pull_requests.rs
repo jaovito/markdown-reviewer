@@ -9,7 +9,7 @@ use markdown_reviewer_core::domain::{
     ChangeStatus, ChangedFile, DiffHunk, HunkKind, PullRequestDetail, PullRequestState,
     PullRequestSummary,
 };
-use markdown_reviewer_core::ports::{GhAuthReport, GhClient, GitClient};
+use markdown_reviewer_core::ports::{GhAuthReport, GhClient, GitClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
 
 struct FakeGh {
@@ -78,6 +78,24 @@ impl GhClient for FakeGh {
         _file_path: &str,
     ) -> AppResult<String> {
         Ok(String::new())
+    }
+    async fn submit_review_batch(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comments: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        Err(AppError::process("not implemented in test fake"))
+    }
+    async fn submit_review_comment(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comment: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        Err(AppError::process("not implemented in test fake"))
     }
 }
 

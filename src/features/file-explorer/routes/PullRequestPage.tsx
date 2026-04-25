@@ -1,5 +1,5 @@
 import { isMarkdownPath } from "@/features/file-explorer";
-import { MainShell, SidebarShell, useRepoContext } from "@/features/main";
+import { PreviewSlot, SidebarShell, ThreadsPane, useRepoContext } from "@/features/main";
 import {
   MarkdownPreview,
   UnsupportedFile,
@@ -41,30 +41,40 @@ export function PullRequestPage() {
   const basePath = `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
 
   return (
-    <MainShell
-      sidebar={
-        <SidebarShell
-          title={`Files in #${prNumber}`}
-          toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
-        >
-          {files.isLoading ? (
-            <SidebarSkeleton />
-          ) : files.error ? (
-            <Alert tone="destructive" className="mx-2 mt-2">
-              <AlertTitle>{describeError(files.error).title}</AlertTitle>
-              <AlertDescription>{describeError(files.error).description}</AlertDescription>
-            </Alert>
-          ) : filteredFiles.length === 0 && (files.data?.length ?? 0) > 0 ? (
-            <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
-              No files match "{debouncedFilter}".
-            </p>
-          ) : (
-            <FileTree files={filteredFiles} selectedPath={selectedPath} basePath={basePath} />
-          )}
-        </SidebarShell>
-      }
-      preview={
-        selectedPath ? (
+    <>
+      <SidebarShell
+        title="Changes"
+        subtitle={
+          files.data
+            ? `${filteredFiles.length} of ${files.data.length} files`
+            : `Files in PR #${prNumber}`
+        }
+        toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
+      >
+        {files.isLoading ? (
+          <SidebarSkeleton />
+        ) : files.error ? (
+          <Alert tone="destructive" className="mx-2 mt-2">
+            <AlertTitle>{describeError(files.error).title}</AlertTitle>
+            <AlertDescription>{describeError(files.error).description}</AlertDescription>
+          </Alert>
+        ) : filteredFiles.length === 0 && (files.data?.length ?? 0) > 0 ? (
+          <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
+            No files match "{debouncedFilter}".
+          </p>
+        ) : (
+          <FileTree files={filteredFiles} selectedPath={selectedPath} basePath={basePath} />
+        )}
+      </SidebarShell>
+      <PreviewSlot
+        toolbar={
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">
+            {selectedPath ?? `Pull request #${prNumber}`}
+          </span>
+        }
+        emptyHint="Pick a Markdown file from the sidebar to start reading."
+      >
+        {selectedPath ? (
           <PreviewArea
             repoPath={repoPath.data ?? undefined}
             sha={detail.data?.headSha}
@@ -72,10 +82,10 @@ export function PullRequestPage() {
             isDetailLoading={detail.isLoading}
             prNumber={prNumber}
           />
-        ) : undefined
-      }
-      previewEmptyHint="Pick a Markdown file from the sidebar to start reading."
-    />
+        ) : null}
+      </PreviewSlot>
+      <ThreadsPane />
+    </>
   );
 }
 
@@ -92,7 +102,6 @@ function PreviewArea({ repoPath, sha, filePath, isDetailLoading, prNumber }: Pre
   const file = useFileContent({
     repoPath,
     sha,
-    // Skip the IPC for unsupported files entirely.
     filePath: supported ? filePath : undefined,
   });
   const diff = useFileDiff({

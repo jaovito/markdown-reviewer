@@ -23,7 +23,7 @@ export function PullRequestListPage() {
   }, [prs.data, debouncedQuery]);
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 px-6 py-6">
+    <main className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 overflow-auto px-6 py-8">
       <header className="flex items-baseline justify-between">
         <h2 className="text-lg font-semibold tracking-tight">Open pull requests</h2>
         <span className="text-xs text-[hsl(var(--muted-foreground))]">
@@ -68,7 +68,7 @@ export function PullRequestListPage() {
           ))
         )}
       </ul>
-    </div>
+    </main>
   );
 }
 

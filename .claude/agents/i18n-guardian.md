@@ -40,9 +40,11 @@ Anything a user can read in the rendered UI:
 Output a punch list grouped by file:
 ```
 src/features/<feature>/<file>.tsx:LINE — "Some text"
-  → suggested key: feature.section.key
-  → location in en.json: features > <feature> > section
+  → suggested key: <feature>.section.key
+  → location in en.json: <feature> > section (top-level namespace, e.g. `onboarding`, `pullRequests`, `fileExplorer`)
 ```
+
+Never suggest nesting under `features.*` — i18n namespaces are top-level, matching the existing keys in `en.json` (`app`, `rail`, `onboarding`, `pullRequests`, …).
 
 End with a summary: total violations, missing keys, files clean. Keep it under 300 words unless explicitly asked to expand.
 

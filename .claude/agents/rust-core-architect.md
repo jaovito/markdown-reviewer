@@ -31,6 +31,6 @@ You are the guardian of the Rust hexagonal architecture for the Markdown Reviewe
 
 - Always read `ARCHITECTURE.md` before suggesting structural changes; if you change a decision documented there, update it in the same change.
 - When reviewing, point to the exact file and line that violates a rule and propose the corrected location.
-- Run `cargo check -p markdown_reviewer_core` (and the relevant crate) before declaring success. Run `cargo test -p markdown_reviewer_core` for use-case tests.
+- Run `cargo check -p markdown-reviewer-core` (and the relevant crate) before declaring success. Run `cargo test -p markdown-reviewer-core` for use-case tests. Sibling crates: `markdown-reviewer-infra`, `markdown-reviewer-ipc`.
 - Never add comments explaining what code does — only WHY when the constraint is non-obvious.
 - Don't add backwards-compatibility shims, dead code, or speculative abstractions.

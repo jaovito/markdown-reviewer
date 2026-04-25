@@ -12,11 +12,11 @@ Follow this checklist exactly — do not skip steps, do not bundle steps:
 3. **Use case** — implement free function(s) in `crates/core/src/application/<feature>/*.rs` taking a ports bundle struct composed of `Arc<dyn ...>` dependencies (one struct per feature module, not raw `Arc<dyn Port>` arguments). Add a unit test in `crates/core/tests/` using an in-memory fake.
 4. **Adapter** — implement the port in `crates/infra/src/<family>/*.rs`. If shelling out, route through `infra::process`. Add an integration test gated with `#[ignore]`.
 5. **IPC command** — add `#[tauri::command]` in `crates/ipc/src/commands/<feature>.rs` (~5 lines). DTO in `crates/ipc/src/dto.rs`. Register in `ipc::register`.
-6. **Frontend contract** — add the typed entry to `src/shared/ipc/contract.ts` and a client helper. Map errors via `src/shared/ipc/errors.ts`.
+6. **Frontend contract** — add the typed entry to `src/shared/ipc/contract.ts` and add the client helper in `src/shared/ipc/client.ts` (all IPC must go through this file; never call `invoke()` directly from a feature). Map errors via `src/shared/ipc/errors.ts`.
 7. **Capabilities** — extend `src-tauri/capabilities/default.json` if a new permission is needed. Never grant `shell:allow-execute`.
 
 After scaffolding:
-- Run `cargo check --workspace` and `cargo test -p markdown_reviewer_core`.
+- Run `cargo check --workspace` and `cargo test -p markdown-reviewer-core`.
 - Run `bunx tsc --noEmit` and `bunx biome check --apply` on edited TS files.
 - Report which files changed and where the user should plug the command into the UI.
 

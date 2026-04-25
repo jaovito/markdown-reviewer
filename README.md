@@ -9,7 +9,6 @@ Desktop app for reviewing Markdown documentation inside GitHub Pull Requests, of
 - [Prerequisites](#prerequisites)
 - [First-time setup](#first-time-setup)
 - [Running the app](#running-the-app)
-- [What you should see](#what-you-should-see)
 - [Project layout](#project-layout)
 - [Scripts](#scripts)
 - [Testing](#testing)
@@ -268,10 +267,6 @@ source "$HOME/.cargo/env"
 # or open a fresh shell
 ```
 
-### Build is slow the first time
-
-Normal — ~100 crates compile from source. Warm cache makes subsequent builds ~10× faster; incremental compilation makes edits feel instant.
-
 ### `xcrun: error: invalid active developer path`
 
 ```sh
@@ -286,21 +281,12 @@ Vite probably hasn't finished booting. Wait ~5 seconds and reload (`Cmd+R` / `Ct
 
 Something is already on Vite's port. Either kill it or change `server.port` in `vite.config.ts` (and `devUrl` in `src-tauri/tauri.conf.json`).
 
-### Repo validation fails for a real GitHub repo
-
-- Confirm `git -C <path> remote get-url origin` returns a URL matching `github.com`. SSH (`git@github.com:…`) and HTTPS are both supported.
-- The app only uses `origin` — if your GitHub remote is named otherwise, add it as `origin` or open an issue.
-
 ### "The `gh` CLI is not authenticated"
 
 ```sh
 gh auth login
 gh auth status   # should say "Logged in to github.com"
 ```
-
-### Tauri dev rebuilds on every save and it's slow
-
-Tauri rebuilds only the Rust side when Rust files change. Frontend edits go through Vite HMR and are instant. If you're mostly working on UI, consider running `bun run dev:web` and only switching to `bun run dev` when you need the Tauri APIs.
 
 ### Resetting local state
 

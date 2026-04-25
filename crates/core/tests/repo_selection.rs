@@ -45,6 +45,16 @@ impl GitClient for FakeGit {
     ) -> markdown_reviewer_core::AppResult<Option<String>> {
         Ok(None)
     }
+    async fn diff_hunks(
+        &self,
+        _repo_path: &str,
+        _base: &str,
+        _head: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Option<Vec<markdown_reviewer_core::domain::DiffHunk>>>
+    {
+        Ok(Some(Vec::new()))
+    }
 }
 
 struct FakeGh {

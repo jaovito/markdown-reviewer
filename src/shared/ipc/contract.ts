@@ -78,6 +78,21 @@ export interface ChangedFile {
   deletions: number;
 }
 
+export type HunkKind = "added" | "modified";
+
+export interface DiffHunk {
+  startLine: number;
+  endLine: number;
+  kind: HunkKind;
+}
+
+export interface FileDiff {
+  filePath: string;
+  headSha: string;
+  baseSha: string;
+  hunks: DiffHunk[];
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -110,6 +125,10 @@ export interface Commands {
   read_markdown_file: {
     args: { repoPath: string; sha: string; filePath: string };
     result: string;
+  };
+  load_file_diff: {
+    args: { repoPath: string; prNumber: number; filePath: string };
+    result: FileDiff;
   };
 }
 

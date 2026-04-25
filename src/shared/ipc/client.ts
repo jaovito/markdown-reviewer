@@ -41,6 +41,8 @@ export const ipc = {
     load: (repoPath: string, prNumber: number) => call("load_pull_request", { repoPath, prNumber }),
     changedFiles: (repoPath: string, prNumber: number) =>
       call("list_changed_files", { repoPath, prNumber }),
+    fileDiff: (repoPath: string, prNumber: number, filePath: string) =>
+      call("load_file_diff", { repoPath, prNumber, filePath }),
   },
   files: {
     readMarkdown: (repoPath: string, sha: string, filePath: string) =>

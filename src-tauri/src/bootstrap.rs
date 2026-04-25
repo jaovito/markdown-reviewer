@@ -38,7 +38,10 @@ pub(crate) fn run() {
                     recents: Arc::new(SqliteRecentsStore::new(db)),
                     clock: Arc::new(SystemClock),
                 },
-                pull_requests: PullRequests { gh: gh.clone() },
+                pull_requests: PullRequests {
+                    gh: gh.clone(),
+                    git: git.clone(),
+                },
                 files: Files {
                     git: git.clone(),
                     gh: gh.clone(),

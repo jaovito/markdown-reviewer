@@ -4,6 +4,7 @@ import {
   MarkdownPreview,
   UnsupportedFile,
   useFileContent,
+  useFileDiff,
   usePullRequestDetail,
 } from "@/features/markdown-preview";
 import { useRepoPath } from "@/features/pull-requests";
@@ -69,6 +70,7 @@ export function PullRequestPage() {
             sha={detail.data?.headSha}
             filePath={selectedPath}
             isDetailLoading={detail.isLoading}
+            prNumber={prNumber}
           />
         ) : undefined
       }
@@ -82,14 +84,20 @@ interface PreviewAreaProps {
   sha: string | undefined;
   filePath: string;
   isDetailLoading: boolean;
+  prNumber: number;
 }
 
-function PreviewArea({ repoPath, sha, filePath, isDetailLoading }: PreviewAreaProps) {
+function PreviewArea({ repoPath, sha, filePath, isDetailLoading, prNumber }: PreviewAreaProps) {
   const supported = isMarkdownPath(filePath);
   const file = useFileContent({
     repoPath,
     sha,
     // Skip the IPC for unsupported files entirely.
+    filePath: supported ? filePath : undefined,
+  });
+  const diff = useFileDiff({
+    repoPath,
+    prNumber,
     filePath: supported ? filePath : undefined,
   });
 
@@ -116,7 +124,7 @@ function PreviewArea({ repoPath, sha, filePath, isDetailLoading }: PreviewAreaPr
       </div>
     );
   }
-  return <MarkdownPreview source={file.data ?? ""} />;
+  return <MarkdownPreview source={file.data ?? ""} hunks={diff.data?.hunks} />;
 }
 
 function PreviewSkeleton() {

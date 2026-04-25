@@ -3,6 +3,7 @@ import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
+import { remarkSourceLine } from "./remarkSourceLine";
 
 /**
  * Sanitize schema extended to allow `data-source-line` on common block
@@ -44,6 +45,7 @@ const schema = {
 
 const processor = unified()
   .use(remarkParse)
+  .use(remarkSourceLine)
   .use(remarkRehype, { allowDangerousHtml: false })
   .use(rehypeSanitize, schema)
   .use(rehypeStringify);

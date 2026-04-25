@@ -61,6 +61,38 @@ export interface PullRequestDetail {
   changedFiles: number;
 }
 
+export type ChangeStatus =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "changed"
+  | "unchanged";
+
+export interface ChangedFile {
+  path: string;
+  previousPath: string | null;
+  status: ChangeStatus;
+  additions: number;
+  deletions: number;
+}
+
+export type HunkKind = "added" | "modified";
+
+export interface DiffHunk {
+  startLine: number;
+  endLine: number;
+  kind: HunkKind;
+}
+
+export interface FileDiff {
+  filePath: string;
+  headSha: string;
+  baseSha: string;
+  hunks: DiffHunk[];
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -68,6 +100,7 @@ export type AppError =
   | { kind: "missingTool"; data: { name: string } }
   | { kind: "ghNotAuthenticated" }
   | { kind: "prNotFound"; data: { number: number } }
+  | { kind: "fileNotFound"; data: { sha: string; path: string } }
   | { kind: "io"; data: { message: string } }
   | { kind: "db"; data: { message: string } }
   | { kind: "process"; data: { message: string } }
@@ -84,6 +117,18 @@ export interface Commands {
   load_pull_request: {
     args: { repoPath: string; prNumber: number };
     result: PullRequestDetail;
+  };
+  list_changed_files: {
+    args: { repoPath: string; prNumber: number };
+    result: ChangedFile[];
+  };
+  read_markdown_file: {
+    args: { repoPath: string; sha: string; filePath: string };
+    result: string;
+  };
+  load_file_diff: {
+    args: { repoPath: string; prNumber: number; filePath: string };
+    result: FileDiff;
   };
 }
 

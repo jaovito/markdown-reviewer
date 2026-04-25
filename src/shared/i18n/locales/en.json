@@ -1,0 +1,138 @@
+{
+  "app": {
+    "brand": "Markdown Reviewer",
+    "actions": {
+      "finishReview": "Finish review",
+      "refresh": "Refresh from GitHub",
+      "refreshAria": "Refresh from remote",
+      "tryAgain": "Try again",
+      "retry": "Retry"
+    },
+    "states": {
+      "somethingWrong": "Something went wrong",
+      "notFoundTitle": "Not found",
+      "notFoundDescription": "The screen you tried to open doesn't exist."
+    }
+  },
+  "rail": {
+    "changes": "Changes",
+    "pullRequests": "Pull requests",
+    "comments": "Comments",
+    "leaveRepository": "Leave repository",
+    "settings": "Settings (coming soon)"
+  },
+  "onboarding": {
+    "title": "Markdown Reviewer",
+    "subtitle": "Open a local repository to start reviewing Markdown pull requests.",
+    "selectButton": "Select repository folder",
+    "validating": "Validating…"
+  },
+  "pullRequests": {
+    "list": {
+      "heading": "Open pull requests",
+      "count": "{{shown}} of {{total}}",
+      "searchPlaceholder": "Search by title, number, author, or branch…",
+      "emptyAll": "There are no open pull requests for this repository.",
+      "emptyFiltered": "No pull requests match your search.",
+      "repoMissingTitle": "Repository not in recents",
+      "repoMissingDescription": "We couldn't find a local path for {{owner}}/{{repo}}. Pick the folder again from the home screen."
+    },
+    "row": {
+      "draft": "Draft",
+      "by": "by {{author}}",
+      "minutesAgo": "{{n}}m ago",
+      "hoursAgo": "{{n}}h ago",
+      "daysAgo": "{{n}}d ago"
+    }
+  },
+  "fileExplorer": {
+    "invalidPrNumber": {
+      "title": "Invalid pull request",
+      "description": "\"{{value}}\" is not a valid PR number."
+    },
+    "sidebar": {
+      "title": "Changes",
+      "fallbackSubtitle": "Files in PR #{{number}}",
+      "summary": "{{shown}} of {{total}} Markdown files",
+      "summaryHidden": "{{shown}} of {{total}} Markdown files ({{hidden}} non-Markdown hidden)",
+      "searchPlaceholder": "Filter files…",
+      "emptyAllNonMarkdown_one": "This pull request changes {{count}} file, none of them Markdown.",
+      "emptyAllNonMarkdown_other": "This pull request changes {{count}} files, none of them Markdown.",
+      "emptyFilter": "No Markdown files match \"{{query}}\".",
+      "emptyTree": "No files changed in this pull request."
+    },
+    "preview": {
+      "noFileSelected": "Pick a Markdown file from the sidebar to start reading.",
+      "unsupportedTitle": "Preview for <code>{{path}}</code> is not supported.",
+      "unsupportedDescription": "Markdown Reviewer renders Markdown files only.",
+      "fallbackToolbarLabel": "Pull request #{{number}}"
+    },
+    "status": {
+      "aria": "Change status: {{status}}",
+      "added": "added",
+      "modified": "modified",
+      "deleted": "deleted",
+      "renamed": "renamed",
+      "copied": "copied",
+      "changed": "changed",
+      "unchanged": "unchanged"
+    }
+  },
+  "main": {
+    "preview": {
+      "emptyHint": "Pick a pull request and a Markdown file to start reviewing."
+    },
+    "threads": {
+      "title": "Review threads",
+      "subtitle": "Comments attached to rendered Markdown ranges.",
+      "phase3Hint": "Comments will land here in Phase 3."
+    },
+    "toolbar": {
+      "backToRepositoriesAria": "Back to repositories"
+    },
+    "sidebar": {
+      "fallbackEmpty": "Nothing to show yet.",
+      "resizeAria": "Resize sidebar"
+    }
+  },
+  "errors": {
+    "invalidPath": {
+      "title": "Invalid folder",
+      "description": "We couldn't access {{path}}.",
+      "actionHint": "Pick a different folder."
+    },
+    "notAGitRepo": {
+      "title": "Not a Git repository",
+      "description": "{{path}} is not inside a Git working tree.",
+      "actionHint": "Select a folder that contains a .git directory."
+    },
+    "noGithubRemote": {
+      "title": "No GitHub remote",
+      "description": "This repository doesn't have a GitHub origin remote.",
+      "actionHint": "Add a GitHub remote with `git remote add origin …`."
+    },
+    "missingTool": {
+      "title": "{{name}} is not installed",
+      "description": "Markdown Reviewer needs `{{name}}` on your PATH.",
+      "actionHintGh": "Install GitHub CLI: https://cli.github.com",
+      "actionHintGeneric": "Install it from your package manager."
+    },
+    "ghNotAuthenticated": {
+      "title": "GitHub CLI not authenticated",
+      "description": "`gh auth status` reports you're not logged in.",
+      "actionHint": "Run `gh auth login` in your terminal."
+    },
+    "prNotFound": {
+      "title": "Pull request not found",
+      "description": "PR #{{number}} does not exist on this repo."
+    },
+    "fileNotFound": {
+      "title": "File not found",
+      "description": "{{path}} doesn't exist at {{shortSha}}.",
+      "actionHint": "The file may have been deleted in this PR, or the ref isn't fetched locally."
+    },
+    "generic": {
+      "title": "Something went wrong"
+    }
+  }
+}

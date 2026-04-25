@@ -43,3 +43,111 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
 }
+
+/* Baseline Markdown preview styles. Phase 5 will revisit (GFM tables,
+   syntax highlighting, callouts). Kept inline here so it ships without a
+   typography plugin dependency. */
+.prose-styles {
+  color: hsl(var(--foreground));
+}
+.prose-styles h1,
+.prose-styles h2,
+.prose-styles h3,
+.prose-styles h4,
+.prose-styles h5,
+.prose-styles h6 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 1.5em;
+  margin-bottom: 0.6em;
+  line-height: 1.25;
+}
+.prose-styles h1 {
+  font-size: 1.875rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.4em;
+  margin-top: 0;
+}
+.prose-styles h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.3em;
+}
+.prose-styles h3 {
+  font-size: 1.25rem;
+}
+.prose-styles h4 {
+  font-size: 1.05rem;
+}
+.prose-styles p,
+.prose-styles ul,
+.prose-styles ol,
+.prose-styles blockquote,
+.prose-styles pre {
+  margin-block: 0.85em;
+}
+.prose-styles ul,
+.prose-styles ol {
+  padding-left: 1.5em;
+}
+.prose-styles ul {
+  list-style-type: disc;
+}
+.prose-styles ol {
+  list-style-type: decimal;
+}
+.prose-styles li::marker {
+  color: hsl(var(--muted-foreground));
+}
+.prose-styles a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-styles code {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.prose-styles pre {
+  background: hsl(var(--muted));
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+}
+.prose-styles pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+}
+.prose-styles blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 1em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.prose-styles hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  margin-block: 1.5em;
+}
+.prose-styles table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: 1em;
+}
+.prose-styles th,
+.prose-styles td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.prose-styles th {
+  background: hsl(var(--muted));
+}
+.prose-styles img {
+  max-width: 100%;
+  border-radius: 4px;
+}

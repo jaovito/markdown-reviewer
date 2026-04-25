@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use markdown_reviewer_core::application::files::Files;
 use markdown_reviewer_core::application::pull_requests::PullRequests;
 use markdown_reviewer_core::application::repo_selection::RepoSelection;
 use markdown_reviewer_infra::{
@@ -37,7 +38,14 @@ pub(crate) fn run() {
                     recents: Arc::new(SqliteRecentsStore::new(db)),
                     clock: Arc::new(SystemClock),
                 },
-                pull_requests: PullRequests { gh: gh.clone() },
+                pull_requests: PullRequests {
+                    gh: gh.clone(),
+                    git: git.clone(),
+                },
+                files: Files {
+                    git: git.clone(),
+                    gh: gh.clone(),
+                },
             };
             app.manage(state);
             Ok(())

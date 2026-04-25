@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use markdown_reviewer_core::domain::{PullRequestDetail, PullRequestState, PullRequestSummary};
+use markdown_reviewer_core::domain::{
+    ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
+};
 use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;
@@ -8,6 +10,7 @@ use crate::process::{redact, run, run_ok};
 
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
+const PR_FILES_TIMEOUT_MS: u64 = 30_000;
 // `gh pr list` defaults to 30; bump to a value high enough to cover the
 // largest realistic open-PR backlog without paginating ourselves.
 const PR_LIST_LIMIT: &str = "200";
@@ -62,6 +65,38 @@ fn parse_state(raw: &str) -> PullRequestState {
         PullRequestState::Closed
     } else {
         PullRequestState::Open
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GhFile {
+    filename: String,
+    #[serde(default)]
+    previous_filename: Option<String>,
+    status: String,
+    additions: u32,
+    deletions: u32,
+}
+
+fn parse_change_status(raw: &str) -> ChangeStatus {
+    match raw {
+        s if s.eq_ignore_ascii_case("added") => ChangeStatus::Added,
+        s if s.eq_ignore_ascii_case("removed") => ChangeStatus::Deleted,
+        s if s.eq_ignore_ascii_case("renamed") => ChangeStatus::Renamed,
+        s if s.eq_ignore_ascii_case("copied") => ChangeStatus::Copied,
+        s if s.eq_ignore_ascii_case("changed") => ChangeStatus::Changed,
+        s if s.eq_ignore_ascii_case("unchanged") => ChangeStatus::Unchanged,
+        _ => ChangeStatus::Modified,
+    }
+}
+
+fn into_changed_file(g: GhFile) -> ChangedFile {
+    ChangedFile {
+        path: g.filename,
+        previous_path: g.previous_filename,
+        status: parse_change_status(&g.status),
+        additions: g.additions,
+        deletions: g.deletions,
     }
 }
 
@@ -205,4 +240,117 @@ impl GhClient for GhCli {
             summary: into_summary(summary),
         })
     }
+
+    async fn list_changed_files(
+        &self,
+        repo_path: &str,
+        number: u64,
+    ) -> AppResult<Vec<ChangedFile>> {
+        // `gh api` infers the repo from the cwd. `--paginate` concatenates pages
+        // into a single JSON stream; we parse each one and flatten.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{number}/files");
+        let out = run(
+            "gh",
+            &[
+                "api",
+                "-X",
+                "GET",
+                &endpoint,
+                "-F",
+                "per_page=100",
+                "--paginate",
+            ],
+            Some(repo_path),
+            PR_FILES_TIMEOUT_MS,
+        )
+        .await?;
+
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(number)));
+        }
+
+        // `gh api --paginate` concatenates each page's JSON array back-to-back.
+        // We use serde_json's streaming Deserializer so it correctly walks
+        // string contents, escapes, and nested structures (the `patch` field
+        // routinely contains `]`/`[` characters that broke a naive splitter).
+        let mut files = Vec::new();
+        let stream =
+            serde_json::Deserializer::from_str(out.stdout.trim()).into_iter::<Vec<GhFile>>();
+        for page in stream {
+            let page = page.map_err(|e| {
+                AppError::process(format!("gh api pulls/{number}/files: invalid JSON: {e}"))
+            })?;
+            files.extend(page.into_iter().map(into_changed_file));
+        }
+        Ok(files)
+    }
+
+    async fn get_file_content(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<String> {
+        // `gh api repos/{owner}/{repo}/contents/{path}?ref=<sha>` returns the
+        // file content base64-encoded. We use `--jq` to pull the raw content
+        // out and rely on `gh` for owner/repo inference via cwd.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/contents/{file_path}?ref={sha}");
+        let out = run(
+            "gh",
+            &["api", "-X", "GET", &endpoint, "--jq", ".content"],
+            Some(repo_path),
+            PR_TIMEOUT_MS,
+        )
+        .await?;
+
+        if !out.ok() {
+            let lower = out.stderr.to_ascii_lowercase();
+            if lower.contains("404") || lower.contains("not found") {
+                return Err(AppError::FileNotFound {
+                    sha: sha.to_string(),
+                    path: file_path.to_string(),
+                });
+            }
+            return Err(AppError::process(redact(out.stderr.trim())));
+        }
+
+        // Body is base64 with newlines.
+        let raw = out.stdout.replace(['\n', '\r'], "");
+        let bytes = base64_decode(&raw)
+            .map_err(|e| AppError::process(format!("gh api contents: invalid base64: {e}")))?;
+        String::from_utf8(bytes)
+            .map_err(|e| AppError::process(format!("gh api contents: invalid UTF-8: {e}")))
+    }
+}
+
+/// Minimal base64 decoder for the standard alphabet. Avoids pulling in a new
+/// dependency just for the GitHub Contents API fallback path.
+fn base64_decode(input: &str) -> Result<Vec<u8>, &'static str> {
+    fn val(c: u8) -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() * 3 / 4);
+    let mut buf: u32 = 0;
+    let mut bits: u32 = 0;
+    for &c in bytes {
+        if c == b'=' {
+            break;
+        }
+        let v = val(c).ok_or("invalid base64 character")?;
+        buf = (buf << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(((buf >> bits) & 0xFF) as u8);
+        }
+    }
+    Ok(out)
 }

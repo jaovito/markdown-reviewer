@@ -1,3 +1,4 @@
+import { i18next } from "@/shared/i18n";
 import type { AppError } from "./contract";
 
 export function isAppError(value: unknown): value is AppError {
@@ -16,51 +17,61 @@ export interface AppErrorView {
 }
 
 export function describeError(e: AppError): AppErrorView {
+  const t = i18next.t.bind(i18next);
   switch (e.kind) {
     case "invalidPath":
       return {
-        title: "Invalid folder",
-        description: `We couldn't access ${e.data.path}.`,
-        actionHint: "Pick a different folder.",
+        title: t("errors.invalidPath.title"),
+        description: t("errors.invalidPath.description", { path: e.data.path }),
+        actionHint: t("errors.invalidPath.actionHint"),
       };
     case "notAGitRepo":
       return {
-        title: "Not a Git repository",
-        description: `${e.data.path} is not inside a Git working tree.`,
-        actionHint: "Select a folder that contains a .git directory.",
+        title: t("errors.notAGitRepo.title"),
+        description: t("errors.notAGitRepo.description", { path: e.data.path }),
+        actionHint: t("errors.notAGitRepo.actionHint"),
       };
     case "noGithubRemote":
       return {
-        title: "No GitHub remote",
-        description: "This repository doesn't have a GitHub origin remote.",
-        actionHint: "Add a GitHub remote with `git remote add origin …`.",
+        title: t("errors.noGithubRemote.title"),
+        description: t("errors.noGithubRemote.description"),
+        actionHint: t("errors.noGithubRemote.actionHint"),
       };
     case "missingTool":
       return {
-        title: `${e.data.name} is not installed`,
-        description: `Markdown Reviewer needs \`${e.data.name}\` on your PATH.`,
+        title: t("errors.missingTool.title", { name: e.data.name }),
+        description: t("errors.missingTool.description", { name: e.data.name }),
         actionHint:
           e.data.name === "gh"
-            ? "Install GitHub CLI: https://cli.github.com"
-            : "Install it from your package manager.",
+            ? t("errors.missingTool.actionHintGh")
+            : t("errors.missingTool.actionHintGeneric"),
       };
     case "ghNotAuthenticated":
       return {
-        title: "GitHub CLI not authenticated",
-        description: "`gh auth status` reports you're not logged in.",
-        actionHint: "Run `gh auth login` in your terminal.",
+        title: t("errors.ghNotAuthenticated.title"),
+        description: t("errors.ghNotAuthenticated.description"),
+        actionHint: t("errors.ghNotAuthenticated.actionHint"),
       };
     case "prNotFound":
       return {
-        title: "Pull request not found",
-        description: `PR #${e.data.number} does not exist on this repo.`,
+        title: t("errors.prNotFound.title"),
+        description: t("errors.prNotFound.description", { number: e.data.number }),
+      };
+    case "fileNotFound":
+      return {
+        title: t("errors.fileNotFound.title"),
+        description: t("errors.fileNotFound.description", {
+          path: e.data.path,
+          shortSha: e.data.sha.slice(0, 7),
+        }),
+        actionHint: t("errors.fileNotFound.actionHint"),
       };
     case "io":
     case "db":
     case "process":
     case "unexpected":
       return {
-        title: "Something went wrong",
+        title: t("errors.generic.title"),
         description: e.data.message,
       };
   }

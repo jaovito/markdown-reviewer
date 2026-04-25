@@ -24,6 +24,9 @@ pub enum AppError {
     #[error("pull request not found")]
     PrNotFound { number: u64 },
 
+    #[error("file not found at ref")]
+    FileNotFound { sha: String, path: String },
+
     #[error("I/O error: {message}")]
     Io { message: String },
 

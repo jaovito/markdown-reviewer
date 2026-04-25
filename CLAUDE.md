@@ -29,6 +29,7 @@ How the pieces fit together (folder layout, dependency rules, IPC contract, pers
 - Vite as the frontend dev server and bundler (chosen over the Bun bundler for ecosystem maturity — `@tailwindcss/vite`, `@vitejs/plugin-react`, wider plugin support — and for smoother open-source contribution).
 - Tailwind v4 + shadcn/ui-style primitives, following the `cZVML` and `markdownReviewExamples` screens in `design.pen`.
 - React Router (declarative mode) for navigation, introduced when the second screen lands in Phase 2.
+- `i18next` + `react-i18next` for translations; English is the default language and the only one shipped today (the language picker comes later).
 - unified / remark / rehype for Markdown; `remark-gfm` for GFM.
 - Shiki for syntax highlighting; Mermaid rendered client-side with a safe fallback.
 - Local SQLite for drafts, PR cache, UI state, and recent repositories (native SQLite on the Rust side).
@@ -42,6 +43,7 @@ How the pieces fit together (folder layout, dependency rules, IPC contract, pers
 - Sanitize HTML from Markdown with a safe allowlist; Mermaid and oversized code blocks have fallbacks.
 - PR cache is timestamped and invalidated when switching PR/branch or on manual refresh.
 - Drafts survive restarts and partial submit failures (never duplicate already-submitted comments when retrying).
+- **No hardcoded user-facing strings on the frontend.** Anything a user can read — labels, placeholders, tooltips, alert titles, empty/error/loading copy — must go through `i18next`. Add the key to `src/shared/i18n/locales/en.json` (grouped by feature) and read it via `useTranslation()` (`<Trans>` for inline JSX). The error mapping helper (`shared/ipc/errors.ts`) uses the singleton `i18next` instance so it works outside React. Default language is English; we'll wire other locales when the language picker lands. ARCHITECTURE.md has the full convention.
 
 ## Expected Tauri commands
 

@@ -17,5 +17,8 @@ pub fn register<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
         commands::recents::remove_recent_repository,
         commands::pull_requests::list_pull_requests,
         commands::pull_requests::load_pull_request,
+        commands::pull_requests::list_changed_files,
+        commands::pull_requests::load_file_diff,
+        commands::files::read_markdown_file,
     ])
 }

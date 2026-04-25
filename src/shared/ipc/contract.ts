@@ -37,6 +37,30 @@ export interface RecentRepository {
   lastOpenedAt: number;
 }
 
+export type PullRequestState = "open" | "closed" | "merged";
+
+export interface PullRequestSummary {
+  number: number;
+  title: string;
+  author: string;
+  baseRef: string;
+  headRef: string;
+  state: PullRequestState;
+  isDraft: boolean;
+  updatedAt: string;
+  url: string;
+}
+
+export interface PullRequestDetail {
+  summary: PullRequestSummary;
+  body: string | null;
+  headSha: string;
+  baseSha: string;
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -56,6 +80,11 @@ export interface Commands {
   list_recent_repositories: { args: undefined; result: RecentRepository[] };
   add_recent_repository: { args: { repo: Repository }; result: RecentRepository };
   remove_recent_repository: { args: { path: string }; result: null };
+  list_pull_requests: { args: { repoPath: string }; result: PullRequestSummary[] };
+  load_pull_request: {
+    args: { repoPath: string; prNumber: number };
+    result: PullRequestDetail;
+  };
 }
 
 export type CommandName = keyof Commands;

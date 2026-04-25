@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use markdown_reviewer_core::application::pull_requests::PullRequests;
 use markdown_reviewer_core::application::repo_selection::RepoSelection;
 use markdown_reviewer_infra::{
     logging,
@@ -27,13 +28,16 @@ pub(crate) fn run() {
 
             let db = open_and_migrate(&paths.db_path)?;
 
+            let git = Arc::new(GitCli);
+            let gh = Arc::new(GhCli);
             let state = AppState {
                 repo_selection: RepoSelection {
-                    git: Arc::new(GitCli),
-                    gh: Arc::new(GhCli),
+                    git: git.clone(),
+                    gh: gh.clone(),
                     recents: Arc::new(SqliteRecentsStore::new(db)),
                     clock: Arc::new(SystemClock),
                 },
+                pull_requests: PullRequests { gh: gh.clone() },
             };
             app.manage(state);
             Ok(())

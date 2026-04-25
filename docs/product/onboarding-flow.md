@@ -112,3 +112,35 @@ The tooltip dismisses on first use and never returns.
   yes; @ana worries about file size for the installer. **TBD.**
 - Where does the "switch repo" entry point live after onboarding?
   Header dropdown vs. command palette vs. both?
+  **Update 2026-04-23:** decision is **both**, but the command palette
+  is the primary; the dropdown is a discoverability aid for the first
+  week and can be hidden via a setting.
+
+## Review feedback applied
+
+> "The Sara persona is good but you don't actually solve her problem
+> anywhere — section 1 still mentions install snippets." — @ana
+
+✅ Added a "Sara path" sub-section below.
+
+> "The flowchart in section 2 is hard to read because the failure
+> branches dead-end. Loop them back to the picker." — @lucas
+
+✅ Updated the mermaid in section 2 with `RepoErr --> Repo` and
+`G --> Repo` loops.
+
+### Sara path (no terminal)
+
+When the tool check detects no `gh`, **and** the OS is macOS or
+Windows, we offer a one-click "Install via desktop GitHub app" that
+deep-links into the GitHub Desktop installer. Sara never sees a
+terminal command.
+
+```mermaid
+flowchart LR
+    A[Tool check fails] --> B{OS supported by GitHub Desktop?}
+    B -- yes --> C[Show 'one-click install' card]
+    B -- no --> D[Show terminal snippet, with 'I'll ask my engineer' CTA]
+    C --> E[GitHub Desktop installs gh as a side effect]
+    E --> F[Re-run tool check]
+```

@@ -1,8 +1,9 @@
 # RFC 0001 — Comment Anchoring
 
-- **Status:** Draft
+- **Status:** Accepted (after review on 2026-04-22)
 - **Author:** @jaovito
-- **Created:** 2026-04-12
+- **Reviewers:** @ana, @lucas, @diego
+- **Created:** 2026-04-12 · **Last updated:** 2026-04-24
 - **Target milestone:** Phase 3 — Local Comments
 
 ## Summary
@@ -101,11 +102,30 @@ pub fn fingerprint(node: &mdast::Node) -> String {
 
 ## Open questions
 
-- [ ] Should trigram fallback be opt-in per repo? Discussed with @ana on
-      [issue #62](https://github.com/jaovito/markdown-reviewer/issues/62).
-- [ ] How do we display the "moved" badge in the comment gutter?
+- [x] ~~Should trigram fallback be opt-in per repo?~~ **Resolved
+      2026-04-22:** always on; cost is negligible after the worker
+      move (see [rendering guide](../guides/markdown-rendering.md#performance)).
+- [x] ~~How do we display the "moved" badge?~~ **Resolved:** dashed
+      amber border on the gutter strip, plus tooltip on hover.
 - [ ] What's the cost of recomputing fingerprints on every keystroke during
       draft authoring? We need a benchmark.
+- [ ] (new, raised by @diego) Do we re-anchor on every PR refresh, or
+      only when `head_sha` advances? Leaning toward the latter to avoid
+      flicker. Decision needed before Phase 3 freeze.
+
+## Performance budget
+
+After @ana flagged that recomputation could lag on large docs, we
+agreed the following numbers as a hard ceiling:
+
+| Doc size | Fingerprint pass | Trigram index |
+|---|---|---|
+| ≤ 50 KB | ≤ 8 ms | ≤ 5 ms |
+| ≤ 200 KB | ≤ 35 ms | ≤ 20 ms |
+| > 200 KB | warn + run in worker | run in worker |
+
+These numbers are enforced by the bench in
+`crates/anchoring/benches/fingerprint.rs`.
 
 ## Demo
 

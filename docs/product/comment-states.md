@@ -105,5 +105,17 @@ export function canTransition(from: CommentState, to: CommentState): boolean {
    (post-MVP)?  → tracked in
    [issue #91](https://github.com/jaovito/markdown-reviewer/issues/91).
 2. Do we want a 6th `pending-submit` state for the moment between
-   "submit clicked" and "GitHub acknowledges"? Currently we keep it as
-   `draft` with an in-flight spinner. _Decision needed by 2026-05-02._
+   "submit clicked" and "GitHub acknowledges"?
+   **Decision (2026-04-24):** no separate state. We keep it as
+   `draft` with an `in_flight: bool` flag in the DB. Reasoning: a
+   sixth state forces every UI consumer to learn about it; a flag is
+   private to the submit pipeline.
+
+## Changelog
+
+| Date | Change | By |
+|---|---|---|
+| 2026-04-12 | Initial spec | @jaovito |
+| 2026-04-19 | Added `deleted` tombstone behaviour | @jaovito |
+| 2026-04-22 | Clarified `hidden` does not affect remote visibility | @ana |
+| 2026-04-24 | Pinned `pending-submit` decision; added changelog | @jaovito |

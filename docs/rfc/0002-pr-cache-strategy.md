@@ -1,8 +1,9 @@
 # RFC 0002 — PR Cache & Refresh Strategy
 
-- **Status:** Draft
+- **Status:** In review (round 2)
 - **Author:** @jaovito
-- **Created:** 2026-04-15
+- **Reviewers:** @ana, @diego
+- **Created:** 2026-04-15 · **Last updated:** 2026-04-24
 - **Target milestone:** Phase 4 — GitHub Sync
 
 ## Context
@@ -47,8 +48,14 @@ CREATE TABLE pr_files (
 | `head_sha` changed since last fetch (detected via `gh pr view`) | Re-fetch |
 | User switches repo | Keep cache, just stop showing it |
 | User submits a review | Re-fetch only the comments slice |
-| Cache row older than **24 h** | Show ⚠️ "stale" badge, no auto-refresh |
+| Cache row older than **6 h** | Show ⚠️ "stale" badge, no auto-refresh |
 | App launch | Use cache as-is, never network |
+| User comes back online after offline edit | Show banner, **manual** refresh CTA |
+
+> **Change in round 2:** the staleness window dropped from 24 h to 6 h
+> after @ana pointed out that an overnight gap is plenty for a PR to
+> have moved. The badge is intentionally non-blocking — we still
+> respect the no-auto-refresh principle.
 
 ## Sequence
 
@@ -103,9 +110,38 @@ pub async fn load_pull_request(
 > to see latest"` whenever a foreground action returns a `head_sha` we
 > haven't seen.
 
+## Storage budget
+
+@diego asked how big the cache can grow. Worst-case math:
+
+```
+1000 cached PRs × 1 MB max payload = 1 GB
+```
+
+That's too much for a desktop app. We add an LRU eviction:
+
+- Soft cap: **200 MB**.
+- Eviction: drop oldest `pr_cache` rows until under cap.
+- Surface the cap in `Settings → Storage` with a "clear cache" button.
+
+```sql
+-- Eviction query, run on app launch
+DELETE FROM pr_cache
+WHERE rowid IN (
+  SELECT rowid FROM pr_cache
+  ORDER BY fetched_at ASC
+  LIMIT (
+    SELECT MAX(0, COUNT(*) - 200)
+    FROM pr_cache
+  )
+);
+```
+
 ## Out of scope
 
 - Background sync (explicitly forbidden by product principles).
 - Cross-device cache (each install is independent).
 - Caching binary attachments (images, PDFs) — those stream from GitHub on
   demand.
+- Encryption at rest (the OS keychain handles auth; cache contents are
+  public PR data).

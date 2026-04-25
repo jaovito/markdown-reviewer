@@ -151,5 +151,28 @@ We benchmark against three reference docs:
   Workaround tracked in [issue #103](https://github.com/jaovito/markdown-reviewer/issues/103).
 - Shiki cold-load adds ~120 ms on first render. We pre-warm in the
   splash screen.
+- ~~Tables wider than the viewport overflow horizontally~~ — fixed in
+  [#118](https://github.com/jaovito/markdown-reviewer/pull/118): they
+  now scroll inside their own container.
 
 ![pipeline trace](../assets/pipeline-trace.png)
+
+## FAQ
+
+### Why not `marked` or `markdown-it`?
+
+We need access to the AST after parsing (for `data-anchor`) and after
+HTML conversion (for sanitize). `unified` is the only widely-used JS
+toolchain that exposes both as plugin layers.
+
+### Can I add a remark plugin without updating tests?
+
+No. Every plugin in the chain is covered by a snapshot test in
+`crates/markdown-pipeline/tests/snapshots/`. CI fails if you add a
+plugin without a corresponding snapshot.
+
+### Why is sanitize on the main thread?
+
+So we can hand React real DOM nodes via `dangerouslySetInnerHTML`
+without re-parsing the HTML string. Moving sanitize to a worker would
+force a string round-trip and double our render cost.

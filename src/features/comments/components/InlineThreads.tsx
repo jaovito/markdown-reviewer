@@ -88,18 +88,12 @@ export function InlineThreads({
     },
   });
 
-  // Memoize groups so identity is stable across renders unless comments
-  // actually change. We compute a fingerprint and use that to gate the memo.
-  const groupsKey = useMemo(
-    () =>
-      comments
-        .map((c) => `${c.id}:${c.state}:${anchorStart(c)}`)
-        .sort()
-        .join("|"),
-    [comments],
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: groupsKey is the stable fingerprint.
-  const groups = useMemo(() => groupCommentsByStartLine(comments), [groupsKey]);
+  // Memoize groups directly from `comments` — the previous fingerprint missed
+  // anchor end-line / kind changes, which left portals pointing at stale
+  // slots when an anchor moved. React Query already returns a stable array
+  // identity until the underlying data changes, so this re-runs precisely
+  // when needed.
+  const groups = useMemo(() => groupCommentsByStartLine(comments), [comments]);
 
   const composerStart = composerAnchor ? anchorStartLine(composerAnchor) : null;
   const composerEnd = composerAnchor
@@ -231,10 +225,6 @@ export function InlineThreads({
         : null}
     </>
   );
-}
-
-function anchorStart(c: ReviewComment): number {
-  return c.anchor.kind === "singleLine" ? c.anchor.line : c.anchor.startLine;
 }
 
 function mutationIsSignificant(record: MutationRecord): boolean {

@@ -42,7 +42,8 @@ impl CommentState {
 
     /// Returns whether `next` is reachable from `self`. Used to guard updates
     /// in `application::comments::update`. `Deleted` is terminal — every
-    /// other transition is enumerated here.
+    /// other transition is enumerated here. Drafts can be discarded as
+    /// resolved before they're ever submitted.
     pub fn can_transition_to(self, next: Self) -> bool {
         use CommentState::{Deleted, Draft, Hidden, Resolved, Submitted};
         if self == next {
@@ -50,9 +51,10 @@ impl CommentState {
         }
         matches!(
             (self, next),
-            (Draft | Resolved, Submitted | Hidden | Deleted)
+            (Draft, Submitted | Hidden | Resolved | Deleted)
                 | (Submitted, Resolved | Hidden | Deleted)
                 | (Hidden, Draft | Submitted | Resolved | Deleted)
+                | (Resolved, Submitted | Hidden | Deleted)
         )
     }
 }
@@ -171,10 +173,11 @@ mod tests {
     }
 
     #[test]
-    fn draft_can_become_submitted() {
+    fn draft_can_become_submitted_or_resolved() {
         assert!(CommentState::Draft.can_transition_to(CommentState::Submitted));
         assert!(CommentState::Draft.can_transition_to(CommentState::Hidden));
-        assert!(!CommentState::Draft.can_transition_to(CommentState::Resolved));
+        // Drafts can be discarded as resolved before they're ever submitted.
+        assert!(CommentState::Draft.can_transition_to(CommentState::Resolved));
     }
 
     #[test]

@@ -135,12 +135,7 @@ pub async fn run(
                 // enum would couple unrelated branches.
                 match svc.store.get(id).await? {
                     Some(comment) => {
-                        let input = ReviewCommentInput {
-                            local_id: id,
-                            path: comment.file_path.clone(),
-                            line: comment.anchor.end_line(),
-                            body: comment.body.clone(),
-                        };
+                        let input = build_input(id, &comment);
                         submit_single(
                             svc,
                             repo_path,
@@ -177,22 +172,35 @@ fn classify(id: i64, fetched: Option<ReviewComment>, head_shas: &mut Vec<String>
             reason: format!("local comment {id} not found"),
         };
     };
-    if matches!(comment.state, CommentState::Deleted) {
-        return Slot::Skipped {
-            reason: format!("local comment {id} is deleted"),
-        };
-    }
+    // Already-published comments are reported as success (idempotent retry).
     if let Some(github_id) = comment.github_id {
         return Slot::AlreadySubmitted { github_id };
     }
+    // Only drafts are submitted. Anything else is reported back so the UI
+    // doesn't silently turn `hidden`/`resolved` rows into remote comments.
+    if !matches!(comment.state, CommentState::Draft) {
+        return Slot::Skipped {
+            reason: format!(
+                "local comment {id} is {} (only drafts are submitted)",
+                comment.state.as_str()
+            ),
+        };
+    }
     head_shas.push(comment.head_sha.clone());
     Slot::Pending {
-        input: ReviewCommentInput {
-            local_id: id,
-            path: comment.file_path,
-            line: comment.anchor.end_line(),
-            body: comment.body,
-        },
+        input: build_input(id, &comment),
+    }
+}
+
+fn build_input(id: i64, comment: &ReviewComment) -> ReviewCommentInput {
+    let start = comment.anchor.start_line();
+    let end = comment.anchor.end_line();
+    ReviewCommentInput {
+        local_id: id,
+        path: comment.file_path.clone(),
+        line: end,
+        start_line: if start < end { Some(start) } else { None },
+        body: comment.body.clone(),
     }
 }
 

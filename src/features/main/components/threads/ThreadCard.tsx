@@ -50,7 +50,7 @@ export function ThreadCard({ group, selected, hideFilePath, onSelect }: ThreadCa
         {truncateBody(head.body)}
       </p>
       <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-        <span className="truncate">{head.author ?? ""}</span>
+        <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
         <span className="flex items-center gap-2">
           {replyCount > 0 ? (
             <span>

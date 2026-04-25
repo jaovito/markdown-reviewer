@@ -26,11 +26,19 @@ interface InlineThreadsProps {
   onComposerClose: () => void;
 }
 
+/** Composite key `${startLine}:${endLine}` so two threads sharing a startLine
+ *  but with different end lines render in distinct slots. */
+type SlotKey = string;
+
+function slotKeyFor(startLine: number, endLine: number): SlotKey {
+  return `${startLine}:${endLine}`;
+}
+
 interface SlotMap {
-  /** sourceLine → portal target div for the expanded card */
-  threads: Map<number, HTMLDivElement>;
-  /** sourceLine → portal target span for the minimized "open" badge */
-  badges: Map<number, HTMLSpanElement>;
+  /** key → portal target div for the expanded card */
+  threads: Map<SlotKey, HTMLDivElement>;
+  /** key → portal target span for the minimized "open" badge */
+  badges: Map<SlotKey, HTMLSpanElement>;
   composerSlot: HTMLDivElement | null;
 }
 
@@ -167,13 +175,14 @@ export function InlineThreads({
   return (
     <>
       {groups.map((group) => {
+        const key = slotKeyFor(group.startLine, group.endLine);
         const minimized = minimizedSet.has(group.line);
         if (minimized) {
-          const badgeSlot = slots.badges.get(group.line);
+          const badgeSlot = slots.badges.get(key);
           if (!badgeSlot) return null;
           return createPortal(
             <MinimizedThreadBadge
-              key={group.line}
+              key={key}
               count={group.comments.length}
               onExpand={() => {
                 expand(group.line);
@@ -182,15 +191,15 @@ export function InlineThreads({
               }}
             />,
             badgeSlot,
-            `thread-badge-${group.line}`,
+            `thread-badge-${key}`,
           );
         }
-        const slot = slots.threads.get(group.line);
+        const slot = slots.threads.get(key);
         if (!slot) return null;
         const isSelected = group.comments.some((c) => c.id === selectedId);
         return createPortal(
           <InlineThreadCard
-            key={group.line}
+            key={key}
             comments={group.comments}
             selected={isSelected}
             onResolve={(c) => {
@@ -202,7 +211,7 @@ export function InlineThreads({
             onDelete={(c) => remove.mutate(c.id)}
           />,
           slot,
-          `thread-${group.line}`,
+          `thread-${key}`,
         );
       })}
       {composerAnchor && slots.composerSlot
@@ -266,38 +275,48 @@ function syncSlots(
   try {
     let changed = false;
 
-    // Per-line splitting for code blocks must happen before we look up
-    // anchors so each commented line has its own DOM element (and the
-    // `[data-has-comment]` highlight CSS targets just that line).
-    splitCodeBlocks(container);
+    // Collect every source line we may need to attach against. Lazy code-block
+    // splitting only touches `<pre>` blocks that actually intersect at least
+    // one commented or composer-pending line — keeps the DOM small for
+    // documents with lots of unrelated code blocks.
+    const wantedLines = new Set<number>();
+    for (const g of groups) {
+      for (let l = g.startLine; l <= g.endLine; l++) wantedLines.add(l);
+      wantedLines.add(g.attachLine);
+    }
+    if (composerStart !== null && composerEnd !== null) {
+      for (let l = composerStart; l <= composerEnd; l++) wantedLines.add(l);
+    }
+    splitCodeBlocks(container, wantedLines);
 
     // A group needs a card slot ONLY when it isn't minimized; otherwise it
     // needs a badge slot inside the line element.
-    const wantsCard = new Set<number>();
-    const wantsBadge = new Set<number>();
+    const wantsCard = new Set<SlotKey>();
+    const wantsBadge = new Set<SlotKey>();
     for (const g of groups) {
-      if (minimized.has(g.line)) wantsBadge.add(g.line);
-      else wantsCard.add(g.line);
+      const key = slotKeyFor(g.startLine, g.endLine);
+      if (minimized.has(g.line)) wantsBadge.add(key);
+      else wantsCard.add(key);
     }
 
     const lineNodes = nearestLineNodes(container);
 
     // 1a. Remove obsolete card slots (lines no longer commented or now
     //     minimized).
-    for (const [line, node] of current.threads) {
-      if (!wantsCard.has(line) || !node.isConnected) {
+    for (const [key, node] of current.threads) {
+      if (!wantsCard.has(key) || !node.isConnected) {
         node.remove();
-        current.threads.delete(line);
+        current.threads.delete(key);
         changed = true;
       }
     }
 
     // 1b. Remove obsolete badge slots (lines no longer commented or now
     //     expanded).
-    for (const [line, node] of current.badges) {
-      if (!wantsBadge.has(line) || !node.isConnected) {
+    for (const [key, node] of current.badges) {
+      if (!wantsBadge.has(key) || !node.isConnected) {
         node.remove();
-        current.badges.delete(line);
+        current.badges.delete(key);
         changed = true;
       }
     }
@@ -327,26 +346,27 @@ function syncSlots(
     //    card sits below the last highlighted row. Badge slot mounts INSIDE
     //    `attachLine` as a trailing inline element on that line.
     for (const group of groups) {
+      const key = slotKeyFor(group.startLine, group.endLine);
       const isMinimized = minimized.has(group.line);
       markRange(lineNodes, group.startLine, group.endLine, isMinimized);
       const anchor = lineNodes.get(group.attachLine);
       if (!anchor) continue;
       if (isMinimized) {
-        if (current.badges.has(group.line)) continue;
+        if (current.badges.has(key)) continue;
         const badge = document.createElement("span");
         badge.dataset.threadBadge = "true";
         badge.dataset.sourceLine = String(group.line);
         anchor.appendChild(badge);
-        current.badges.set(group.line, badge);
+        current.badges.set(key, badge);
         changed = true;
       } else {
-        if (current.threads.has(group.line)) continue;
+        if (current.threads.has(key)) continue;
         if (!anchor.parentNode) continue;
         const slot = document.createElement("div");
         slot.dataset.threadSlot = "thread";
         slot.dataset.sourceLine = String(group.line);
         anchor.parentNode.insertBefore(slot, anchor.nextSibling);
-        current.threads.set(group.line, slot);
+        current.threads.set(key, slot);
         changed = true;
       }
     }
@@ -410,14 +430,16 @@ function removeAllSlots(container: HTMLElement) {
 }
 
 /**
- * Walks every code block and breaks its content into one
+ * Splits each code block whose lines intersect `wantedLines` into one
  * `<span data-code-line data-source-line=N>` per line so the highlight CSS
  * (and slot-injection logic) can target individual lines instead of the
  * whole block. Handles both shapes remark-rehype may produce — the
  * `data-source-line` attribute can sit on the `<pre>` OR on its inner
- * `<code>`. Idempotent.
+ * `<code>`. Idempotent. We skip code blocks the user hasn't commented on
+ * to avoid blowing up the DOM in code-heavy documents.
  */
-function splitCodeBlocks(container: HTMLElement) {
+function splitCodeBlocks(container: HTMLElement, wantedLines: Set<number>) {
+  if (wantedLines.size === 0) return;
   const seen = new WeakSet<HTMLElement>();
   const candidates = container.querySelectorAll<HTMLElement>(
     "pre[data-source-line], pre > code[data-source-line]",
@@ -437,6 +459,16 @@ function splitCodeBlocks(container: HTMLElement) {
     const host = code ?? pre;
     const text = host.textContent ?? "";
     if (text.length === 0) continue;
+    const lineCount = text.split("\n").length;
+    // Only split when at least one of this block's lines was requested.
+    let intersects = false;
+    for (let i = 0; i < lineCount; i++) {
+      if (wantedLines.has(fenceLine + 1 + i)) {
+        intersects = true;
+        break;
+      }
+    }
+    if (!intersects) continue;
 
     // Drop the trailing newline (markdown always emits one) so we don't add
     // an empty span the user can't visibly select.

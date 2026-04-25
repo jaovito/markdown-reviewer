@@ -341,38 +341,52 @@ impl GhClient for GhCli {
         let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews");
         let commit_arg = format!("commit_id={head_sha}");
 
-        // Pre-compute every -f / -F string with stable lifetimes so the &str
-        // slice we hand to `run` stays valid for the whole call.
-        let mut owned: Vec<String> = Vec::with_capacity(4 + comments.len() * 8);
-        for (idx, c) in comments.iter().enumerate() {
-            owned.push(format!("comments[{idx}][path]={}", c.path));
-            owned.push(format!("comments[{idx}][line]={}", c.line));
-            owned.push(format!("comments[{idx}][side]=RIGHT"));
-            owned.push(format!("comments[{idx}][body]={}", c.body));
-        }
+        // Pre-compute owned strings with stable lifetimes for the &str args
+        // we hand to `run`. We use `--raw-field` for user-provided string
+        // values (path/body/side) so a body starting with `@` (or otherwise
+        // matching gh's "@file" sigil) is sent literally instead of being
+        // interpreted as a file reference. Numeric line/start_line use `-F`
+        // so they land as JSON numbers.
+        let owned: Vec<BatchCommentSlot> = comments
+            .iter()
+            .enumerate()
+            .map(|(idx, c)| BatchCommentSlot {
+                path: format!("comments[{idx}][path]={}", c.path),
+                line: format!("comments[{idx}][line]={}", c.line),
+                side: format!("comments[{idx}][side]=RIGHT"),
+                body: format!("comments[{idx}][body]={}", c.body),
+                start_line: c
+                    .start_line
+                    .map(|s| format!("comments[{idx}][start_line]={s}")),
+                start_side: c
+                    .start_line
+                    .map(|_| format!("comments[{idx}][start_side]=RIGHT")),
+            })
+            .collect();
 
         let mut args: Vec<&str> = vec!["api", "-X", "POST", &endpoint];
-        args.push("-f");
+        args.push("--raw-field");
         args.push(&commit_arg);
-        args.push("-f");
+        args.push("--raw-field");
         args.push("event=COMMENT");
 
-        // Alternate flags: -f (string) for path/side/body, -F (typed) for
-        // line so it lands as a JSON number.
-        for (idx, c) in comments.iter().enumerate() {
-            let path_idx = idx * 4;
-            let line_idx = path_idx + 1;
-            let side_idx = path_idx + 2;
-            let body_idx = path_idx + 3;
-            args.push("-f");
-            args.push(&owned[path_idx]);
+        for slot in &owned {
+            args.push("--raw-field");
+            args.push(&slot.path);
             args.push("-F");
-            args.push(&owned[line_idx]);
-            args.push("-f");
-            args.push(&owned[side_idx]);
-            args.push("-f");
-            args.push(&owned[body_idx]);
-            let _ = c; // silence unused warning if any
+            args.push(&slot.line);
+            args.push("--raw-field");
+            args.push(&slot.side);
+            args.push("--raw-field");
+            args.push(&slot.body);
+            if let Some(start) = &slot.start_line {
+                args.push("-F");
+                args.push(start);
+            }
+            if let Some(start_side) = &slot.start_side {
+                args.push("--raw-field");
+                args.push(start_side);
+            }
         }
 
         // `--jq '.comments | map(.id)'` extracts the ids in submission order.
@@ -411,25 +425,35 @@ impl GhClient for GhCli {
         let path_arg = format!("path={}", comment.path);
         let line_arg = format!("line={}", comment.line);
         let body_arg = format!("body={}", comment.body);
+        let start_line_arg = comment.start_line.map(|s| format!("start_line={s}"));
 
-        let args: Vec<&str> = vec![
+        // `--raw-field` for user-provided strings (commit/path/body/side) so
+        // bodies starting with `@` are sent literally instead of being treated
+        // as file inputs by gh. `-F` keeps numeric `line`/`start_line` typed.
+        let mut args: Vec<&str> = vec![
             "api",
             "-X",
             "POST",
             &endpoint,
-            "-f",
+            "--raw-field",
             &commit_arg,
-            "-f",
+            "--raw-field",
             &path_arg,
             "-F",
             &line_arg,
-            "-f",
+            "--raw-field",
             "side=RIGHT",
-            "-f",
+            "--raw-field",
             &body_arg,
-            "--jq",
-            ".id",
         ];
+        if let Some(arg) = start_line_arg.as_deref() {
+            args.push("-F");
+            args.push(arg);
+            args.push("--raw-field");
+            args.push("start_side=RIGHT");
+        }
+        args.push("--jq");
+        args.push(".id");
 
         let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
         if !out.ok() {
@@ -443,6 +467,17 @@ impl GhClient for GhCli {
         })?;
         Ok(id)
     }
+}
+
+/// Stable-lifetime owned strings used to assemble each batch-comment entry's
+/// `--raw-field` / `-F` argv pair.
+struct BatchCommentSlot {
+    path: String,
+    line: String,
+    side: String,
+    body: String,
+    start_line: Option<String>,
+    start_side: Option<String>,
 }
 
 /// Minimal base64 decoder for the standard alphabet. Avoids pulling in a new

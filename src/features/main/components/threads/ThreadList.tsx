@@ -11,9 +11,17 @@ interface ThreadListProps {
   isLoading: boolean;
   hideFilePath: boolean;
   hiddenCount: number;
+  /** File path of the currently open preview, when one is selected. */
+  currentFilePath?: string;
 }
 
-export function ThreadList({ comments, isLoading, hideFilePath, hiddenCount }: ThreadListProps) {
+export function ThreadList({
+  comments,
+  isLoading,
+  hideFilePath,
+  hiddenCount,
+  currentFilePath,
+}: ThreadListProps) {
   const { t } = useTranslation();
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   const select = useSelectedThread((s) => s.select);
@@ -49,7 +57,12 @@ export function ThreadList({ comments, isLoading, hideFilePath, hiddenCount }: T
             hideFilePath={hideFilePath}
             onSelect={(comment) => {
               select(comment.id);
-              scrollToAnchorLine(getAnchorScrollLine(comment));
+              // Scrolling targets the *currently open* preview's article;
+              // for cross-file threads we'd land on an unrelated same-numbered
+              // line. Skip until file navigation is wired.
+              if (comment.filePath === currentFilePath) {
+                scrollToAnchorLine(getAnchorScrollLine(comment));
+              }
             }}
           />
         );

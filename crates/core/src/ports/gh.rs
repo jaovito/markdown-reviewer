@@ -13,15 +13,20 @@ pub struct GhAuthReport {
 }
 
 /// One inline review comment to submit. Lines refer to positions in the file
-/// at `head_sha`; we always anchor to a single line on the RIGHT side because
-/// GitHub's per-comment endpoint requires it (range comments live on the
-/// review-batch endpoint via `start_line`).
+/// at `head_sha`. `line` is the final line of the anchor (single-line or end
+/// of a range); when `start_line` is present the comment becomes multi-line
+/// on the GitHub side (`POST /pulls/{n}/comments` and the review-batch
+/// `comments[i][start_line]` payload both honor it).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewCommentInput {
     pub local_id: i64,
     pub path: String,
     pub line: u32,
+    /// Set to `Some(start)` when the original anchor spans multiple lines.
+    /// Unused for single-line anchors.
+    #[serde(default)]
+    pub start_line: Option<u32>,
     pub body: String,
 }
 

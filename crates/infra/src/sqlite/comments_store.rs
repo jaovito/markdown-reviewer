@@ -44,12 +44,15 @@ fn row_to_comment(row: &Row<'_>) -> rusqlite::Result<ReviewComment> {
         )
     })?;
 
-    let pr_number: i64 = row.get(1)?;
+    let pr_number_signed: i64 = row.get(1)?;
+    let pr_number = u64::try_from(pr_number_signed).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(1, rusqlite::types::Type::Integer, Box::new(e))
+    })?;
     let github_id: Option<i64> = row.get(13)?;
 
     Ok(ReviewComment {
         id: row.get(0)?,
-        pr_number: u64::try_from(pr_number).unwrap_or_default(),
+        pr_number,
         file_path: row.get(2)?,
         head_sha: row.get(3)?,
         body: row.get(4)?,
@@ -147,12 +150,9 @@ fn decode_anchor(
     start_line: i64,
     end_line: i64,
 ) -> Result<CommentAnchor, BadEnum> {
-    let payload: AnchorPayload = serde_json::from_str(data).unwrap_or(AnchorPayload {
-        line: None,
-        start_line: None,
-        end_line: None,
-        code_start_line: None,
-    });
+    // Surface JSON corruption rather than silently inventing a line number.
+    let payload: AnchorPayload = serde_json::from_str(data)
+        .map_err(|e| BadEnum(format!("anchor_data: invalid JSON: {e}")))?;
     let start = payload
         .start_line
         .or(payload.line)

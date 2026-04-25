@@ -39,14 +39,14 @@ function FolderRow({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-xs",
+          "flex w-full items-center gap-1 whitespace-nowrap rounded px-1.5 py-1 text-left text-xs",
           "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]",
         )}
         style={{ paddingLeft: `${depth * 12 + 6}px` }}
       >
         <Chevron className="size-3 shrink-0" />
         <FolderIcon className="size-3.5 shrink-0" />
-        <span className="truncate font-medium text-[hsl(var(--foreground))]">{node.name}</span>
+        <span className="font-medium text-[hsl(var(--foreground))]">{node.name}</span>
       </button>
       {open ? (
         <ul>
@@ -79,7 +79,7 @@ function FileRow({
       <Link
         to={`${basePath}/files/${encodePath(node.path)}`}
         className={cn(
-          "flex items-center gap-1.5 rounded px-1.5 py-1 text-xs transition-colors",
+          "flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 pr-3 text-xs transition-colors",
           isSupported
             ? "text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))]"
             : "cursor-not-allowed text-[hsl(var(--muted-foreground))] opacity-70",
@@ -92,9 +92,9 @@ function FileRow({
         }}
       >
         <Icon className="size-3.5 shrink-0" />
-        <span className="flex-1 truncate">{node.name}</span>
+        <span>{node.name}</span>
         <ChangeStatusDot status={node.file.status} />
-        <span className="ml-1 hidden shrink-0 gap-1 font-mono text-[10px] tabular-nums text-[hsl(var(--muted-foreground))] sm:flex">
+        <span className="ml-1 flex shrink-0 gap-1 font-mono text-[10px] tabular-nums text-[hsl(var(--muted-foreground))]">
           {node.file.additions > 0 ? (
             <span className="text-emerald-600 dark:text-emerald-400">+{node.file.additions}</span>
           ) : null}

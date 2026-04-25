@@ -85,7 +85,13 @@
     "threads": {
       "title": "Review threads",
       "subtitle": "Comments attached to rendered Markdown ranges.",
-      "phase3Hint": "Comments will land here in Phase 3."
+      "currentFile": "Current file",
+      "allFiles": "All files in PR",
+      "loading": "Loading comments…",
+      "empty": "No threads yet — select text in the preview to start one.",
+      "errorTitle": "Couldn't load comments",
+      "hiddenCount_one": "+ {{count}} hidden thread",
+      "hiddenCount_other": "+ {{count}} hidden threads"
     },
     "toolbar": {
       "backToRepositoriesAria": "Back to repositories"
@@ -93,6 +99,65 @@
     "sidebar": {
       "fallbackEmpty": "Nothing to show yet.",
       "resizeAria": "Resize sidebar"
+    }
+  },
+  "threads": {
+    "row": {
+      "anchorLine": "L{{line}}",
+      "anchorRange": "L{{start}}–L{{end}}",
+      "minutesAgo": "{{n}}m ago",
+      "hoursAgo": "{{n}}h ago",
+      "daysAgo": "{{n}}d ago",
+      "justNow": "just now",
+      "replyCount_one": "{{count}} reply",
+      "replyCount_other": "{{count}} replies"
+    },
+    "filter": {
+      "label": "Show",
+      "draft": "Drafts",
+      "submitted": "Submitted",
+      "resolved": "Resolved",
+      "hidden": "Hidden"
+    },
+    "state": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "hidden": "Hidden",
+      "resolved": "Resolved",
+      "deleted": "Deleted"
+    }
+  },
+  "comments": {
+    "composer": {
+      "placeholder": "Add a comment…",
+      "save": "Save",
+      "cancel": "Cancel",
+      "commentAction": "Comment",
+      "submitShortcut": "{{shortcut}} to save",
+      "metaSingle": "Comment on line {{line}}",
+      "metaRange": "Comment on lines {{start}}–{{end}}",
+      "errorTitle": "Couldn't save comment"
+    },
+    "markers": {
+      "tooltipMore_one": "{{count}} comment",
+      "tooltipMore_other": "{{count}} comments",
+      "selectionAria": "Add comment for selected lines",
+      "expandAria": "Expand thread"
+    },
+    "thread": {
+      "anonAuthor": "Someone",
+      "metaSingle": "{{author}} on line {{line}}",
+      "metaRange": "{{author}} on lines {{start}}–{{end}}",
+      "reply": "Reply",
+      "hide": "Hide",
+      "resolve": "Resolve",
+      "delete": "Delete",
+      "deleteAria": "Delete this comment",
+      "badgeOpen": "Open",
+      "badgeDraft": "Draft",
+      "badgeResolved": "Resolved",
+      "badgeHidden": "Hidden",
+      "badgeDeleted": "Deleted"
     }
   },
   "errors": {

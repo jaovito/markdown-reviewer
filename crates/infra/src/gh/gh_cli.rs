@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use markdown_reviewer_core::domain::{
     ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
 };
-use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
+use markdown_reviewer_core::ports::{GhAuthReport, GhClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;
 
@@ -11,6 +11,8 @@ use crate::process::{redact, run, run_ok};
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
 const PR_FILES_TIMEOUT_MS: u64 = 30_000;
+const REVIEW_SUBMIT_TIMEOUT_MS: u64 = 30_000;
+const REVIEW_COMMENT_TIMEOUT_MS: u64 = 15_000;
 // `gh pr list` defaults to 30; bump to a value high enough to cover the
 // largest realistic open-PR backlog without paginating ourselves.
 const PR_LIST_LIMIT: &str = "200";
@@ -321,6 +323,161 @@ impl GhClient for GhCli {
         String::from_utf8(bytes)
             .map_err(|e| AppError::process(format!("gh api contents: invalid UTF-8: {e}")))
     }
+
+    async fn submit_review_batch(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comments: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        if comments.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // We assemble the call as `gh api -X POST <endpoint> -f field=value`
+        // (string) and `-F field=value` (raw / numeric). gh CLI translates
+        // bracketed names like `comments[0][path]` into a nested JSON body.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews");
+        let commit_arg = format!("commit_id={head_sha}");
+
+        // Pre-compute owned strings with stable lifetimes for the &str args
+        // we hand to `run`. We use `--raw-field` for user-provided string
+        // values (path/body/side) so a body starting with `@` (or otherwise
+        // matching gh's "@file" sigil) is sent literally instead of being
+        // interpreted as a file reference. Numeric line/start_line use `-F`
+        // so they land as JSON numbers.
+        let owned: Vec<BatchCommentSlot> = comments
+            .iter()
+            .enumerate()
+            .map(|(idx, c)| BatchCommentSlot {
+                path: format!("comments[{idx}][path]={}", c.path),
+                line: format!("comments[{idx}][line]={}", c.line),
+                side: format!("comments[{idx}][side]=RIGHT"),
+                body: format!("comments[{idx}][body]={}", c.body),
+                start_line: c
+                    .start_line
+                    .map(|s| format!("comments[{idx}][start_line]={s}")),
+                start_side: c
+                    .start_line
+                    .map(|_| format!("comments[{idx}][start_side]=RIGHT")),
+            })
+            .collect();
+
+        let mut args: Vec<&str> = vec!["api", "-X", "POST", &endpoint];
+        args.push("--raw-field");
+        args.push(&commit_arg);
+        args.push("--raw-field");
+        args.push("event=COMMENT");
+
+        for slot in &owned {
+            args.push("--raw-field");
+            args.push(&slot.path);
+            args.push("-F");
+            args.push(&slot.line);
+            args.push("--raw-field");
+            args.push(&slot.side);
+            args.push("--raw-field");
+            args.push(&slot.body);
+            if let Some(start) = &slot.start_line {
+                args.push("-F");
+                args.push(start);
+            }
+            if let Some(start_side) = &slot.start_side {
+                args.push("--raw-field");
+                args.push(start_side);
+            }
+        }
+
+        // `--jq '.comments | map(.id)'` extracts the ids in submission order.
+        args.push("--jq");
+        args.push(".comments | map(.id)");
+
+        let out = run("gh", &args, Some(repo_path), REVIEW_SUBMIT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+
+        let ids: Vec<i64> = serde_json::from_str(out.stdout.trim()).map_err(|e| {
+            AppError::process(format!(
+                "gh api pulls/{pr_number}/reviews: invalid JSON: {e}"
+            ))
+        })?;
+        if ids.len() != comments.len() {
+            return Err(AppError::process(format!(
+                "gh api pulls/{pr_number}/reviews: expected {} comment ids, got {}",
+                comments.len(),
+                ids.len()
+            )));
+        }
+        Ok(ids)
+    }
+
+    async fn submit_review_comment(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comment: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments");
+        let commit_arg = format!("commit_id={head_sha}");
+        let path_arg = format!("path={}", comment.path);
+        let line_arg = format!("line={}", comment.line);
+        let body_arg = format!("body={}", comment.body);
+        let start_line_arg = comment.start_line.map(|s| format!("start_line={s}"));
+
+        // `--raw-field` for user-provided strings (commit/path/body/side) so
+        // bodies starting with `@` are sent literally instead of being treated
+        // as file inputs by gh. `-F` keeps numeric `line`/`start_line` typed.
+        let mut args: Vec<&str> = vec![
+            "api",
+            "-X",
+            "POST",
+            &endpoint,
+            "--raw-field",
+            &commit_arg,
+            "--raw-field",
+            &path_arg,
+            "-F",
+            &line_arg,
+            "--raw-field",
+            "side=RIGHT",
+            "--raw-field",
+            &body_arg,
+        ];
+        if let Some(arg) = start_line_arg.as_deref() {
+            args.push("-F");
+            args.push(arg);
+            args.push("--raw-field");
+            args.push("start_side=RIGHT");
+        }
+        args.push("--jq");
+        args.push(".id");
+
+        let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+
+        let id: i64 = out.stdout.trim().parse().map_err(|e| {
+            AppError::process(format!(
+                "gh api pulls/{pr_number}/comments: invalid id: {e}"
+            ))
+        })?;
+        Ok(id)
+    }
+}
+
+/// Stable-lifetime owned strings used to assemble each batch-comment entry's
+/// `--raw-field` / `-F` argv pair.
+struct BatchCommentSlot {
+    path: String,
+    line: String,
+    side: String,
+    body: String,
+    start_line: Option<String>,
+    start_side: Option<String>,
 }
 
 /// Minimal base64 decoder for the standard alphabet. Avoids pulling in a new

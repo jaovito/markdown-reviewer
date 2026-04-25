@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use markdown_reviewer_core::application::comments::Comments;
 use markdown_reviewer_core::application::files::Files;
 use markdown_reviewer_core::application::pull_requests::PullRequests;
 use markdown_reviewer_core::application::repo_selection::RepoSelection;
 use markdown_reviewer_infra::{
     logging,
-    sqlite::{open_and_migrate, SqliteRecentsStore},
+    sqlite::{open_and_migrate, SqliteCommentsStore, SqliteRecentsStore},
     GhCli, GitCli, Paths, SystemClock,
 };
 use markdown_reviewer_ipc::AppState;
@@ -31,12 +32,14 @@ pub(crate) fn run() {
 
             let git = Arc::new(GitCli);
             let gh = Arc::new(GhCli);
+            let clock = Arc::new(SystemClock);
+            let comments_store = Arc::new(SqliteCommentsStore::new(db.clone()));
             let state = AppState {
                 repo_selection: RepoSelection {
                     git: git.clone(),
                     gh: gh.clone(),
                     recents: Arc::new(SqliteRecentsStore::new(db)),
-                    clock: Arc::new(SystemClock),
+                    clock: clock.clone(),
                 },
                 pull_requests: PullRequests {
                     gh: gh.clone(),
@@ -44,6 +47,11 @@ pub(crate) fn run() {
                 },
                 files: Files {
                     git: git.clone(),
+                    gh: gh.clone(),
+                },
+                comments: Comments {
+                    store: comments_store,
+                    clock,
                     gh: gh.clone(),
                 },
             };

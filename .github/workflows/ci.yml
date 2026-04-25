@@ -29,7 +29,12 @@ jobs:
         run: bun run typecheck
 
       - name: Tests
-        run: bun test
+        run: |
+          if find src -type f \( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" \) | grep -q .; then
+            bun test
+          else
+            echo "No frontend tests found, skipping."
+          fi
 
   rust:
     name: Rust (fmt, clippy, test)

@@ -101,14 +101,9 @@ pub async fn load_pull_request(
 
 ## Risks
 
-> ⚠️ **Risk:** stale comments after a force-push. Because we cache by
-> `head_sha`, comments anchored to lines that no longer exist will fall
-> into the "stale" tray defined in [RFC 0001](./0001-comment-anchoring.md).
-> We must surface a clear banner when `head_sha` advances.
-
-> 💡 **Mitigation:** show a non-blocking toast `"Branch updated — refresh
-> to see latest"` whenever a foreground action returns a `head_sha` we
-> haven't seen.
+> ⚠️ **Risk:** stale comments after a force-push. We surface a clear
+> banner when `head_sha` advances; mitigation tracked in
+> [RFC 0001](./0001-comment-anchoring.md).
 
 ## Storage budget
 

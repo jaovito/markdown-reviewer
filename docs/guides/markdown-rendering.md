@@ -19,8 +19,7 @@ flowchart LR
     I --> J[(DOM)]
 ```
 
-Every step is a unified plugin. None of them run in a Web Worker yet —
-see the **Performance** section below for the plan.
+Every step is a unified plugin.
 
 ## Plugin order matters
 
@@ -129,21 +128,17 @@ function MermaidBlock({ code }: { code: string }) {
 
 ## Performance
 
-We benchmark against three reference docs:
+We benchmark against two reference docs:
 
 | Doc | Size | Target render | Current |
 |---|---|---|---|
 | `superset/docs/intro.md` | 12 KB | < 50 ms | 38 ms ✅ |
 | `kubernetes/docs/concepts.md` | 84 KB | < 250 ms | 290 ms ⚠️ |
-| `synthetic/giant-table.md` | 220 KB | < 800 ms | 1.4 s ❌ |
 
 ### Plan
 
-1. Move steps 1–6 into a Web Worker. Sanitize stays on the main thread
-   so we can intern DOM nodes directly.
-2. Memoize per-block hast on `data-anchor` so re-renders only diff
-   touched blocks.
-3. Lazy-render code blocks below the fold.
+1. Move steps 1–6 into a Web Worker.
+2. Memoize per-block hast on `data-anchor`.
 
 ## Known issues
 

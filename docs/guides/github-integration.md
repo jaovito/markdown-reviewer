@@ -20,12 +20,8 @@ flowchart TD
 
 ## Why `gh` first?
 
-1. **Auth is solved.** `gh` already manages tokens, refresh, SSO.
-   We never see the token, never store it, never log it.
-2. **Rate limits are managed for us.** `gh` respects the rate-limit
-   headers and gives us back structured errors when throttled.
-3. **One install for users.** Asking someone to also create a personal
-   access token for a desktop app is a bad first impression.
+1. **Auth is solved.** `gh` manages tokens, refresh, SSO.
+2. **One install for users.** No PAT setup required.
 
 ## Command catalog
 

@@ -52,8 +52,6 @@ stateDiagram-v2
 ### `hidden`
 
 - Local-only flag. **Does not** affect remote visibility.
-- Shows a small `👁️‍🗨️` marker so the user can find them again. Per the
-  product principle, hidden comments must remain traceable.
 
 ### `resolved`
 
@@ -101,15 +99,10 @@ export function canTransition(from: CommentState, to: CommentState): boolean {
 
 ## Open product questions
 
-1. Should `hidden` survive across devices once we add cross-device sync
-   (post-MVP)?  → tracked in
-   [issue #91](https://github.com/jaovito/markdown-reviewer/issues/91).
-2. Do we want a 6th `pending-submit` state for the moment between
+1. Do we want a 6th `pending-submit` state for the moment between
    "submit clicked" and "GitHub acknowledges"?
    **Decision (2026-04-24):** no separate state. We keep it as
-   `draft` with an `in_flight: bool` flag in the DB. Reasoning: a
-   sixth state forces every UI consumer to learn about it; a flag is
-   private to the submit pipeline.
+   `draft` with an `in_flight: bool` flag in the DB.
 
 ## Changelog
 

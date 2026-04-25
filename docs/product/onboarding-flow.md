@@ -11,13 +11,9 @@ ever opening a terminal.
 
 ## Personas served
 
-- **Maya, PM.** Has `gh` installed (engineer set it up) but has never
-  used it. Cares about commenting on the rendered preview, not the
-  diff.
-- **Diego, QA.** Comfortable with the terminal but wants the GUI for
-  rich review. Already authenticated with `gh auth login`.
-- **Sara, legal.** No terminal. We must not expose `gh auth login`
-  copy-paste; instead defer to the desktop GitHub app's auth.
+- **Maya, PM.** Has `gh` installed but never used it. Cares about the
+  rendered preview, not the diff.
+- **Sara, legal.** No terminal. We defer to GitHub Desktop's auth.
 
 ## Flow
 

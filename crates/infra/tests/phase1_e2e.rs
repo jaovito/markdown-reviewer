@@ -48,6 +48,13 @@ impl GhClient for StubGh {
     ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::PullRequestDetail> {
         Err(AppError::PrNotFound { number })
     }
+    async fn list_changed_files(
+        &self,
+        _repo_path: &str,
+        _number: u64,
+    ) -> markdown_reviewer_core::AppResult<Vec<markdown_reviewer_core::domain::ChangedFile>> {
+        Ok(Vec::new())
+    }
 }
 
 fn svc(db_dir: &std::path::Path, authed: bool) -> RepoSelection {

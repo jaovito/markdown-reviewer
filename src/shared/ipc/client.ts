@@ -39,5 +39,7 @@ export const ipc = {
   pullRequests: {
     list: (repoPath: string) => call("list_pull_requests", { repoPath }),
     load: (repoPath: string, prNumber: number) => call("load_pull_request", { repoPath, prNumber }),
+    changedFiles: (repoPath: string, prNumber: number) =>
+      call("list_changed_files", { repoPath, prNumber }),
   },
 };

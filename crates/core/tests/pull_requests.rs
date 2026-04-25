@@ -2,15 +2,19 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use markdown_reviewer_core::application::pull_requests::{
-    list::list_pull_requests, load::load_pull_request, PullRequests,
+    changed_files::list_changed_files, list::list_pull_requests, load::load_pull_request,
+    PullRequests,
 };
-use markdown_reviewer_core::domain::{PullRequestDetail, PullRequestState, PullRequestSummary};
+use markdown_reviewer_core::domain::{
+    ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
+};
 use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
 use markdown_reviewer_core::{AppError, AppResult};
 
 struct FakeGh {
     summaries: Vec<PullRequestSummary>,
     detail: Option<PullRequestDetail>,
+    files: Vec<ChangedFile>,
     auth_error: Option<AppError>,
 }
 
@@ -19,6 +23,7 @@ impl FakeGh {
         Self {
             summaries,
             detail,
+            files: Vec::new(),
             auth_error: None,
         }
     }
@@ -54,6 +59,16 @@ impl GhClient for FakeGh {
             Some(d) if d.summary.number == number => Ok(d.clone()),
             _ => Err(AppError::PrNotFound { number }),
         }
+    }
+    async fn list_changed_files(
+        &self,
+        _repo_path: &str,
+        _number: u64,
+    ) -> AppResult<Vec<ChangedFile>> {
+        if let Some(err) = &self.auth_error {
+            return Err(err.clone());
+        }
+        Ok(self.files.clone())
     }
 }
 
@@ -124,4 +139,45 @@ async fn load_missing_returns_pr_not_found() {
     let svc = svc_with(FakeGh::new(vec![], None));
     let err = load_pull_request(&svc, "/repo", 99).await.unwrap_err();
     assert!(matches!(err, AppError::PrNotFound { number: 99 }));
+}
+
+fn changed(path: &str, status: ChangeStatus, additions: u32, deletions: u32) -> ChangedFile {
+    ChangedFile {
+        path: path.into(),
+        previous_path: None,
+        status,
+        additions,
+        deletions,
+    }
+}
+
+#[tokio::test]
+async fn changed_files_empty_vec() {
+    let svc = svc_with(FakeGh::new(vec![], None));
+    let files = list_changed_files(&svc, "/repo", 1).await.unwrap();
+    assert!(files.is_empty());
+}
+
+#[tokio::test]
+async fn changed_files_preserves_order_and_payload() {
+    let mut gh = FakeGh::new(vec![], None);
+    gh.files = vec![
+        changed("README.md", ChangeStatus::Modified, 5, 2),
+        changed("src/lib.rs", ChangeStatus::Added, 12, 0),
+    ];
+    let svc = svc_with(gh);
+    let files = list_changed_files(&svc, "/repo", 1).await.unwrap();
+    assert_eq!(files.len(), 2);
+    assert_eq!(files[0].path, "README.md");
+    assert_eq!(files[0].additions, 5);
+    assert!(matches!(files[1].status, ChangeStatus::Added));
+}
+
+#[tokio::test]
+async fn changed_files_propagates_auth_error() {
+    let mut gh = FakeGh::new(vec![], None);
+    gh.auth_error = Some(AppError::GhNotAuthenticated);
+    let svc = svc_with(gh);
+    let err = list_changed_files(&svc, "/repo", 1).await.unwrap_err();
+    assert!(matches!(err, AppError::GhNotAuthenticated));
 }

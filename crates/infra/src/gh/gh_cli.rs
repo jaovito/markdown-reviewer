@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use markdown_reviewer_core::domain::{PullRequestDetail, PullRequestState, PullRequestSummary};
+use markdown_reviewer_core::domain::{
+    ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
+};
 use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;
@@ -8,6 +10,7 @@ use crate::process::{redact, run, run_ok};
 
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
+const PR_FILES_TIMEOUT_MS: u64 = 30_000;
 // `gh pr list` defaults to 30; bump to a value high enough to cover the
 // largest realistic open-PR backlog without paginating ourselves.
 const PR_LIST_LIMIT: &str = "200";
@@ -62,6 +65,38 @@ fn parse_state(raw: &str) -> PullRequestState {
         PullRequestState::Closed
     } else {
         PullRequestState::Open
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GhFile {
+    filename: String,
+    #[serde(default)]
+    previous_filename: Option<String>,
+    status: String,
+    additions: u32,
+    deletions: u32,
+}
+
+fn parse_change_status(raw: &str) -> ChangeStatus {
+    match raw {
+        s if s.eq_ignore_ascii_case("added") => ChangeStatus::Added,
+        s if s.eq_ignore_ascii_case("removed") => ChangeStatus::Deleted,
+        s if s.eq_ignore_ascii_case("renamed") => ChangeStatus::Renamed,
+        s if s.eq_ignore_ascii_case("copied") => ChangeStatus::Copied,
+        s if s.eq_ignore_ascii_case("changed") => ChangeStatus::Changed,
+        s if s.eq_ignore_ascii_case("unchanged") => ChangeStatus::Unchanged,
+        _ => ChangeStatus::Modified,
+    }
+}
+
+fn into_changed_file(g: GhFile) -> ChangedFile {
+    ChangedFile {
+        path: g.filename,
+        previous_path: g.previous_filename,
+        status: parse_change_status(&g.status),
+        additions: g.additions,
+        deletions: g.deletions,
     }
 }
 
@@ -205,4 +240,74 @@ impl GhClient for GhCli {
             summary: into_summary(summary),
         })
     }
+
+    async fn list_changed_files(
+        &self,
+        repo_path: &str,
+        number: u64,
+    ) -> AppResult<Vec<ChangedFile>> {
+        // `gh api` infers the repo from the cwd. `--paginate` concatenates pages
+        // into a single JSON stream; we parse each one and flatten.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{number}/files");
+        let out = run(
+            "gh",
+            &[
+                "api",
+                "-X",
+                "GET",
+                &endpoint,
+                "-F",
+                "per_page=100",
+                "--paginate",
+            ],
+            Some(repo_path),
+            PR_FILES_TIMEOUT_MS,
+        )
+        .await?;
+
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(number)));
+        }
+
+        let mut files = Vec::new();
+        for chunk in split_json_arrays(out.stdout.trim()) {
+            let page: Vec<GhFile> = serde_json::from_str(chunk).map_err(|e| {
+                AppError::process(format!("gh api pulls/{number}/files: invalid JSON: {e}"))
+            })?;
+            files.extend(page.into_iter().map(into_changed_file));
+        }
+        Ok(files)
+    }
+}
+
+/// `gh api --paginate` concatenates each page's JSON output back-to-back, so a
+/// 250-file PR comes back as `[…][…][…]`. Split on top-level `][` to get one
+/// JSON array per page that we can parse independently.
+fn split_json_arrays(raw: &str) -> Vec<&str> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Vec::new();
+    }
+    let mut chunks = Vec::new();
+    let mut depth: i32 = 0;
+    let mut start = 0;
+    let bytes = raw.as_bytes();
+    for (i, b) in bytes.iter().enumerate() {
+        match b {
+            b'[' => depth += 1,
+            b']' => {
+                depth -= 1;
+                if depth == 0 {
+                    chunks.push(&raw[start..=i]);
+                    // skip whitespace before the next array
+                    start = i + 1;
+                    while start < bytes.len() && bytes[start].is_ascii_whitespace() {
+                        start += 1;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    chunks
 }

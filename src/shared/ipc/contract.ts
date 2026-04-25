@@ -61,6 +61,23 @@ export interface PullRequestDetail {
   changedFiles: number;
 }
 
+export type ChangeStatus =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "changed"
+  | "unchanged";
+
+export interface ChangedFile {
+  path: string;
+  previousPath: string | null;
+  status: ChangeStatus;
+  additions: number;
+  deletions: number;
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -84,6 +101,10 @@ export interface Commands {
   load_pull_request: {
     args: { repoPath: string; prNumber: number };
     result: PullRequestDetail;
+  };
+  list_changed_files: {
+    args: { repoPath: string; prNumber: number };
+    result: ChangedFile[];
   };
 }
 

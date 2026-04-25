@@ -33,10 +33,16 @@ export function PullRequestPage() {
   const files = useChangedFiles(repoPath.data ?? undefined, prNumber);
   const detail = usePullRequestDetail(repoPath.data ?? undefined, prNumber);
 
-  const filteredFiles = useMemo(
-    () => filterChangedFiles(files.data ?? [], debouncedFilter),
-    [files.data, debouncedFilter],
+  const markdownFiles = useMemo(
+    () => (files.data ?? []).filter((f) => isMarkdownPath(f.path)),
+    [files.data],
   );
+  const filteredFiles = useMemo(
+    () => filterChangedFiles(markdownFiles, debouncedFilter),
+    [markdownFiles, debouncedFilter],
+  );
+  const totalFiles = files.data?.length ?? 0;
+  const hiddenCount = totalFiles - markdownFiles.length;
 
   const basePath = `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
 
@@ -46,7 +52,9 @@ export function PullRequestPage() {
         title="Changes"
         subtitle={
           files.data
-            ? `${filteredFiles.length} of ${files.data.length} files`
+            ? `${filteredFiles.length} of ${markdownFiles.length} Markdown files${
+                hiddenCount > 0 ? ` (${hiddenCount} non-Markdown hidden)` : ""
+              }`
             : `Files in PR #${prNumber}`
         }
         toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
@@ -58,9 +66,14 @@ export function PullRequestPage() {
             <AlertTitle>{describeError(files.error).title}</AlertTitle>
             <AlertDescription>{describeError(files.error).description}</AlertDescription>
           </Alert>
-        ) : filteredFiles.length === 0 && (files.data?.length ?? 0) > 0 ? (
+        ) : markdownFiles.length === 0 && totalFiles > 0 ? (
+          <p className="px-3 py-6 text-xs text-[hsl(var(--muted-foreground))]">
+            This pull request changes {totalFiles} file{totalFiles === 1 ? "" : "s"}, none of them
+            Markdown.
+          </p>
+        ) : filteredFiles.length === 0 && markdownFiles.length > 0 ? (
           <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
-            No files match "{debouncedFilter}".
+            No Markdown files match "{debouncedFilter}".
           </p>
         ) : (
           <FileTree files={filteredFiles} selectedPath={selectedPath} basePath={basePath} />

@@ -1,11 +1,12 @@
 import { ipc } from "@/shared/ipc/client";
-import type { AppError } from "@/shared/ipc/contract";
+import type { AppError, PullRequestDetail } from "@/shared/ipc/contract";
 import { useQuery } from "@tanstack/react-query";
 
 /**
- * Lightweight title lookup used by `AppHeader`. Reuses the same React
- * Query keys as `usePullRequestDetail` and `useRepoPath` so opening the
- * PR detail page doesn't trigger a duplicate fetch.
+ * Title lookup used by `AppHeader`. Shares its queryKey AND queryFn shape
+ * with `usePullRequestDetail` so the cache holds a single `PullRequestDetail`
+ * per PR — opening the detail page reuses what we already fetched, and the
+ * detail page's downstream consumers (`headSha`, etc.) keep working.
  */
 export function usePullRequestTitle(
   owner: string | undefined,
@@ -22,13 +23,14 @@ export function usePullRequestTitle(
     },
   });
 
-  return useQuery<string, AppError>({
+  return useQuery<PullRequestDetail, AppError, string>({
     queryKey: ["pull-request", repoPath.data, prNumber],
     enabled: Boolean(repoPath.data && prNumber),
     queryFn: async () => {
       const res = await ipc.pullRequests.load(repoPath.data as string, prNumber as number);
       if (!res.ok) throw res.error;
-      return res.value.summary.title;
+      return res.value;
     },
+    select: (detail) => detail.summary.title,
   });
 }

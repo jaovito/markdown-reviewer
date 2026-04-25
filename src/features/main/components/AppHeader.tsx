@@ -3,6 +3,7 @@ import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { CheckIcon, GitBranchIcon } from "lucide-react";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
+import { RefreshButton } from "./RefreshButton";
 
 interface AppHeaderProps {
   owner: string;
@@ -36,6 +37,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       ) : null}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {rightAction}
+        <RefreshButton />
         {branch ? (
           <span className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-2.5 text-xs">
             <GitBranchIcon className="size-3.5 text-[hsl(var(--muted-foreground))]" />

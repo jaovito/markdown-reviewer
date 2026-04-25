@@ -1,4 +1,5 @@
 import { cn } from "@/shared/lib/cn";
+import { useLastPullRequest } from "@/shared/stores/useLastPullRequest";
 import { Button } from "@/shared/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import {
@@ -74,10 +75,14 @@ export function Rail() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const repoMatch = useMatch("/repo/:owner/:repo/*");
-  const repoBase = repoMatch ? `/repo/${repoMatch.params.owner}/${repoMatch.params.repo}` : "/";
+  const owner = repoMatch?.params.owner ?? "";
+  const repo = repoMatch?.params.repo ?? "";
+  const repoBase = repoMatch ? `/repo/${owner}/${repo}` : "/";
   const prMatch = pathname.match(/\/pulls\/(\d+)/);
-  const prBase = prMatch ? `${repoBase}/pulls/${prMatch[1]}` : null;
-  const onPrList = Boolean(repoMatch) && !prBase;
+  const lastPr = useLastPullRequest((s) => (repoMatch ? s.byRepo[`${owner}/${repo}`] : undefined));
+  const activePrNumber = prMatch ? Number(prMatch[1]) : lastPr;
+  const prBase = activePrNumber ? `${repoBase}/pulls/${activePrNumber}` : null;
+  const onPrList = Boolean(repoMatch) && !prMatch;
 
   return (
     <nav

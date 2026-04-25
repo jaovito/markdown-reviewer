@@ -10,10 +10,11 @@ import {
 import { useRepoPath } from "@/features/pull-requests";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { describeError } from "@/shared/ipc/errors";
+import { useLastPullRequest } from "@/shared/stores/useLastPullRequest";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FileTree } from "../components/FileTree";
 import { FileTreeSearch } from "../components/FileTreeSearch";
@@ -25,6 +26,12 @@ export function PullRequestPage() {
   const params = useParams<{ number: string; "*": string }>();
   const prNumber = Number(params.number);
   const selectedPath = params["*"] ? decodePath(params["*"]) : undefined;
+  const rememberLastPr = useLastPullRequest((s) => s.remember);
+  useEffect(() => {
+    if (Number.isFinite(prNumber) && prNumber > 0) {
+      rememberLastPr(owner, repo, prNumber);
+    }
+  }, [owner, repo, prNumber, rememberLastPr]);
 
   const [filterQuery, setFilterQuery] = useState("");
   const debouncedFilter = useDebouncedValue(filterQuery);

@@ -269,9 +269,15 @@ impl GhClient for GhCli {
             return Err(map_gh_error(&out.stderr, Some(number)));
         }
 
+        // `gh api --paginate` concatenates each page's JSON array back-to-back.
+        // We use serde_json's streaming Deserializer so it correctly walks
+        // string contents, escapes, and nested structures (the `patch` field
+        // routinely contains `]`/`[` characters that broke a naive splitter).
         let mut files = Vec::new();
-        for chunk in split_json_arrays(out.stdout.trim()) {
-            let page: Vec<GhFile> = serde_json::from_str(chunk).map_err(|e| {
+        let stream =
+            serde_json::Deserializer::from_str(out.stdout.trim()).into_iter::<Vec<GhFile>>();
+        for page in stream {
+            let page = page.map_err(|e| {
                 AppError::process(format!("gh api pulls/{number}/files: invalid JSON: {e}"))
             })?;
             files.extend(page.into_iter().map(into_changed_file));
@@ -347,36 +353,4 @@ fn base64_decode(input: &str) -> Result<Vec<u8>, &'static str> {
         }
     }
     Ok(out)
-}
-
-/// `gh api --paginate` concatenates each page's JSON output back-to-back, so a
-/// 250-file PR comes back as `[…][…][…]`. Split on top-level `][` to get one
-/// JSON array per page that we can parse independently.
-fn split_json_arrays(raw: &str) -> Vec<&str> {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return Vec::new();
-    }
-    let mut chunks = Vec::new();
-    let mut depth: i32 = 0;
-    let mut start = 0;
-    let bytes = raw.as_bytes();
-    for (i, b) in bytes.iter().enumerate() {
-        match b {
-            b'[' => depth += 1,
-            b']' => {
-                depth -= 1;
-                if depth == 0 {
-                    chunks.push(&raw[start..=i]);
-                    // skip whitespace before the next array
-                    start = i + 1;
-                    while start < bytes.len() && bytes[start].is_ascii_whitespace() {
-                        start += 1;
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-    chunks
 }

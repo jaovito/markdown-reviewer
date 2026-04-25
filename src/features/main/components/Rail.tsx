@@ -93,7 +93,7 @@ export function Rail() {
         to={prBase ?? repoBase}
         icon={FilesIcon}
         label="Changes"
-        isActive={Boolean(prBase)}
+        isActive={Boolean(prMatch)}
         disabled={!prBase}
       />
       <RailItem

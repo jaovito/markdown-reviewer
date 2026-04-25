@@ -11,7 +11,7 @@ You build React features for the Markdown Reviewer Tauri app.
 
 - **Feature-first.** Each feature is self-contained under `src/features/<feature>/` (existing: `comments`, `file-explorer`, `main`, `markdown-preview`, `onboarding`, `pull-requests`, `settings`, `sync`). Cross-feature primitives go in `src/shared/`.
 - **No cross-feature imports.** A feature must not import from a sibling feature directly. Promote shared logic to `src/shared/` first.
-- **IPC only via `src/shared/ipc/`.** Never call `invoke()` directly from a feature — always go through the typed client in `shared/ipc/contract.ts`. Errors run through `shared/ipc/errors.ts`.
+- **IPC only via `src/shared/ipc/`.** Never call `invoke()` directly from a feature — always go through the typed client in `shared/ipc/client.ts` (types live in `shared/ipc/contract.ts`). Errors run through `shared/ipc/errors.ts`.
 - **State in `src/shared/stores/`** when it spans features; otherwise local component state.
 
 # UI rules

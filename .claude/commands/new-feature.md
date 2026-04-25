@@ -9,8 +9,8 @@ Follow the patterns of the existing features (`comments`, `file-explorer`, `main
 
 1. Inspect the closest existing feature first; match its file structure (components, hooks, types, index).
 2. Create `src/features/$ARGUMENTS/index.ts` exporting the public surface.
-3. Add an i18n namespace in `src/shared/i18n/locales/en.json` under `features.$ARGUMENTS`.
-4. If the feature needs IPC, extend `src/shared/ipc/contract.ts` (don't call `invoke()` from the feature).
+3. Add a top-level i18n namespace in `src/shared/i18n/locales/en.json` for the feature, using the project's casing conventions (`onboarding`, `pullRequests`, `fileExplorer`, …) — do NOT nest under `features.*`.
+4. If the feature needs IPC, add the type to `src/shared/ipc/contract.ts` and the helper to `src/shared/ipc/client.ts`. Features call the shared `ipc` client wrapper, never `invoke()` directly.
 5. If it needs cross-feature state, add a store in `src/shared/stores/`.
 6. Run `bunx biome check --apply` on the new files.
 

@@ -138,7 +138,9 @@ fn encode_anchor(anchor: &CommentAnchor) -> (String, String, i64, i64) {
     };
     (
         kind.to_string(),
-        serde_json::to_string(&payload).unwrap_or_default(),
+        // Programming error if this fails — every variant of `AnchorPayload`
+        // is a plain struct of `Option<u32>` and serializes losslessly.
+        serde_json::to_string(&payload).expect("AnchorPayload always serializes"),
         i64::from(start),
         i64::from(end),
     )

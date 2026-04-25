@@ -33,6 +33,19 @@ function findEnclosingPre(article: HTMLElement, node: Node | null): HTMLElement 
   return null;
 }
 
+/** True when `node` (or any ancestor) is one of the comments-feature wrappers. */
+function insideInjectedUi(node: Node | null): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (current.nodeType === Node.ELEMENT_NODE) {
+      const el = current as HTMLElement;
+      if (el.dataset?.threadSlot || el.dataset?.threadBadge) return true;
+    }
+    current = current.parentNode;
+  }
+  return false;
+}
+
 function readSourceLine(el: HTMLElement | null): number | null {
   if (!el?.dataset.sourceLine) return null;
   const n = Number(el.dataset.sourceLine);
@@ -68,21 +81,44 @@ interface EffectivePoint {
 /**
  * If `endOffset === 0` the visible selection ends *before* `endContainer`.
  * Walk back to the previous leaf so the resolved line matches what the user
- * actually highlighted.
+ * actually highlighted. We keep stepping back while the candidate position
+ * isn't a valid one to anchor against (e.g. an empty element with no
+ * children would produce an invalid `Range` offset).
  */
 function effectiveEnd(article: HTMLElement, range: Range): EffectivePoint {
   let container = range.endContainer;
   let offset = range.endOffset;
-  // Step back past any zero-offset positions.
-  while (offset === 0 && container !== article) {
+  // Bound the walk so a malformed DOM can't loop forever.
+  for (let safety = 0; safety < 256 && offset === 0 && container !== article; safety++) {
     const prev = previousLeaf(article, container);
     if (!prev) break;
-    container = prev;
     if (prev.nodeType === Node.TEXT_NODE) {
-      offset = prev.textContent?.length ?? 0;
-    } else {
-      offset = prev.childNodes.length || 1;
+      const len = prev.textContent?.length ?? 0;
+      if (len === 0) {
+        // Empty text node — treat its start as zero-offset and keep walking.
+        container = prev;
+        offset = 0;
+        continue;
+      }
+      container = prev;
+      offset = len;
+      break;
     }
+    if (prev.nodeType === Node.ELEMENT_NODE) {
+      const childCount = prev.childNodes.length;
+      if (childCount === 0) {
+        // Empty element — anchoring at offset 1 would be invalid; step back.
+        container = prev;
+        offset = 0;
+        continue;
+      }
+      container = prev;
+      offset = childCount;
+      break;
+    }
+    // Anything else (comment node, etc.) — skip past it.
+    container = prev;
+    offset = 0;
   }
   return { container, offset };
 }
@@ -119,6 +155,11 @@ export function resolveAnchor(article: HTMLElement, selection: Selection): Ancho
   const range = selection.getRangeAt(0);
   if (range.collapsed) return null;
   if (!article.contains(range.startContainer) || !article.contains(range.endContainer)) {
+    return null;
+  }
+  // Selections inside our own injected UI (thread cards, draft composers,
+  // minimized badges) must not be treated as a markdown selection.
+  if (insideInjectedUi(range.startContainer) || insideInjectedUi(range.endContainer)) {
     return null;
   }
 

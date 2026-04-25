@@ -39,14 +39,16 @@ export interface CommentGroup {
 }
 
 /**
- * Filters out hidden / resolved / deleted comments and buckets the rest by
+ * Filters out only deleted comments and buckets the rest by
  * `(startLine, endLine)`. Each bucket renders as one card; the head comment
- * decides the bucket's anchor extent.
+ * decides the bucket's anchor extent. Resolved/hidden threads are kept so
+ * marking a comment resolved doesn't make it disappear inline — the card
+ * surfaces the state via its badge.
  */
 export function groupCommentsByStartLine(comments: ReviewComment[]): CommentGroup[] {
   const buckets = new Map<string, CommentGroup>();
   for (const c of comments) {
-    if (c.state !== "draft" && c.state !== "submitted") continue;
+    if (c.state === "deleted") continue;
     const startLine = anchorStartLine(c.anchor);
     const endLine = Math.max(startLine, anchorEndLine(c.anchor));
     const key = `${startLine}:${endLine}`;

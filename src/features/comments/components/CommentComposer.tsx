@@ -76,6 +76,12 @@ export function CommentComposer({
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Escape") {
+      // Don't dismiss while a save is in flight — match the click-outside
+      // guard so the user always sees the success/error state.
+      if (create.isPending) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       onClose();
       return;

@@ -1,6 +1,6 @@
 import { ipc } from "@/shared/ipc/client";
 import type { CommentAnchor, CommentUpdate, ReviewComment } from "@/shared/ipc/contract";
-import { useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
+import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -175,8 +175,8 @@ export function InlineThreads({
   return (
     <>
       {groups.map((group) => {
-        const key = slotKeyFor(group.startLine, group.endLine);
-        const minimized = minimizedSet.has(group.line);
+        const key = minimizedKey(group.startLine, group.endLine);
+        const minimized = minimizedSet.has(key);
         if (minimized) {
           const badgeSlot = slots.badges.get(key);
           if (!badgeSlot) return null;
@@ -185,7 +185,7 @@ export function InlineThreads({
               key={key}
               count={group.comments.length}
               onExpand={() => {
-                expand(group.line);
+                expand(key);
                 const head = group.comments[0];
                 if (head) select(head.id);
               }}
@@ -206,7 +206,7 @@ export function InlineThreads({
               select(c.id);
               update.mutate({ id: c.id, patch: { state: "resolved" } });
             }}
-            onHide={() => minimize(group.line)}
+            onHide={() => minimize(key)}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
           />,
@@ -266,7 +266,7 @@ function syncSlots(
   container: HTMLElement,
   current: SlotMap,
   groups: CommentGroup[],
-  minimized: Set<number>,
+  minimized: Set<SlotKey>,
   composerStart: number | null,
   composerEnd: number | null,
   mutatingRef: { current: boolean },
@@ -295,7 +295,7 @@ function syncSlots(
     const wantsBadge = new Set<SlotKey>();
     for (const g of groups) {
       const key = slotKeyFor(g.startLine, g.endLine);
-      if (minimized.has(g.line)) wantsBadge.add(key);
+      if (minimized.has(key)) wantsBadge.add(key);
       else wantsCard.add(key);
     }
 
@@ -326,7 +326,7 @@ function syncSlots(
       current.composerSlot &&
       (composerEnd === null ||
         !current.composerSlot.isConnected ||
-        Number(current.composerSlot.dataset.sourceLine ?? "0") !== composerEnd)
+        Number(current.composerSlot.dataset.threadSlotLine ?? "0") !== composerEnd)
     ) {
       current.composerSlot.remove();
       current.composerSlot = null;
@@ -347,7 +347,7 @@ function syncSlots(
     //    `attachLine` as a trailing inline element on that line.
     for (const group of groups) {
       const key = slotKeyFor(group.startLine, group.endLine);
-      const isMinimized = minimized.has(group.line);
+      const isMinimized = minimized.has(key);
       markRange(lineNodes, group.startLine, group.endLine, isMinimized);
       const anchor = lineNodes.get(group.attachLine);
       if (!anchor) continue;
@@ -355,7 +355,7 @@ function syncSlots(
         if (current.badges.has(key)) continue;
         const badge = document.createElement("span");
         badge.dataset.threadBadge = "true";
-        badge.dataset.sourceLine = String(group.line);
+        badge.dataset.threadSlotLine = String(group.line);
         anchor.appendChild(badge);
         current.badges.set(key, badge);
         changed = true;
@@ -364,7 +364,7 @@ function syncSlots(
         if (!anchor.parentNode) continue;
         const slot = document.createElement("div");
         slot.dataset.threadSlot = "thread";
-        slot.dataset.sourceLine = String(group.line);
+        slot.dataset.threadSlotLine = String(group.line);
         anchor.parentNode.insertBefore(slot, anchor.nextSibling);
         current.threads.set(key, slot);
         changed = true;
@@ -379,7 +379,7 @@ function syncSlots(
         if (anchor?.parentNode) {
           const slot = document.createElement("div");
           slot.dataset.threadSlot = "composer";
-          slot.dataset.sourceLine = String(composerEnd);
+          slot.dataset.threadSlotLine = String(composerEnd);
           anchor.parentNode.insertBefore(slot, anchor.nextSibling);
           current.composerSlot = slot;
           changed = true;

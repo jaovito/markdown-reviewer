@@ -86,7 +86,10 @@ function groupByAnchor(comments: ReviewComment[]): ThreadGroup[] {
   const buckets = new Map<string, ThreadGroup>();
   for (const comment of comments) {
     const startLine = startLineOf(comment);
-    const key = `${comment.filePath}::${startLine}`;
+    const endLine = endLineOf(comment);
+    // Include the anchor extent in the key so a single-line and a multi-line
+    // range that share `startLine` render as distinct cards.
+    const key = `${comment.filePath}::${startLine}:${endLine}`;
     const existing = buckets.get(key);
     if (existing) {
       existing.comments.push(comment);
@@ -102,7 +105,7 @@ function groupByAnchor(comments: ReviewComment[]): ThreadGroup[] {
   for (const group of buckets.values()) {
     group.comments.sort((a, b) => a.createdAt - b.createdAt);
   }
-  // Sort groups by file path, then by line number — stable, predictable order.
+  // Sort groups by file path, then by start line — stable, predictable order.
   return Array.from(buckets.values()).sort((a, b) => {
     if (a.filePath !== b.filePath) return a.filePath.localeCompare(b.filePath);
     return a.startLine - b.startLine;
@@ -113,4 +116,10 @@ function startLineOf(comment: ReviewComment): number {
   const a = comment.anchor;
   if (a.kind === "singleLine") return a.line;
   return a.startLine;
+}
+
+function endLineOf(comment: ReviewComment): number {
+  const a = comment.anchor;
+  if (a.kind === "singleLine") return a.line;
+  return a.endLine;
 }

@@ -4,7 +4,7 @@ use markdown_reviewer_core::ports::{GhAuthReport, GhClient};
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;
 
-use crate::process::{run, run_ok};
+use crate::process::{redact, run, run_ok};
 
 const TIMEOUT_MS: u64 = 7_000;
 const PR_TIMEOUT_MS: u64 = 15_000;
@@ -99,7 +99,7 @@ fn map_gh_error(stderr: &str, number: Option<u64>) -> AppError {
     if lower.contains("authentication required") || lower.contains("gh auth login") {
         return AppError::GhNotAuthenticated;
     }
-    AppError::process(stderr.trim().to_string())
+    AppError::process(redact(stderr.trim()))
 }
 
 #[async_trait]

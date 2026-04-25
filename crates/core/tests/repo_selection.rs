@@ -37,6 +37,14 @@ impl GitClient for FakeGit {
     ) -> markdown_reviewer_core::AppResult<Option<String>> {
         Ok(self.branch.clone())
     }
+    async fn show_file(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Option<String>> {
+        Ok(None)
+    }
 }
 
 struct FakeGh {
@@ -84,6 +92,14 @@ impl GhClient for FakeGh {
         _number: u64,
     ) -> markdown_reviewer_core::AppResult<Vec<markdown_reviewer_core::domain::ChangedFile>> {
         Ok(Vec::new())
+    }
+    async fn get_file_content(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<String> {
+        Ok(String::new())
     }
 }
 

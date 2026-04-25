@@ -85,6 +85,7 @@ export type AppError =
   | { kind: "missingTool"; data: { name: string } }
   | { kind: "ghNotAuthenticated" }
   | { kind: "prNotFound"; data: { number: number } }
+  | { kind: "fileNotFound"; data: { sha: string; path: string } }
   | { kind: "io"; data: { message: string } }
   | { kind: "db"; data: { message: string } }
   | { kind: "process"; data: { message: string } }
@@ -105,6 +106,10 @@ export interface Commands {
   list_changed_files: {
     args: { repoPath: string; prNumber: number };
     result: ChangedFile[];
+  };
+  read_markdown_file: {
+    args: { repoPath: string; sha: string; filePath: string };
+    result: string;
   };
 }
 

@@ -278,6 +278,75 @@ impl GhClient for GhCli {
         }
         Ok(files)
     }
+
+    async fn get_file_content(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<String> {
+        // `gh api repos/{owner}/{repo}/contents/{path}?ref=<sha>` returns the
+        // file content base64-encoded. We use `--jq` to pull the raw content
+        // out and rely on `gh` for owner/repo inference via cwd.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/contents/{file_path}?ref={sha}");
+        let out = run(
+            "gh",
+            &["api", "-X", "GET", &endpoint, "--jq", ".content"],
+            Some(repo_path),
+            PR_TIMEOUT_MS,
+        )
+        .await?;
+
+        if !out.ok() {
+            let lower = out.stderr.to_ascii_lowercase();
+            if lower.contains("404") || lower.contains("not found") {
+                return Err(AppError::FileNotFound {
+                    sha: sha.to_string(),
+                    path: file_path.to_string(),
+                });
+            }
+            return Err(AppError::process(redact(out.stderr.trim())));
+        }
+
+        // Body is base64 with newlines.
+        let raw = out.stdout.replace(['\n', '\r'], "");
+        let bytes = base64_decode(&raw)
+            .map_err(|e| AppError::process(format!("gh api contents: invalid base64: {e}")))?;
+        String::from_utf8(bytes)
+            .map_err(|e| AppError::process(format!("gh api contents: invalid UTF-8: {e}")))
+    }
+}
+
+/// Minimal base64 decoder for the standard alphabet. Avoids pulling in a new
+/// dependency just for the GitHub Contents API fallback path.
+fn base64_decode(input: &str) -> Result<Vec<u8>, &'static str> {
+    fn val(c: u8) -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() * 3 / 4);
+    let mut buf: u32 = 0;
+    let mut bits: u32 = 0;
+    for &c in bytes {
+        if c == b'=' {
+            break;
+        }
+        let v = val(c).ok_or("invalid base64 character")?;
+        buf = (buf << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(((buf >> bits) & 0xFF) as u8);
+        }
+    }
+    Ok(out)
 }
 
 /// `gh api --paginate` concatenates each page's JSON output back-to-back, so a

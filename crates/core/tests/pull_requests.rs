@@ -70,6 +70,14 @@ impl GhClient for FakeGh {
         }
         Ok(self.files.clone())
     }
+    async fn get_file_content(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<String> {
+        Ok(String::new())
+    }
 }
 
 fn summary(number: u64, title: &str) -> PullRequestSummary {

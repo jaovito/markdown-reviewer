@@ -16,4 +16,15 @@ pub trait GitClient: Send + Sync {
 
     /// Returns the currently checked-out branch name (None if detached HEAD).
     async fn current_branch(&self, path: &str) -> AppResult<Option<String>>;
+
+    /// Returns the contents of `<file_path>` at `<sha>`, equivalent to
+    /// `git show <sha>:<file_path>`. Returns `None` when either the ref or
+    /// the file at that ref is missing locally; callers can fall back to a
+    /// remote fetch.
+    async fn show_file(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<Option<String>>;
 }

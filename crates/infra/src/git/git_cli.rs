@@ -60,4 +60,20 @@ impl GitClient for GitCli {
         let b = out.stdout.trim().to_string();
         Ok((!b.is_empty()).then_some(b))
     }
+
+    async fn show_file(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<Option<String>> {
+        let spec = format!("{sha}:{file_path}");
+        let out = run("git", &["-C", repo_path, "show", &spec], None, TIMEOUT_MS).await?;
+        if !out.ok() {
+            // Either the ref is missing locally (`unknown revision`) or the
+            // file doesn't exist at that ref. Both are recoverable upstream.
+            return Ok(None);
+        }
+        Ok(Some(out.stdout))
+    }
 }

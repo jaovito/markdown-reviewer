@@ -55,6 +55,12 @@ export function describeError(e: AppError): AppErrorView {
         title: "Pull request not found",
         description: `PR #${e.data.number} does not exist on this repo.`,
       };
+    case "fileNotFound":
+      return {
+        title: "File not found",
+        description: `${e.data.path} doesn't exist at ${e.data.sha.slice(0, 7)}.`,
+        actionHint: "The file may have been deleted in this PR, or the ref isn't fetched locally.",
+      };
     case "io":
     case "db":
     case "process":

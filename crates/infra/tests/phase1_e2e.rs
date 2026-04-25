@@ -55,6 +55,14 @@ impl GhClient for StubGh {
     ) -> markdown_reviewer_core::AppResult<Vec<markdown_reviewer_core::domain::ChangedFile>> {
         Ok(Vec::new())
     }
+    async fn get_file_content(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<String> {
+        Ok(String::new())
+    }
 }
 
 fn svc(db_dir: &std::path::Path, authed: bool) -> RepoSelection {

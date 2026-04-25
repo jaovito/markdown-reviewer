@@ -42,4 +42,8 @@ export const ipc = {
     changedFiles: (repoPath: string, prNumber: number) =>
       call("list_changed_files", { repoPath, prNumber }),
   },
+  files: {
+    readMarkdown: (repoPath: string, sha: string, filePath: string) =>
+      call("read_markdown_file", { repoPath, sha, filePath }),
+  },
 };

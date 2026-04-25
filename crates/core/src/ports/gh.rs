@@ -22,4 +22,14 @@ pub trait GhClient: Send + Sync {
         -> AppResult<PullRequestDetail>;
     async fn list_changed_files(&self, repo_path: &str, number: u64)
         -> AppResult<Vec<ChangedFile>>;
+    /// Fetches the contents of `<file_path>` at `<sha>` from the GitHub
+    /// remote. Used as a fallback when the ref isn't in the local clone.
+    /// Returns `Err(AppError::FileNotFound { sha, path })` when the file
+    /// doesn't exist at that ref.
+    async fn get_file_content(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<String>;
 }

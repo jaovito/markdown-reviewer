@@ -33,7 +33,9 @@
       "count": "{{shown}} of {{total}}",
       "searchPlaceholder": "Search by title, number, author, or branch…",
       "emptyAll": "There are no open pull requests for this repository.",
-      "emptyFiltered": "No pull requests match your search."
+      "emptyFiltered": "No pull requests match your search.",
+      "repoMissingTitle": "Repository not in recents",
+      "repoMissingDescription": "We couldn't find a local path for {{owner}}/{{repo}}. Pick the folder again from the home screen."
     },
     "row": {
       "draft": "Draft",
@@ -44,6 +46,10 @@
     }
   },
   "fileExplorer": {
+    "invalidPrNumber": {
+      "title": "Invalid pull request",
+      "description": "\"{{value}}\" is not a valid PR number."
+    },
     "sidebar": {
       "title": "Changes",
       "fallbackSubtitle": "Files in PR #{{number}}",

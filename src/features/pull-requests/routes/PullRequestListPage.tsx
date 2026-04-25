@@ -24,6 +24,10 @@ export function PullRequestListPage() {
     return filterPullRequests(prs.data, debouncedQuery);
   }, [prs.data, debouncedQuery]);
 
+  const isLoadingPath = repoPath.isLoading;
+  const repoPathMissing = !isLoadingPath && repoPath.data === null;
+  const isLoadingPrs = isLoadingPath || (Boolean(repoPath.data) && prs.isLoading);
+
   return (
     <main className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 overflow-auto px-6 py-8">
       <header className="flex items-baseline justify-between">
@@ -36,6 +40,20 @@ export function PullRequestListPage() {
       </header>
 
       <PullRequestSearch value={query} onChange={setQuery} />
+
+      {repoPath.error ? (
+        <Alert tone="destructive">
+          <AlertTitle>{describeError(repoPath.error).title}</AlertTitle>
+          <AlertDescription>{describeError(repoPath.error).description}</AlertDescription>
+        </Alert>
+      ) : repoPathMissing ? (
+        <Alert tone="destructive">
+          <AlertTitle>{t("pullRequests.list.repoMissingTitle")}</AlertTitle>
+          <AlertDescription>
+            {t("pullRequests.list.repoMissingDescription", { owner, repo })}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {prs.error ? (
         <Alert tone="destructive">
@@ -50,7 +68,7 @@ export function PullRequestListPage() {
       ) : null}
 
       <ul className="flex flex-col gap-1">
-        {prs.isLoading ? (
+        {isLoadingPrs ? (
           <SkeletonList />
         ) : filtered.length === 0 && prs.data ? (
           <EmptyState hasQuery={query.length > 0} />

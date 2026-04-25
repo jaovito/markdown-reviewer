@@ -26,11 +26,15 @@ export function PullRequestPage() {
   const { t } = useTranslation();
   const { owner, repo } = useRepoContext();
   const params = useParams<{ number: string; "*": string }>();
-  const prNumber = Number(params.number);
+  const rawNumber = params.number ?? "";
+  const parsedNumber = Number(rawNumber);
+  const isValidPrNumber = Number.isFinite(parsedNumber) && parsedNumber > 0;
+  const prNumber = isValidPrNumber ? parsedNumber : undefined;
   const selectedPath = params["*"] ? decodePath(params["*"]) : undefined;
+
   const rememberLastPr = useLastPullRequest((s) => s.remember);
   useEffect(() => {
-    if (Number.isFinite(prNumber) && prNumber > 0) {
+    if (prNumber !== undefined) {
       rememberLastPr(owner, repo, prNumber);
     }
   }, [owner, repo, prNumber, rememberLastPr]);
@@ -53,6 +57,21 @@ export function PullRequestPage() {
   const totalFiles = files.data?.length ?? 0;
   const hiddenCount = totalFiles - markdownFiles.length;
 
+  if (!isValidPrNumber) {
+    return (
+      <PreviewSlot>
+        <div className="mx-auto max-w-md px-6 py-8">
+          <Alert tone="destructive">
+            <AlertTitle>{t("fileExplorer.invalidPrNumber.title")}</AlertTitle>
+            <AlertDescription>
+              {t("fileExplorer.invalidPrNumber.description", { value: rawNumber })}
+            </AlertDescription>
+          </Alert>
+        </div>
+      </PreviewSlot>
+    );
+  }
+
   const basePath = `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
 
   const subtitle = files.data
@@ -68,6 +87,9 @@ export function PullRequestPage() {
         })
     : t("fileExplorer.sidebar.fallbackSubtitle", { number: prNumber });
 
+  const repoPathMissing = !repoPath.isLoading && repoPath.data === null;
+  const sidebarLoading = repoPath.isLoading || (Boolean(repoPath.data) && files.isLoading);
+
   return (
     <>
       <SidebarShell
@@ -75,7 +97,19 @@ export function PullRequestPage() {
         subtitle={subtitle}
         toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
       >
-        {files.isLoading ? (
+        {repoPath.error ? (
+          <Alert tone="destructive" className="mx-2 mt-2">
+            <AlertTitle>{describeError(repoPath.error).title}</AlertTitle>
+            <AlertDescription>{describeError(repoPath.error).description}</AlertDescription>
+          </Alert>
+        ) : repoPathMissing ? (
+          <Alert tone="destructive" className="mx-2 mt-2">
+            <AlertTitle>{t("pullRequests.list.repoMissingTitle")}</AlertTitle>
+            <AlertDescription>
+              {t("pullRequests.list.repoMissingDescription", { owner, repo })}
+            </AlertDescription>
+          </Alert>
+        ) : sidebarLoading ? (
           <SidebarSkeleton />
         ) : files.error ? (
           <Alert tone="destructive" className="mx-2 mt-2">
@@ -102,12 +136,12 @@ export function PullRequestPage() {
         }
         emptyHint={t("fileExplorer.preview.noFileSelected")}
       >
-        {selectedPath ? (
+        {selectedPath && prNumber !== undefined ? (
           <PreviewArea
             repoPath={repoPath.data ?? undefined}
             sha={detail.data?.headSha}
             filePath={selectedPath}
-            isDetailLoading={detail.isLoading}
+            isDetailLoading={repoPath.isLoading || detail.isLoading}
             prNumber={prNumber}
           />
         ) : null}

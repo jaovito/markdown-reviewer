@@ -13,9 +13,12 @@ export function usePullRequestTitle(
   repo: string | undefined,
   prNumber: number | undefined,
 ) {
+  // Skip the recents lookup unless we actually need a PR title — `AppHeader`
+  // calls this hook on every repo route, including the PR list where there's
+  // no PR yet, and we don't want to ping IPC just to throw the value away.
   const repoPath = useQuery<string | null, AppError>({
     queryKey: ["repo-path", owner, repo],
-    enabled: Boolean(owner && repo),
+    enabled: Boolean(owner && repo && prNumber),
     queryFn: async () => {
       const res = await ipc.recents.list();
       if (!res.ok) throw res.error;

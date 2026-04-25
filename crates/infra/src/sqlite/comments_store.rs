@@ -155,14 +155,11 @@ fn decode_anchor(
     // Surface JSON corruption rather than silently inventing a line number.
     let payload: AnchorPayload = serde_json::from_str(data)
         .map_err(|e| BadEnum(format!("anchor_data: invalid JSON: {e}")))?;
-    let start = payload
-        .start_line
-        .or(payload.line)
-        .unwrap_or_else(|| u32::try_from(start_line).unwrap_or(1));
-    let end = payload
-        .end_line
-        .or(payload.line)
-        .unwrap_or_else(|| u32::try_from(end_line).unwrap_or(start));
+    // Prefer the JSON payload, fall back to the dedicated columns. If neither
+    // yields a valid 1-indexed `u32`, fail loudly — defaulting to `1` would
+    // silently move the anchor.
+    let start = read_line(payload.start_line, payload.line, start_line, "start_line")?;
+    let end = read_line(payload.end_line, payload.line, end_line, "end_line")?;
     match kind {
         "singleLine" => Ok(CommentAnchor::SingleLine {
             line: payload.line.unwrap_or(start),
@@ -178,6 +175,37 @@ fn decode_anchor(
         }),
         other => Err(BadEnum(other.to_string())),
     }
+}
+
+/// Resolves a 1-indexed source line from the JSON payload, falling back to
+/// the dedicated `SQLite` column. Returns an error when neither yields a
+/// valid `u32 >= 1` so corrupt rows surface instead of getting a silent
+/// default.
+fn read_line(
+    primary: Option<u32>,
+    fallback: Option<u32>,
+    column: i64,
+    field: &str,
+) -> Result<u32, BadEnum> {
+    if let Some(v) = primary.or(fallback) {
+        if v == 0 {
+            return Err(BadEnum(format!(
+                "anchor_data.{field}: zero is not 1-indexed"
+            )));
+        }
+        return Ok(v);
+    }
+    let v = u32::try_from(column).map_err(|_| {
+        BadEnum(format!(
+            "anchor_data.{field}: column value {column} is out of range for u32"
+        ))
+    })?;
+    if v == 0 {
+        return Err(BadEnum(format!(
+            "anchor_data.{field}: zero is not 1-indexed"
+        )));
+    }
+    Ok(v)
 }
 
 fn fetch_one(conn: &Connection, id: i64) -> AppResult<ReviewComment> {

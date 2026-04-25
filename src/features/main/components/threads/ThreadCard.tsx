@@ -7,7 +7,12 @@ import { StateBadge } from "./StateBadge";
 const PREVIEW_LIMIT = 120;
 
 export interface ThreadGroup {
-  /** Stable id derived from `filePath` + the anchor's start line. */
+  /**
+   * Stable id derived from `filePath` + the anchor's `(startLine, endLine)`
+   * extent — kept in lockstep with `groupByAnchor` in `ThreadList`. A
+   * single-line and a multi-line range starting on the same line need
+   * distinct keys so they render as separate cards.
+   */
   key: string;
   filePath: string;
   startLine: number;

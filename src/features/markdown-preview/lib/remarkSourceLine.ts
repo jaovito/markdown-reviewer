@@ -28,7 +28,7 @@ export const remarkSourceLine: Plugin = () => {
       if (!node.data) node.data = {};
       const data = node.data as { hProperties?: Record<string, unknown> };
       if (!data.hProperties) data.hProperties = {};
-      data.hProperties.dataSourceLine = String(line);
+      data.hProperties["data-source-line"] = String(line);
     });
   };
 };

@@ -66,6 +66,16 @@
       "unsupportedTitle": "Preview for <code>{{path}}</code> is not supported.",
       "unsupportedDescription": "Markdown Reviewer renders Markdown files only.",
       "fallbackToolbarLabel": "Pull request #{{number}}"
+    },
+    "status": {
+      "aria": "Change status: {{status}}",
+      "added": "added",
+      "modified": "modified",
+      "deleted": "deleted",
+      "renamed": "renamed",
+      "copied": "copied",
+      "changed": "changed",
+      "unchanged": "unchanged"
     }
   },
   "main": {
@@ -76,6 +86,9 @@
       "title": "Review threads",
       "subtitle": "Comments attached to rendered Markdown ranges.",
       "phase3Hint": "Comments will land here in Phase 3."
+    },
+    "toolbar": {
+      "backToRepositoriesAria": "Back to repositories"
     },
     "sidebar": {
       "fallbackEmpty": "Nothing to show yet.",

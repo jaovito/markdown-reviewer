@@ -1,17 +1,18 @@
 import { useRepoContext } from "@/features/main";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
-import type { PullRequestSummary } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PullRequestRow } from "../components/PullRequestRow";
-import { PullRequestSearch } from "../components/PullRequestSearch";
-import { usePullRequests } from "../hooks/usePullRequests";
-import { useRepoPath } from "../hooks/useRepoPath";
+import { PullRequestRow } from "../../components/PullRequestRow";
+import { PullRequestSearch } from "../../components/PullRequestSearch";
+import { usePullRequests } from "../../hooks/usePullRequests";
+import { useRepoPath } from "../../hooks/useRepoPath";
+import { filterPullRequests } from "../../lib/filterPullRequests";
+import { EmptyState } from "./EmptyState";
+import { SkeletonList } from "./SkeletonList";
 
-export function PullRequestListPage() {
+export function PullRequestListScreen() {
   const { t } = useTranslation();
   const { owner, repo } = useRepoContext();
   const [query, setQuery] = useState("");
@@ -24,9 +25,8 @@ export function PullRequestListPage() {
     return filterPullRequests(prs.data, debouncedQuery);
   }, [prs.data, debouncedQuery]);
 
-  const isLoadingPath = repoPath.isLoading;
-  const repoPathMissing = !isLoadingPath && repoPath.data === null;
-  const isLoadingPrs = isLoadingPath || (Boolean(repoPath.data) && prs.isLoading);
+  const repoPathMissing = !repoPath.isLoading && repoPath.data === null;
+  const isLoadingPrs = repoPath.isLoading || (Boolean(repoPath.data) && prs.isLoading);
 
   return (
     <main className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 overflow-auto px-6 py-8">
@@ -82,37 +82,4 @@ export function PullRequestListPage() {
       </ul>
     </main>
   );
-}
-
-const SKELETON_KEYS = ["s-1", "s-2", "s-3", "s-4"] as const;
-
-function SkeletonList() {
-  return (
-    <>
-      {SKELETON_KEYS.map((k) => (
-        <li key={k} className="px-3 py-3">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="mt-2 h-3 w-1/2" />
-        </li>
-      ))}
-    </>
-  );
-}
-
-function EmptyState({ hasQuery }: { hasQuery: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <li className="rounded-md border border-dashed border-[hsl(var(--border))] px-4 py-10 text-center text-sm text-[hsl(var(--muted-foreground))]">
-      {hasQuery ? t("pullRequests.list.emptyFiltered") : t("pullRequests.list.emptyAll")}
-    </li>
-  );
-}
-
-export function filterPullRequests(prs: PullRequestSummary[], query: string): PullRequestSummary[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return prs;
-  return prs.filter((pr) => {
-    if (`#${pr.number}`.includes(q)) return true;
-    return [pr.title, pr.author, pr.baseRef, pr.headRef].some((s) => s.toLowerCase().includes(q));
-  });
 }

@@ -1,1 +1,1 @@
-export { SelectRepoRoute } from "./routes/SelectRepoRoute";
+export { SelectRepoScreen } from "./screens/SelectRepoScreen";

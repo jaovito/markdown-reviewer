@@ -37,7 +37,7 @@ const schema = {
     ...Object.fromEntries(
       ANCHOR_TAGS.map((tag) => [
         tag,
-        [...((defaultSchema.attributes?.[tag] as string[] | undefined) ?? []), "dataSourceLine"],
+        [...((defaultSchema.attributes?.[tag] as string[] | undefined) ?? []), "data-source-line"],
       ]),
     ),
   },

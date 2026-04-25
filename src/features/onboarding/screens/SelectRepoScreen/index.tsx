@@ -1,16 +1,16 @@
 import type { AppError, Repository } from "@/shared/ipc/contract";
-import { describeError } from "@/shared/ipc/errors";
-import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
+import { isAppError } from "@/shared/ipc/errors";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { RecentReposList } from "../components/RecentReposList";
-import { ToolStatusPanel } from "../components/ToolStatusPanel";
-import { useRecents, useRemoveRecent, useSelectRepository } from "../hooks/useSelectRepository";
-import { useToolStatus } from "../hooks/useToolStatus";
+import { RecentReposList } from "../../components/RecentReposList";
+import { ToolStatusPanel } from "../../components/ToolStatusPanel";
+import { useRecents, useRemoveRecent, useSelectRepository } from "../../hooks/useSelectRepository";
+import { useToolStatus } from "../../hooks/useToolStatus";
+import { ErrorAlert } from "./ErrorAlert";
 
-export function SelectRepoRoute() {
+export function SelectRepoScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tools = useToolStatus();
@@ -20,7 +20,7 @@ export function SelectRepoRoute() {
 
   const goToRepo = (r: Repository) => {
     navigate(`/repo/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}`, {
-      state: { path: r.path, branch: r.currentBranch },
+      state: { branch: r.currentBranch },
     });
   };
 
@@ -61,24 +61,5 @@ export function SelectRepoRoute() {
         disabled={select.isPending}
       />
     </main>
-  );
-}
-
-function isAppError(e: unknown): e is AppError {
-  return !!e && typeof e === "object" && "kind" in (e as Record<string, unknown>);
-}
-
-function ErrorAlert({ error }: { error: AppError }) {
-  const view = describeError(error);
-  return (
-    <Alert tone="destructive">
-      <div>
-        <AlertTitle>{view.title}</AlertTitle>
-        <AlertDescription>{view.description}</AlertDescription>
-        {view.actionHint ? (
-          <AlertDescription className="mt-1 text-xs">{view.actionHint}</AlertDescription>
-        ) : null}
-      </div>
-    </Alert>
   );
 }

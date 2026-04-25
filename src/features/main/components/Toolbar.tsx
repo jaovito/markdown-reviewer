@@ -1,6 +1,7 @@
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { ChevronLeftIcon, GitBranchIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 interface ToolbarProps {
@@ -11,10 +12,12 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ owner, repo, branch, rightSlot }: ToolbarProps) {
+  const { t } = useTranslation();
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3">
       <Button asChild variant="ghost" size="sm">
-        <Link to="/" aria-label="Back to repositories">
+        <Link to="/" aria-label={t("main.toolbar.backToRepositoriesAria")}>
           <ChevronLeftIcon className="size-4" />
         </Link>
       </Button>

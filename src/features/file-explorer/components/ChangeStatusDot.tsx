@@ -1,5 +1,6 @@
 import type { ChangeStatus } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
+import { useTranslation } from "react-i18next";
 
 const STATUS_LABEL: Record<ChangeStatus, string> = {
   added: "A",
@@ -21,10 +22,23 @@ const STATUS_TONE: Record<ChangeStatus, string> = {
   unchanged: "text-[hsl(var(--muted-foreground))]",
 };
 
+const STATUS_NAME_KEY = {
+  added: "fileExplorer.status.added",
+  modified: "fileExplorer.status.modified",
+  deleted: "fileExplorer.status.deleted",
+  renamed: "fileExplorer.status.renamed",
+  copied: "fileExplorer.status.copied",
+  changed: "fileExplorer.status.changed",
+  unchanged: "fileExplorer.status.unchanged",
+} as const satisfies Record<ChangeStatus, string>;
+
 export function ChangeStatusDot({ status }: { status: ChangeStatus }) {
+  const { t } = useTranslation();
+  const statusName = t(STATUS_NAME_KEY[status]);
+
   return (
     <span
-      aria-label={`change status: ${status}`}
+      aria-label={t("fileExplorer.status.aria", { status: statusName })}
       className={cn(
         "inline-flex w-3 shrink-0 justify-center font-mono text-[10px] font-semibold",
         STATUS_TONE[status],

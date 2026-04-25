@@ -2,6 +2,7 @@ import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { CheckIcon, GitBranchIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
 import { RefreshButton } from "./RefreshButton";
 
@@ -14,6 +15,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHeaderProps) {
+  const { t } = useTranslation();
   const title = usePullRequestTitle(owner, repo, prNumber);
 
   return (
@@ -22,7 +24,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
         <div className="flex size-7 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
           <span className="text-[11px] font-bold">M</span>
         </div>
-        <span className="text-sm font-semibold tracking-tight">Markdown Reviewer</span>
+        <span className="text-sm font-semibold tracking-tight">{t("app.brand")}</span>
       </div>
       <Separator orientation="vertical" className="h-5" />
       <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">
@@ -47,7 +49,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
         {prNumber ? (
           <Button size="sm" className="gap-1.5">
             <CheckIcon className="size-3.5" />
-            Finish review
+            {t("app.actions.finishReview")}
           </Button>
         ) : null}
       </div>

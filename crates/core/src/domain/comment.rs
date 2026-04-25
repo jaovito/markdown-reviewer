@@ -63,7 +63,11 @@ impl CommentState {
 /// The `kind` discriminator is rendered as `lineRange`, `singleLine`,
 /// `codeBlock` to match the frontend contract.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum CommentAnchor {
     SingleLine {
         line: u32,

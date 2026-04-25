@@ -1,7 +1,5 @@
 use async_trait::async_trait;
-use markdown_reviewer_core::domain::{
-    CommentAnchor, CommentState, CommentUpdate, ReviewComment,
-};
+use markdown_reviewer_core::domain::{CommentAnchor, CommentState, CommentUpdate, ReviewComment};
 use markdown_reviewer_core::ports::{CommentsStore, NewComment, SubmitOutcome};
 use markdown_reviewer_core::{AppError, AppResult};
 use rusqlite::{params, Connection, Row};
@@ -27,10 +25,15 @@ fn row_to_comment(row: &Row<'_>) -> rusqlite::Result<ReviewComment> {
     let anchor_data: String = row.get(8)?;
     let anchor_start_line: i64 = row.get(9)?;
     let anchor_end_line: i64 = row.get(10)?;
-    let anchor = decode_anchor(&anchor_kind, &anchor_data, anchor_start_line, anchor_end_line)
-        .map_err(|e| {
-            rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e))
-        })?;
+    let anchor = decode_anchor(
+        &anchor_kind,
+        &anchor_data,
+        anchor_start_line,
+        anchor_end_line,
+    )
+    .map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e))
+    })?;
 
     let state_raw: String = row.get(6)?;
     let state = CommentState::from_str(&state_raw).ok_or_else(|| {
@@ -79,7 +82,11 @@ struct AnchorPayload {
     start_line: Option<u32>,
     #[serde(default, rename = "endLine", skip_serializing_if = "Option::is_none")]
     end_line: Option<u32>,
-    #[serde(default, rename = "codeStartLine", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "codeStartLine",
+        skip_serializing_if = "Option::is_none"
+    )]
     code_start_line: Option<u32>,
 }
 

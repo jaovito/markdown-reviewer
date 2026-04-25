@@ -20,11 +20,7 @@ pub async fn create(svc: &Comments, payload: NewComment) -> AppResult<ReviewComm
     svc.store.create(payload, svc.clock.now_unix_ms()).await
 }
 
-pub async fn update(
-    svc: &Comments,
-    id: i64,
-    patch: CommentUpdate,
-) -> AppResult<ReviewComment> {
+pub async fn update(svc: &Comments, id: i64, patch: CommentUpdate) -> AppResult<ReviewComment> {
     svc.store.update(id, patch, svc.clock.now_unix_ms()).await
 }
 

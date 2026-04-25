@@ -59,13 +59,7 @@ impl CommentsStore for InMemoryCommentsStore {
     }
 
     async fn get(&self, id: i64) -> AppResult<Option<ReviewComment>> {
-        Ok(self
-            .rows
-            .lock()
-            .await
-            .iter()
-            .find(|c| c.id == id)
-            .cloned())
+        Ok(self.rows.lock().await.iter().find(|c| c.id == id).cloned())
     }
 
     async fn create(&self, new: NewComment, now_unix_ms: i64) -> AppResult<ReviewComment> {
@@ -311,7 +305,10 @@ async fn batch_success_marks_every_comment_submitted() {
     assert_eq!(result.comments[0].local_id, a.id);
     assert_eq!(result.comments[0].github_id, Some(1001));
     assert_eq!(result.comments[1].github_id, Some(1002));
-    assert!(result.comments.iter().all(|c| c.submitted && c.error.is_none()));
+    assert!(result
+        .comments
+        .iter()
+        .all(|c| c.submitted && c.error.is_none()));
 
     // Persisted state matches.
     let stored_a = store.get(a.id).await.unwrap().unwrap();
@@ -330,7 +327,8 @@ async fn batch_failure_falls_back_to_per_comment() {
     let a = seed_comment(&store, 9, "a.md", "sha1", "first").await;
     let b = seed_comment(&store, 9, "b.md", "sha1", "second").await;
 
-    gh.set_batch(Err(AppError::process("422 unprocessable"))).await;
+    gh.set_batch(Err(AppError::process("422 unprocessable")))
+        .await;
     gh.set_per_comment(a.id, Ok(2001)).await;
     gh.set_per_comment(b.id, Ok(2002)).await;
 
@@ -383,7 +381,11 @@ async fn mixed_fallback_keeps_failures_as_drafts_with_error() {
     let stored_bad = store.get(bad.id).await.unwrap().unwrap();
     assert_eq!(stored_bad.state, CommentState::Draft);
     assert!(stored_bad.github_id.is_none());
-    assert!(stored_bad.submit_error.as_deref().unwrap().contains("rate limited"));
+    assert!(stored_bad
+        .submit_error
+        .as_deref()
+        .unwrap()
+        .contains("rate limited"));
 
     // Successful comment is on disk as Submitted with no lingering error.
     let stored_ok = store.get(ok.id).await.unwrap().unwrap();

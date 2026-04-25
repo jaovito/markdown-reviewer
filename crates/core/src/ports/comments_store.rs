@@ -34,11 +34,8 @@ pub trait CommentsStore: Send + Sync {
     async fn list_for_pr(&self, pr_number: u64) -> AppResult<Vec<ReviewComment>>;
 
     /// Lists every comment anchored to a single file inside a PR.
-    async fn list_for_file(
-        &self,
-        pr_number: u64,
-        file_path: &str,
-    ) -> AppResult<Vec<ReviewComment>>;
+    async fn list_for_file(&self, pr_number: u64, file_path: &str)
+        -> AppResult<Vec<ReviewComment>>;
 
     /// Returns the comment with the given local id, or `None` if absent.
     async fn get(&self, id: i64) -> AppResult<Option<ReviewComment>>;

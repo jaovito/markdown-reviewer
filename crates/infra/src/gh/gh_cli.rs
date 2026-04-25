@@ -385,7 +385,9 @@ impl GhClient for GhCli {
         }
 
         let ids: Vec<i64> = serde_json::from_str(out.stdout.trim()).map_err(|e| {
-            AppError::process(format!("gh api pulls/{pr_number}/reviews: invalid JSON: {e}"))
+            AppError::process(format!(
+                "gh api pulls/{pr_number}/reviews: invalid JSON: {e}"
+            ))
         })?;
         if ids.len() != comments.len() {
             return Err(AppError::process(format!(

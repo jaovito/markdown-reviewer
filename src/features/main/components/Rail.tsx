@@ -111,7 +111,7 @@ export function Rail() {
       />
       <div className="mt-auto flex flex-col items-center gap-2">
         <RailButton icon={LogOutIcon} label="Leave repository" onClick={() => navigate("/")} />
-        <RailItem to="/settings" icon={SettingsIcon} label="Settings" />
+        <RailItem to="/settings" icon={SettingsIcon} label="Settings (coming soon)" disabled />
       </div>
     </nav>
   );

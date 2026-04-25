@@ -1,4 +1,5 @@
 import { useRepoContext } from "@/features/main";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import type { PullRequestSummary } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
@@ -12,13 +13,14 @@ import { useRepoPath } from "../hooks/useRepoPath";
 export function PullRequestListPage() {
   const { owner, repo } = useRepoContext();
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query);
   const repoPath = useRepoPath(owner, repo);
   const prs = usePullRequests(repoPath.data ?? undefined);
 
   const filtered = useMemo(() => {
     if (!prs.data) return [];
-    return filterPullRequests(prs.data, query);
-  }, [prs.data, query]);
+    return filterPullRequests(prs.data, debouncedQuery);
+  }, [prs.data, debouncedQuery]);
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 px-6 py-6">

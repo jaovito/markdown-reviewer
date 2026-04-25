@@ -7,12 +7,17 @@ import {
   usePullRequestDetail,
 } from "@/features/markdown-preview";
 import { useRepoPath } from "@/features/pull-requests";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FileTree } from "../components/FileTree";
+import { FileTreeSearch } from "../components/FileTreeSearch";
 import { useChangedFiles } from "../hooks/useChangedFiles";
+import { filterChangedFiles } from "../lib/filterFiles";
 
 export function PullRequestPage() {
   const { owner, repo } = useRepoContext();
@@ -20,16 +25,27 @@ export function PullRequestPage() {
   const prNumber = Number(params.number);
   const selectedPath = params["*"] ? decodePath(params["*"]) : undefined;
 
+  const [filterQuery, setFilterQuery] = useState("");
+  const debouncedFilter = useDebouncedValue(filterQuery);
+
   const repoPath = useRepoPath(owner, repo);
   const files = useChangedFiles(repoPath.data ?? undefined, prNumber);
   const detail = usePullRequestDetail(repoPath.data ?? undefined, prNumber);
+
+  const filteredFiles = useMemo(
+    () => filterChangedFiles(files.data ?? [], debouncedFilter),
+    [files.data, debouncedFilter],
+  );
 
   const basePath = `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
 
   return (
     <MainShell
       sidebar={
-        <SidebarShell title={`Files in #${prNumber}`}>
+        <SidebarShell
+          title={`Files in #${prNumber}`}
+          toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
+        >
           {files.isLoading ? (
             <SidebarSkeleton />
           ) : files.error ? (
@@ -37,8 +53,12 @@ export function PullRequestPage() {
               <AlertTitle>{describeError(files.error).title}</AlertTitle>
               <AlertDescription>{describeError(files.error).description}</AlertDescription>
             </Alert>
+          ) : filteredFiles.length === 0 && (files.data?.length ?? 0) > 0 ? (
+            <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
+              No files match "{debouncedFilter}".
+            </p>
           ) : (
-            <FileTree files={files.data ?? []} selectedPath={selectedPath} basePath={basePath} />
+            <FileTree files={filteredFiles} selectedPath={selectedPath} basePath={basePath} />
           )}
         </SidebarShell>
       }
@@ -65,25 +85,34 @@ interface PreviewAreaProps {
 }
 
 function PreviewArea({ repoPath, sha, filePath, isDetailLoading }: PreviewAreaProps) {
-  if (!isMarkdownPath(filePath)) {
+  const supported = isMarkdownPath(filePath);
+  const file = useFileContent({
+    repoPath,
+    sha,
+    // Skip the IPC for unsupported files entirely.
+    filePath: supported ? filePath : undefined,
+  });
+
+  if (!supported) {
     return <UnsupportedFile path={filePath} />;
   }
-  const file = useFileContent({ repoPath, sha, filePath });
   if (isDetailLoading || file.isLoading) {
     return <PreviewSkeleton />;
   }
   if (file.error) {
+    const view = describeError(file.error);
     return (
       <div className="mx-auto max-w-2xl px-6 py-8">
         <Alert tone="destructive">
-          <AlertTitle>{describeError(file.error).title}</AlertTitle>
-          <AlertDescription>{describeError(file.error).description}</AlertDescription>
-          {describeError(file.error).actionHint ? (
-            <AlertDescription className="mt-1 text-xs">
-              {describeError(file.error).actionHint}
-            </AlertDescription>
+          <AlertTitle>{view.title}</AlertTitle>
+          <AlertDescription>{view.description}</AlertDescription>
+          {view.actionHint ? (
+            <AlertDescription className="mt-1 text-xs">{view.actionHint}</AlertDescription>
           ) : null}
         </Alert>
+        <Button onClick={() => file.refetch()} size="sm" variant="outline" className="mt-3">
+          Retry
+        </Button>
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
   MessageSquareIcon,
   SettingsIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useMatch, useNavigate } from "react-router-dom";
 
 interface RailItemProps {
@@ -72,6 +73,7 @@ function RailButton({ icon: Icon, label, onClick }: RailButtonProps) {
 }
 
 export function Rail() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const repoMatch = useMatch("/repo/:owner/:repo/*");
@@ -92,26 +94,30 @@ export function Rail() {
       <RailItem
         to={prBase ?? repoBase}
         icon={FilesIcon}
-        label="Changes"
+        label={t("rail.changes")}
         isActive={Boolean(prMatch)}
         disabled={!prBase}
       />
       <RailItem
         to={repoBase}
         icon={GitPullRequestIcon}
-        label="Pull requests"
+        label={t("rail.pullRequests")}
         isActive={onPrList}
         disabled={!repoMatch}
       />
       <RailItem
         to={prBase ?? repoBase}
         icon={MessageSquareIcon}
-        label="Comments"
+        label={t("rail.comments")}
         disabled={!prBase}
       />
       <div className="mt-auto flex flex-col items-center gap-2">
-        <RailButton icon={LogOutIcon} label="Leave repository" onClick={() => navigate("/")} />
-        <RailItem to="/settings" icon={SettingsIcon} label="Settings (coming soon)" disabled />
+        <RailButton
+          icon={LogOutIcon}
+          label={t("rail.leaveRepository")}
+          onClick={() => navigate("/")}
+        />
+        <RailItem to="/settings" icon={SettingsIcon} label={t("rail.settings")} disabled />
       </div>
     </nav>
   );

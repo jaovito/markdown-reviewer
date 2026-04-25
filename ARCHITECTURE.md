@@ -130,6 +130,8 @@ src/
     ├── ui/             # shadcn-style primitives (button, card, alert, badge, separator)
     ├── lib/            # cn, result, logger
     ├── hooks/          # cross-feature hooks
+    ├── stores/         # cross-feature Zustand stores (last-PR, sidebar width)
+    ├── i18n/           # i18next config + locales (en today; more later)
     └── styles/         # Tailwind entry + design tokens
 ```
 
@@ -141,14 +143,24 @@ src/
 - **Error mapping is centralized.** `shared/ipc/errors.ts::describeError(AppError)` returns `{ title, description, actionHint? }`. Features just render it.
 - **Server state → React Query; client UI state → Zustand** (not yet used; introduce when a feature needs it, keep stores small and feature-local).
 - **Routing: React Router (declarative mode)** — introduce in Phase 2 when the second screen lands. Code-based routes in `app/routes.tsx`. Search params validated with a tiny zod helper in `shared/lib/search-params.ts` (to be added).
+- **i18n is non-negotiable.** Every user-facing string flows through `i18next`. Components call `useTranslation()` and read `t("feature.key")`; for inline JSX use `<Trans>` with the `components` map. The error helper in `shared/ipc/errors.ts` uses the singleton `i18next` instance so `describeError` works outside React.
+
+### i18n conventions
+
+- **Locales live in `src/shared/i18n/locales/<lang>.json`.** Today only `en.json` ships; new locales drop in alongside it. The locale shape is type-checked via `src/shared/i18n/types.d.ts` so missing keys fail `tsc`.
+- **Key naming.** Group by feature/domain — `onboarding.*`, `pullRequests.list.*`, `fileExplorer.sidebar.*`, `main.threads.*`, `errors.<kind>.*`. Reuse cross-cutting strings from the `app.*` namespace (`app.actions.refresh`, `app.actions.retry`, `app.states.somethingWrong`).
+- **Interpolation** uses i18next's `{{var}}` syntax. Plurals use the suffix convention (`_one`, `_other`) — e.g. `emptyAllNonMarkdown_one` / `emptyAllNonMarkdown_other` driven by a `count` value.
+- **Inline JSX** (e.g. an `<code>` inside a sentence) goes through `<Trans>` with a `components` prop, never via string concatenation.
+- **Default language is `en`.** No detection wired yet; the language picker lands when settings ship. Until then, prefer concise, neutral English copy that translates well.
 
 ### Adding a frontend feature — checklist
 
 1. Create `src/features/<name>/` with `routes/`, `components/`, `hooks/`, `index.ts`.
 2. Build hooks that wrap `ipc.*` calls; throw `AppError` so React Query surfaces them.
 3. Compose screens from `shared/ui` primitives. Only reach into `shared/` — never into a sibling feature.
-4. Register the route in `app/routes.tsx` (Phase 2+).
-5. Export just what other parts of the app need from `index.ts`; keep internals internal.
+4. **Add every user-facing string to `src/shared/i18n/locales/en.json`** under a feature-scoped key, then read it via `useTranslation()` (`<Trans>` for inline JSX). No raw strings in JSX, alerts, tooltips, or aria labels.
+5. Register the route in `app/routes.tsx` (Phase 2+).
+6. Export just what other parts of the app need from `index.ts`; keep internals internal.
 
 ---
 

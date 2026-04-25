@@ -5,12 +5,14 @@ import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PullRequestRow } from "../components/PullRequestRow";
 import { PullRequestSearch } from "../components/PullRequestSearch";
 import { usePullRequests } from "../hooks/usePullRequests";
 import { useRepoPath } from "../hooks/useRepoPath";
 
 export function PullRequestListPage() {
+  const { t } = useTranslation();
   const { owner, repo } = useRepoContext();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
@@ -25,23 +27,15 @@ export function PullRequestListPage() {
   return (
     <main className="mx-auto flex h-full w-full max-w-3xl flex-col gap-4 overflow-auto px-6 py-8">
       <header className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">Open pull requests</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t("pullRequests.list.heading")}</h2>
         <span className="text-xs text-[hsl(var(--muted-foreground))]">
-          {prs.data ? `${filtered.length} of ${prs.data.length}` : null}
+          {prs.data
+            ? t("pullRequests.list.count", { shown: filtered.length, total: prs.data.length })
+            : null}
         </span>
       </header>
 
       <PullRequestSearch value={query} onChange={setQuery} />
-
-      {repoPath.data === null && !repoPath.isLoading ? (
-        <Alert tone="destructive">
-          <AlertTitle>Repository not in recents</AlertTitle>
-          <AlertDescription>
-            We couldn't find a local path for {owner}/{repo}. Pick the folder again from the home
-            screen.
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       {prs.error ? (
         <Alert tone="destructive">
@@ -88,11 +82,10 @@ function SkeletonList() {
 }
 
 function EmptyState({ hasQuery }: { hasQuery: boolean }) {
+  const { t } = useTranslation();
   return (
     <li className="rounded-md border border-dashed border-[hsl(var(--border))] px-4 py-10 text-center text-sm text-[hsl(var(--muted-foreground))]">
-      {hasQuery
-        ? "No pull requests match your search."
-        : "There are no open pull requests for this repository."}
+      {hasQuery ? t("pullRequests.list.emptyFiltered") : t("pullRequests.list.emptyAll")}
     </li>
   );
 }

@@ -7,6 +7,7 @@ import {
   GitPullRequestClosedIcon,
   GitPullRequestIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 interface PullRequestRowProps {
@@ -16,6 +17,7 @@ interface PullRequestRowProps {
 }
 
 export function PullRequestRow({ owner, repo, pr }: PullRequestRowProps) {
+  const { t } = useTranslation();
   return (
     <Link
       to={`/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${pr.number}`}
@@ -31,12 +33,12 @@ export function PullRequestRow({ owner, repo, pr }: PullRequestRowProps) {
           <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">#{pr.number}</span>
           {pr.isDraft ? (
             <Badge tone="muted" className="shrink-0">
-              Draft
+              {t("pullRequests.row.draft")}
             </Badge>
           ) : null}
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-          <span>by {pr.author}</span>
+          <span>{t("pullRequests.row.by", { author: pr.author })}</span>
           <span>•</span>
           <span className="flex items-center gap-1">
             <GitBranchIcon className="size-3" />
@@ -45,7 +47,7 @@ export function PullRequestRow({ owner, repo, pr }: PullRequestRowProps) {
             <span className="truncate">{pr.baseRef}</span>
           </span>
           <span>•</span>
-          <time dateTime={pr.updatedAt}>{relativeTime(pr.updatedAt)}</time>
+          <time dateTime={pr.updatedAt}>{useRelativeTime(pr.updatedAt)}</time>
         </div>
       </div>
     </Link>
@@ -75,14 +77,16 @@ function StateIcon({
   );
 }
 
-function relativeTime(iso: string): string {
+function useRelativeTime(iso: string): string {
+  const { t, i18n } = useTranslation();
   const then = new Date(iso).getTime();
   const diff = Date.now() - then;
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (diff < hour) return `${Math.max(1, Math.round(diff / minute))}m ago`;
-  if (diff < day) return `${Math.round(diff / hour)}h ago`;
-  if (diff < 30 * day) return `${Math.round(diff / day)}d ago`;
-  return new Date(iso).toLocaleDateString();
+  if (diff < hour)
+    return t("pullRequests.row.minutesAgo", { n: Math.max(1, Math.round(diff / minute)) });
+  if (diff < day) return t("pullRequests.row.hoursAgo", { n: Math.round(diff / hour) });
+  if (diff < 30 * day) return t("pullRequests.row.daysAgo", { n: Math.round(diff / day) });
+  return new Date(iso).toLocaleDateString(i18n.language);
 }

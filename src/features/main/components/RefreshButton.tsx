@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCwIcon } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface RefreshButtonProps {
   /**
@@ -22,6 +23,7 @@ const DEFAULT_KEYS = [
 ];
 
 export function RefreshButton({ keys = DEFAULT_KEYS }: RefreshButtonProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [spinning, setSpinning] = useState(false);
 
@@ -43,14 +45,14 @@ export function RefreshButton({ keys = DEFAULT_KEYS }: RefreshButtonProps) {
           type="button"
           variant="outline"
           size="icon"
-          aria-label="Refresh from remote"
+          aria-label={t("app.actions.refreshAria")}
           onClick={handleClick}
           className="size-8"
         >
           <RefreshCwIcon className={cn("size-3.5", spinning && "animate-spin")} />
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="bottom">Refresh from GitHub</TooltipContent>
+      <TooltipContent side="bottom">{t("app.actions.refresh")}</TooltipContent>
     </Tooltip>
   );
 }

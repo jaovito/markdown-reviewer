@@ -1,5 +1,5 @@
-import { isAppError } from "@/shared/ipc/errors";
-import { describeError } from "@/shared/ipc/errors";
+import { i18next } from "@/shared/i18n";
+import { describeError, isAppError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Component, type ErrorInfo, type ReactNode } from "react";
@@ -29,10 +29,11 @@ export class AppErrorBoundary extends Component<Props, State> {
   override render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    const t = i18next.t.bind(i18next);
 
     const view = isAppError(error)
       ? describeError(error)
-      : { title: "Something went wrong", description: error.message };
+      : { title: t("app.states.somethingWrong"), description: error.message };
 
     return (
       <main className="mx-auto flex min-h-full w-full max-w-xl flex-col gap-4 p-8">
@@ -44,7 +45,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           ) : null}
         </Alert>
         <Button onClick={this.reset} className="self-start">
-          Try again
+          {t("app.actions.tryAgain")}
         </Button>
       </main>
     );

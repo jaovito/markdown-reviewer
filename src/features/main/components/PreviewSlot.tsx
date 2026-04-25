@@ -1,5 +1,6 @@
 import { FileTextIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PreviewSlotProps {
   children?: ReactNode;
@@ -8,6 +9,7 @@ interface PreviewSlotProps {
 }
 
 export function PreviewSlot({ children, emptyHint, toolbar }: PreviewSlotProps) {
+  const { t } = useTranslation();
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col bg-[hsl(var(--background))]">
       {toolbar ? (
@@ -19,7 +21,7 @@ export function PreviewSlot({ children, emptyHint, toolbar }: PreviewSlotProps) 
         {children ?? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
             <FileTextIcon className="size-8 opacity-60" />
-            <p>{emptyHint ?? "Pick a pull request and a Markdown file to start reviewing."}</p>
+            <p>{emptyHint ?? t("main.preview.emptyHint")}</p>
           </div>
         )}
       </div>

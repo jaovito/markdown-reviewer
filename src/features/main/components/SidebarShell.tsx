@@ -5,6 +5,7 @@ import {
 } from "@/shared/stores/useSidebarWidth";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface SidebarShellProps {
   title: string;
@@ -15,6 +16,7 @@ interface SidebarShellProps {
 }
 
 export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: SidebarShellProps) {
+  const { t } = useTranslation();
   const width = useSidebarWidth((s) => s.width);
   const setWidth = useSidebarWidth((s) => s.setWidth);
   const asideRef = useRef<HTMLElement>(null);
@@ -64,7 +66,7 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
         <div className="px-2 pb-3">
           {children ?? (
             <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
-              {emptyHint ?? "Nothing to show yet."}
+              {emptyHint ?? t("main.sidebar.fallbackEmpty")}
             </p>
           )}
         </div>
@@ -73,7 +75,7 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
         role="separator"
         tabIndex={0}
         aria-orientation="vertical"
-        aria-label="Resize sidebar"
+        aria-label={t("main.sidebar.resizeAria")}
         aria-valuenow={width}
         aria-valuemin={SIDEBAR_MIN_WIDTH}
         aria-valuemax={SIDEBAR_MAX_WIDTH}

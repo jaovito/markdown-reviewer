@@ -3,6 +3,7 @@ import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { RecentReposList } from "../components/RecentReposList";
 import { ToolStatusPanel } from "../components/ToolStatusPanel";
@@ -10,6 +11,7 @@ import { useRecents, useRemoveRecent, useSelectRepository } from "../hooks/useSe
 import { useToolStatus } from "../hooks/useToolStatus";
 
 export function SelectRepoRoute() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const tools = useToolStatus();
   const recents = useRecents();
@@ -34,10 +36,8 @@ export function SelectRepoRoute() {
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-6 p-8">
       <header className="flex items-baseline justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Markdown Reviewer</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Open a local repository to start reviewing Markdown pull requests.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">{t("onboarding.subtitle")}</p>
         </div>
       </header>
 
@@ -47,7 +47,7 @@ export function SelectRepoRoute() {
 
       <div className="flex flex-col gap-3">
         <Button size="lg" onClick={() => handleSelect()} disabled={select.isPending}>
-          {select.isPending ? "Validating…" : "Select repository folder"}
+          {select.isPending ? t("onboarding.validating") : t("onboarding.selectButton")}
         </Button>
         {error && isAppError(error) ? <ErrorAlert error={error} /> : null}
       </div>

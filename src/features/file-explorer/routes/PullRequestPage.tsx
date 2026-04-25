@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { FileTree } from "../components/FileTree";
 import { FileTreeSearch } from "../components/FileTreeSearch";
@@ -22,6 +23,7 @@ import { useChangedFiles } from "../hooks/useChangedFiles";
 import { filterChangedFiles } from "../lib/filterFiles";
 
 export function PullRequestPage() {
+  const { t } = useTranslation();
   const { owner, repo } = useRepoContext();
   const params = useParams<{ number: string; "*": string }>();
   const prNumber = Number(params.number);
@@ -53,17 +55,24 @@ export function PullRequestPage() {
 
   const basePath = `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
 
+  const subtitle = files.data
+    ? hiddenCount > 0
+      ? t("fileExplorer.sidebar.summaryHidden", {
+          shown: filteredFiles.length,
+          total: markdownFiles.length,
+          hidden: hiddenCount,
+        })
+      : t("fileExplorer.sidebar.summary", {
+          shown: filteredFiles.length,
+          total: markdownFiles.length,
+        })
+    : t("fileExplorer.sidebar.fallbackSubtitle", { number: prNumber });
+
   return (
     <>
       <SidebarShell
-        title="Changes"
-        subtitle={
-          files.data
-            ? `${filteredFiles.length} of ${markdownFiles.length} Markdown files${
-                hiddenCount > 0 ? ` (${hiddenCount} non-Markdown hidden)` : ""
-              }`
-            : `Files in PR #${prNumber}`
-        }
+        title={t("fileExplorer.sidebar.title")}
+        subtitle={subtitle}
         toolbar={<FileTreeSearch value={filterQuery} onChange={setFilterQuery} />}
       >
         {files.isLoading ? (
@@ -75,12 +84,11 @@ export function PullRequestPage() {
           </Alert>
         ) : markdownFiles.length === 0 && totalFiles > 0 ? (
           <p className="px-3 py-6 text-xs text-[hsl(var(--muted-foreground))]">
-            This pull request changes {totalFiles} file{totalFiles === 1 ? "" : "s"}, none of them
-            Markdown.
+            {t("fileExplorer.sidebar.emptyAllNonMarkdown", { count: totalFiles })}
           </p>
         ) : filteredFiles.length === 0 && markdownFiles.length > 0 ? (
           <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">
-            No Markdown files match "{debouncedFilter}".
+            {t("fileExplorer.sidebar.emptyFilter", { query: debouncedFilter })}
           </p>
         ) : (
           <FileTree files={filteredFiles} selectedPath={selectedPath} basePath={basePath} />
@@ -89,10 +97,10 @@ export function PullRequestPage() {
       <PreviewSlot
         toolbar={
           <span className="text-xs text-[hsl(var(--muted-foreground))]">
-            {selectedPath ?? `Pull request #${prNumber}`}
+            {selectedPath ?? t("fileExplorer.preview.fallbackToolbarLabel", { number: prNumber })}
           </span>
         }
-        emptyHint="Pick a Markdown file from the sidebar to start reading."
+        emptyHint={t("fileExplorer.preview.noFileSelected")}
       >
         {selectedPath ? (
           <PreviewArea
@@ -118,6 +126,7 @@ interface PreviewAreaProps {
 }
 
 function PreviewArea({ repoPath, sha, filePath, isDetailLoading, prNumber }: PreviewAreaProps) {
+  const { t } = useTranslation();
   const supported = isMarkdownPath(filePath);
   const file = useFileContent({
     repoPath,
@@ -148,7 +157,7 @@ function PreviewArea({ repoPath, sha, filePath, isDetailLoading, prNumber }: Pre
           ) : null}
         </Alert>
         <Button onClick={() => file.refetch()} size="sm" variant="outline" className="mt-3">
-          Retry
+          {t("app.actions.retry")}
         </Button>
       </div>
     );

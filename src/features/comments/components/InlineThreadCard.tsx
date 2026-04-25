@@ -1,8 +1,9 @@
 import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useGhUser } from "../hooks/useGhUser";
 
 interface InlineThreadCardProps {
   comments: ReviewComment[];
@@ -11,6 +12,7 @@ interface InlineThreadCardProps {
   onResolve?: (comment: ReviewComment) => void;
   onHide?: (comment: ReviewComment) => void;
   onReply?: (head: ReviewComment) => void;
+  onDelete?: (comment: ReviewComment) => void;
 }
 
 function isRange(anchor: CommentAnchor): boolean {
@@ -84,8 +86,12 @@ export function InlineThreadCard({
   onResolve,
   onHide,
   onReply,
+  onDelete,
 }: InlineThreadCardProps) {
   const { t } = useTranslation();
+  const ghUser = useGhUser();
+  const currentUser = ghUser.data ?? null;
+  const isOwn = (c: ReviewComment) => Boolean(currentUser && c.author === currentUser);
   const head = comments[0];
   if (!head) return null;
   const isResolved = head.state === "resolved";
@@ -136,15 +142,34 @@ export function InlineThreadCard({
           key={c.id}
           className={cn(
             "px-1 text-[12px] leading-snug text-[hsl(var(--foreground))]/85",
-            idx === 0 ? "pt-0.5" : "border-t border-[hsl(var(--border))] pt-2 mt-1",
+            idx === 0 ? "pt-0.5" : "mt-1 border-[hsl(var(--border))] border-t pt-2",
           )}
         >
-          {idx > 0 && c.author ? (
-            <p className="mb-1 text-[11px] font-semibold text-[hsl(var(--foreground))]">
-              {c.author}
-            </p>
-          ) : null}
-          <p className="whitespace-pre-wrap">{c.body}</p>
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              {idx > 0 && c.author ? (
+                <p className="mb-1 text-[11px] font-semibold text-[hsl(var(--foreground))]">
+                  {c.author}
+                </p>
+              ) : null}
+              <p className="whitespace-pre-wrap">{c.body}</p>
+            </div>
+            {onDelete && isOwn(c) ? (
+              <button
+                type="button"
+                onClick={() => onDelete(c)}
+                aria-label={t("comments.thread.deleteAria")}
+                title={t("comments.thread.delete")}
+                className={cn(
+                  "shrink-0 rounded-md p-1 text-[hsl(var(--muted-foreground))]",
+                  "transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--destructive))]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
+                )}
+              >
+                <Trash2Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
         </div>
       ))}
 

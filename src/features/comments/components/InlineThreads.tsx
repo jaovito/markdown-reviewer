@@ -68,6 +68,18 @@ export function InlineThreads({
     },
   });
 
+  const remove = useMutation({
+    mutationFn: (id: number) =>
+      ipc.comments.delete(id).then((r) => {
+        if (!r.ok) throw r.error;
+        return r.value;
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber, filePath] });
+    },
+  });
+
   // Memoize groups so identity is stable across renders unless comments
   // actually change. We compute a fingerprint and use that to gate the memo.
   const groupsKey = useMemo(
@@ -187,6 +199,7 @@ export function InlineThreads({
             }}
             onHide={() => minimize(group.line)}
             onReply={(c) => select(c.id)}
+            onDelete={(c) => remove.mutate(c.id)}
           />,
           slot,
           `thread-${group.line}`,

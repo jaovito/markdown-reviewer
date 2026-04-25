@@ -151,6 +151,8 @@
       "reply": "Reply",
       "hide": "Hide",
       "resolve": "Resolve",
+      "delete": "Delete",
+      "deleteAria": "Delete this comment",
       "badgeOpen": "Open",
       "badgeDraft": "Draft",
       "badgeResolved": "Resolved",

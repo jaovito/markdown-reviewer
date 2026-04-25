@@ -3,25 +3,29 @@ import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { RecentReposList } from "../components/RecentReposList";
-import { RepoValidationCard } from "../components/RepoValidationCard";
 import { ToolStatusPanel } from "../components/ToolStatusPanel";
 import { useRecents, useRemoveRecent, useSelectRepository } from "../hooks/useSelectRepository";
 import { useToolStatus } from "../hooks/useToolStatus";
 
 export function SelectRepoRoute() {
+  const navigate = useNavigate();
   const tools = useToolStatus();
   const recents = useRecents();
   const select = useSelectRepository();
   const removeRecent = useRemoveRecent();
 
-  const [repo, setRepo] = useState<Repository | null>(null);
+  const goToRepo = (r: Repository) => {
+    navigate(`/repo/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}`, {
+      state: { path: r.path, branch: r.currentBranch },
+    });
+  };
 
   const handleSelect = async (path?: string) => {
     const result = await select.mutateAsync(path).catch((e: AppError) => e);
     if (result && "kind" in result) return; // error — rendered below
-    if (result) setRepo(result);
+    if (result) goToRepo(result);
   };
 
   const error = select.error ?? tools.error ?? recents.error;
@@ -41,16 +45,12 @@ export function SelectRepoRoute() {
 
       <Separator />
 
-      {repo ? (
-        <RepoValidationCard repo={repo} onClear={() => setRepo(null)} />
-      ) : (
-        <div className="flex flex-col gap-3">
-          <Button size="lg" onClick={() => handleSelect()} disabled={select.isPending}>
-            {select.isPending ? "Validating…" : "Select repository folder"}
-          </Button>
-          {error && isAppError(error) ? <ErrorAlert error={error} /> : null}
-        </div>
-      )}
+      <div className="flex flex-col gap-3">
+        <Button size="lg" onClick={() => handleSelect()} disabled={select.isPending}>
+          {select.isPending ? "Validating…" : "Select repository folder"}
+        </Button>
+        {error && isAppError(error) ? <ErrorAlert error={error} /> : null}
+      </div>
 
       <Separator />
 

@@ -171,9 +171,27 @@ fn decode_anchor(
         "codeBlock" => Ok(CommentAnchor::CodeBlock {
             start_line: start,
             end_line: end,
-            code_start_line: payload.code_start_line.unwrap_or(start),
+            // No DB column tracks the fence opener, so a missing
+            // `codeStartLine` here is genuine corruption — fail loudly
+            // instead of silently anchoring to `start`.
+            code_start_line: read_required_payload_line(
+                payload.code_start_line,
+                "code_start_line",
+            )?,
         }),
         other => Err(BadEnum(other.to_string())),
+    }
+}
+
+/// Resolves a required 1-indexed source line that lives only in the JSON
+/// payload (no `SQLite` fallback column). Errors when missing or invalid.
+fn read_required_payload_line(value: Option<u32>, field: &str) -> Result<u32, BadEnum> {
+    match value {
+        Some(line) if line >= 1 => Ok(line),
+        Some(_) => Err(BadEnum(format!(
+            "anchor_data.{field}: zero is not 1-indexed"
+        ))),
+        None => Err(BadEnum(format!("anchor_data.{field}: missing"))),
     }
 }
 

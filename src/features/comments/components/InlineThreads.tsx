@@ -100,6 +100,19 @@ export function InlineThreads({
     ? Math.max(composerStart ?? 0, anchorEndLine(composerAnchor))
     : null;
 
+  // The minimized store is global and keyed by (prNumber, filePath, start,
+  // end). The slot Maps inside this component are per-instance and keyed by
+  // (start, end) only. Project the global state down to a local slot-key set
+  // so `syncSlots` can keep using the simple comparison.
+  const localMinimized = useMemo(() => {
+    const out = new Set<SlotKey>();
+    for (const g of groups) {
+      const k = minimizedKey(prNumber, filePath, g.startLine, g.endLine);
+      if (minimizedSet.has(k)) out.add(slotKeyFor(g.startLine, g.endLine));
+    }
+    return out;
+  }, [groups, minimizedSet, prNumber, filePath]);
+
   // Slot map lives in a ref; we only bump `revision` when the slot identities
   // actually change so the React tree re-renders the portals minimally.
   const slotsRef = useRef<SlotMap>({
@@ -119,7 +132,7 @@ export function InlineThreads({
       container,
       slotsRef.current,
       groups,
-      minimizedSet,
+      localMinimized,
       composerStart,
       composerEnd,
       mutatingRef,
@@ -137,7 +150,7 @@ export function InlineThreads({
         });
       }
     };
-  }, [containerRef, groups, minimizedSet, composerStart, composerEnd]);
+  }, [containerRef, groups, localMinimized, composerStart, composerEnd]);
 
   // Re-sync when the rendered article DOM changes (a markdown re-render).
   useEffect(() => {
@@ -153,7 +166,7 @@ export function InlineThreads({
         container,
         slotsRef.current,
         groups,
-        minimizedSet,
+        localMinimized,
         composerStart,
         composerEnd,
         mutatingRef,
@@ -162,50 +175,51 @@ export function InlineThreads({
     });
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef, groups, minimizedSet, composerStart, composerEnd]);
+  }, [containerRef, groups, localMinimized, composerStart, composerEnd]);
 
   const slots = slotsRef.current;
 
   return (
     <>
       {groups.map((group) => {
-        const key = minimizedKey(group.startLine, group.endLine);
-        const minimized = minimizedSet.has(key);
+        const slotKey = slotKeyFor(group.startLine, group.endLine);
+        const minKey = minimizedKey(prNumber, filePath, group.startLine, group.endLine);
+        const minimized = minimizedSet.has(minKey);
         if (minimized) {
-          const badgeSlot = slots.badges.get(key);
+          const badgeSlot = slots.badges.get(slotKey);
           if (!badgeSlot) return null;
           return createPortal(
             <MinimizedThreadBadge
-              key={key}
+              key={slotKey}
               count={group.comments.length}
               onExpand={() => {
-                expand(key);
+                expand(minKey);
                 const head = group.comments[0];
                 if (head) select(head.id);
               }}
             />,
             badgeSlot,
-            `thread-badge-${key}`,
+            `thread-badge-${slotKey}`,
           );
         }
-        const slot = slots.threads.get(key);
+        const slot = slots.threads.get(slotKey);
         if (!slot) return null;
         const isSelected = group.comments.some((c) => c.id === selectedId);
         return createPortal(
           <InlineThreadCard
-            key={key}
+            key={slotKey}
             comments={group.comments}
             selected={isSelected}
             onResolve={(c) => {
               select(c.id);
               update.mutate({ id: c.id, patch: { state: "resolved" } });
             }}
-            onHide={() => minimize(key)}
+            onHide={() => minimize(minKey)}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
           />,
           slot,
-          `thread-${key}`,
+          `thread-${slotKey}`,
         );
       })}
       {composerAnchor && slots.composerSlot
@@ -238,12 +252,9 @@ function mutationIsSignificant(record: MutationRecord): boolean {
     if (node.dataset.codeLine) continue;
     return true;
   }
-  // Pure attribute changes on the line nodes (data-has-comment /
-  // data-comment-minimized) are also self-inflicted — our toggles trigger them.
-  if (record.type === "attributes") {
-    if (record.attributeName === "data-has-comment") return false;
-    if (record.attributeName === "data-comment-minimized") return false;
-  }
+  // Observer is configured `{ childList: true, subtree: true }` only — no
+  // attribute mutations reach this callback, so any record with no
+  // significant added/removed nodes is by definition irrelevant.
   return false;
 }
 

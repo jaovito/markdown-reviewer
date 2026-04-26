@@ -1,10 +1,20 @@
 import { create } from "zustand";
 
-/** Composite key `${startLine}:${endLine}` matching the inline slot keying. */
+/**
+ * Composite key `${prNumber}:${filePath}:${startLine}:${endLine}` so the
+ * minimized state is scoped per (PR, file) — minimizing a thread in one
+ * file no longer collapses an unrelated thread that happens to share the
+ * same line range in another file.
+ */
 export type MinimizedKey = string;
 
-export function minimizedKey(startLine: number, endLine: number): MinimizedKey {
-  return `${startLine}:${endLine}`;
+export function minimizedKey(
+  prNumber: number,
+  filePath: string,
+  startLine: number,
+  endLine: number,
+): MinimizedKey {
+  return `${prNumber}:${filePath}:${startLine}:${endLine}`;
 }
 
 interface MinimizedThreadsState {

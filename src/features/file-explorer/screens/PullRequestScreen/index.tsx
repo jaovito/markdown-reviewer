@@ -113,7 +113,7 @@ export function PullRequestScreen() {
           />
         ) : null}
       </PreviewSlot>
-      <ThreadsPane />
+      <ThreadsPane prNumber={prNumber} filePath={selectedPath} />
     </>
   );
 }

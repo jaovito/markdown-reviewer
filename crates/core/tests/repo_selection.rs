@@ -5,7 +5,7 @@ use markdown_reviewer_core::application::repo_selection::{
     check_tools::check_tools, recents, validate_repository::validate_repository, RepoSelection,
 };
 use markdown_reviewer_core::ports::{
-    Clock, GhAuthReport, GhClient, GitClient, RecentRepository, RecentsStore,
+    Clock, GhAuthReport, GhClient, GitClient, RecentRepository, RecentsStore, ReviewCommentInput,
 };
 use markdown_reviewer_core::AppError;
 use time::OffsetDateTime;
@@ -110,6 +110,24 @@ impl GhClient for FakeGh {
         _file_path: &str,
     ) -> markdown_reviewer_core::AppResult<String> {
         Ok(String::new())
+    }
+    async fn submit_review_batch(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comments: &[ReviewCommentInput],
+    ) -> markdown_reviewer_core::AppResult<Vec<i64>> {
+        Err(AppError::process("not implemented in test fake"))
+    }
+    async fn submit_review_comment(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comment: &ReviewCommentInput,
+    ) -> markdown_reviewer_core::AppResult<i64> {
+        Err(AppError::process("not implemented in test fake"))
     }
 }
 

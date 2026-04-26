@@ -12,6 +12,42 @@ pub struct GhAuthReport {
     pub detail: String,
 }
 
+/// One inline review comment to submit. Lines refer to positions in the file
+/// at `head_sha`. `line` is the final line of the anchor (single-line or end
+/// of a range); when `start_line` is present the comment becomes multi-line
+/// on the GitHub side (`POST /pulls/{n}/comments` and the review-batch
+/// `comments[i][start_line]` payload both honor it).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewCommentInput {
+    pub local_id: i64,
+    pub path: String,
+    pub line: u32,
+    /// Set to `Some(start)` when the original anchor spans multiple lines.
+    /// Unused for single-line anchors.
+    #[serde(default)]
+    pub start_line: Option<u32>,
+    pub body: String,
+}
+
+/// Per-comment status returned to the UI after a `submit_review` round-trip.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmittedReviewComment {
+    pub local_id: i64,
+    pub github_id: Option<i64>,
+    pub submitted: bool,
+    pub error: Option<String>,
+}
+
+/// Aggregate result of a `submit_review` round-trip.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewSubmissionResult {
+    pub comments: Vec<SubmittedReviewComment>,
+    pub all_submitted: bool,
+}
+
 /// Abstracts the GitHub CLI (`gh`).
 #[async_trait]
 pub trait GhClient: Send + Sync {
@@ -32,4 +68,28 @@ pub trait GhClient: Send + Sync {
         sha: &str,
         file_path: &str,
     ) -> AppResult<String>;
+
+    /// Posts a review with multiple inline comments via
+    /// `POST /repos/{owner}/{repo}/pulls/{number}/reviews` with
+    /// `event: COMMENT`. Returns the created GitHub comment ids in the same
+    /// order as `comments`, or `Err` if the entire batch failed (caller can
+    /// then fall back to per-comment submission).
+    async fn submit_review_batch(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comments: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>>;
+
+    /// Posts a single review comment via
+    /// `POST /repos/{owner}/{repo}/pulls/{number}/comments`. Used as the
+    /// fallback when the batch endpoint rejects part or all of the request.
+    async fn submit_review_comment(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        head_sha: &str,
+        comment: &ReviewCommentInput,
+    ) -> AppResult<i64>;
 }

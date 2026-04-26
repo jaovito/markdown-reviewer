@@ -15,6 +15,10 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "0002_ui_state",
         include_str!("migrations/0002_ui_state.sql"),
     ),
+    (
+        "0003_local_comments",
+        include_str!("migrations/0003_local_comments.sql"),
+    ),
 ];
 
 pub fn open_and_migrate(path: &Path) -> AppResult<Db> {

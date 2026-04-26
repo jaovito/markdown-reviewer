@@ -151,3 +151,72 @@ body {
   max-width: 100%;
   border-radius: 4px;
 }
+
+/* Soft brand-tinted text selection inside the rendered Markdown — matches the
+   `#eff6ff` highlight from design.pen instead of the harsh OS default blue. */
+.prose-styles ::selection {
+  background: hsl(var(--comment-selection-bg));
+  color: hsl(var(--comment-selection-fg));
+}
+
+/* Lines that already carry at least one comment get a soft persistent
+   highlight + 3px brand bar on the left, matching the `mrexSameLine` style. */
+.prose-styles [data-source-line][data-has-comment="true"] {
+  background: hsl(var(--comment-selection-bg));
+  border-left: 3px solid hsl(var(--comment-marker-fg));
+  border-radius: 6px;
+  padding-left: 0.6em;
+  margin-left: -0.6em;
+}
+/* Minimized threads keep the anchor visible with a much softer wash so the
+   document content stays the focus. */
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-minimized="true"] {
+  background: hsl(var(--comment-selection-bg) / 0.35);
+  border-left-color: hsl(var(--comment-marker-fg) / 0.4);
+}
+
+/* Per-line spans inserted into `<pre>` by InlineThreads.splitCodeBlocks —
+   they need block layout so the highlight strip spans the full code width
+   instead of just the text glyphs. */
+.prose-styles pre [data-code-line] {
+  display: block;
+}
+.prose-styles pre [data-code-line][data-has-comment="true"] {
+  background: hsl(var(--comment-selection-bg));
+  border-left: 3px solid hsl(var(--comment-marker-fg));
+  /* Keep the highlight tight to the line — no rounded corners, no negative
+     margins, since we're inside a preformatted block. */
+  border-radius: 0;
+  padding-left: 0.5em;
+  margin-left: -0.5em;
+  color: hsl(var(--comment-selection-fg));
+}
+.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-minimized="true"] {
+  background: hsl(var(--comment-selection-bg) / 0.35);
+  border-left-color: hsl(var(--comment-marker-fg) / 0.4);
+  color: inherit;
+}
+
+/* Inline thread / composer slots inserted by InlineThreads — make them sit
+   flush in the document flow under the anchor line. */
+.prose-styles [data-thread-slot] {
+  margin: 0;
+}
+
+/* Minimized "open" badge inserted at the end of the highlighted line. Pushed
+   to the right end so it doesn't disturb the surrounding text. */
+.prose-styles [data-thread-badge] {
+  float: right;
+  margin-left: 0.5em;
+  /* Reset preformatting when the badge lands inside a `<pre>` line span. */
+  white-space: normal;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* When a slot lands inside a `<pre>` (between code lines), reset
+   preformatting so the React card renders normally. */
+.prose-styles pre [data-thread-slot] {
+  white-space: normal;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}

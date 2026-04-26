@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use markdown_reviewer_core::application::files::{read_markdown_file::read_markdown_file, Files};
-use markdown_reviewer_core::ports::{GhAuthReport, GhClient, GitClient};
+use markdown_reviewer_core::ports::{GhAuthReport, GhClient, GitClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
 
 struct FakeGit {
@@ -85,6 +85,24 @@ impl GhClient for FakeGh {
         _file_path: &str,
     ) -> AppResult<String> {
         self.fallback.clone()
+    }
+    async fn submit_review_batch(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comments: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        Err(AppError::process("not implemented in test fake"))
+    }
+    async fn submit_review_comment(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _head_sha: &str,
+        _comment: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        Err(AppError::process("not implemented in test fake"))
     }
 }
 

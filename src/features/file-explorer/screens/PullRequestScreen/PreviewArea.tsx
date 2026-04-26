@@ -59,5 +59,13 @@ export function PreviewArea({
       </div>
     );
   }
-  return <MarkdownPreview source={file.data ?? ""} hunks={diff.data?.hunks} />;
+  return (
+    <MarkdownPreview
+      source={file.data ?? ""}
+      hunks={diff.data?.hunks}
+      prNumber={prNumber}
+      filePath={filePath}
+      headSha={sha}
+    />
+  );
 }

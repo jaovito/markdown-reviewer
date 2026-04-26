@@ -350,7 +350,7 @@ impl CommentsStore for SqliteCommentsStore {
 
             let new_state = patch.state.unwrap_or(current.state);
             if !current.state.can_transition_to(new_state) {
-                return Err(AppError::db(format!(
+                return Err(AppError::validation(format!(
                     "illegal state transition: {} -> {}",
                     current.state.as_str(),
                     new_state.as_str()

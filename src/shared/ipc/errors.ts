@@ -66,6 +66,11 @@ export function describeError(e: AppError): AppErrorView {
         }),
         actionHint: t("errors.fileNotFound.actionHint"),
       };
+    case "validation":
+      return {
+        title: t("errors.validation.title"),
+        description: e.data.message,
+      };
     case "io":
     case "db":
     case "process":

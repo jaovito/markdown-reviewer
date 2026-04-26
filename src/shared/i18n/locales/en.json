@@ -198,6 +198,9 @@
     },
     "generic": {
       "title": "Something went wrong"
+    },
+    "validation": {
+      "title": "Invalid action"
     }
   }
 }

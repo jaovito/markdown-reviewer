@@ -179,13 +179,24 @@ export function resolveAnchor(article: HTMLElement, selection: Selection): Ancho
   if (startPre && startPre === endPre) {
     const preLine = readSourceLine(startPre);
     if (preLine !== null) {
+      // Number of content lines, ignoring a trailing newline that markdown
+      // routinely emits (matches splitCodeBlocks which also trims it).
+      const raw = startPre.textContent ?? "";
+      const trimmed = raw.endsWith("\n") ? raw.slice(0, -1) : raw;
+      const lineCount = trimmed.length === 0 ? 0 : trimmed.split("\n").length;
+      const lastContentLine = lineCount === 0 ? preLine + 1 : preLine + lineCount;
+
       const startOffset = newlinesUpTo(startPre, range.startContainer, range.startOffset);
       const endOffset = newlinesUpTo(startPre, end.container, end.offset);
       // `+ 1` because the fence opener is line `preLine`, the first content
       // line is `preLine + 1`. The newline counter returns 0 for the first
-      // content line; bump everything by 1 to land on it.
-      const startLine = preLine + 1 + startOffset;
-      const endLine = preLine + 1 + endOffset;
+      // content line; bump everything by 1 to land on it. Clamp to the last
+      // real content line so a selection ending at the close of the `<pre>`
+      // (which counts the trailing newline) doesn't overshoot.
+      const rawStart = preLine + 1 + startOffset;
+      const rawEnd = preLine + 1 + endOffset;
+      const startLine = Math.min(rawStart, lastContentLine);
+      const endLine = Math.min(rawEnd, lastContentLine);
       const [s, e] = startLine <= endLine ? [startLine, endLine] : [endLine, startLine];
       return {
         anchor: { kind: "codeBlock", startLine: s, endLine: e, codeStartLine: preLine },

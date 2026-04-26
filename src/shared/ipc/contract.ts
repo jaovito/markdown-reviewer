@@ -147,6 +147,7 @@ export type AppError =
   | { kind: "io"; data: { message: string } }
   | { kind: "db"; data: { message: string } }
   | { kind: "process"; data: { message: string } }
+  | { kind: "validation"; data: { message: string } }
   | { kind: "unexpected"; data: { message: string } };
 
 export interface Commands {

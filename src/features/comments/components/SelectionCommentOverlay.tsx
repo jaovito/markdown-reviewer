@@ -23,6 +23,22 @@ const BUTTON_OFFSET_Y = 6;
 const BUTTON_WIDTH = 110;
 const SAFE_PADDING = 8;
 
+/** Walks up from `node` collecting every ancestor that scrolls itself. */
+function collectScrollAncestors(node: HTMLElement): (HTMLElement | Document)[] {
+  const out: (HTMLElement | Document)[] = [];
+  let current: HTMLElement | null = node.parentElement;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (/(auto|scroll|overlay)/.test(style.overflowY + style.overflowX)) {
+      out.push(current);
+    }
+    current = current.parentElement;
+  }
+  // Document scroll handles the window-level case.
+  out.push(document);
+  return out;
+}
+
 /**
  * Listens for text selections inside `container` and surfaces a floating
  * "Comment" button anchored to the selection. Clicking it lifts the chosen
@@ -68,9 +84,19 @@ export function SelectionCommentOverlay({
 
     document.addEventListener("selectionchange", refresh);
     window.addEventListener("resize", refresh);
+    // Also follow scrolls of any scrollable ancestor (the preview slot is
+    // `overflow-auto`, so without this the button drifts away from the
+    // selected text whenever the user scrolls the article).
+    const scrollAncestors = collectScrollAncestors(container);
+    for (const node of scrollAncestors) {
+      node.addEventListener("scroll", refresh, { passive: true });
+    }
     return () => {
       document.removeEventListener("selectionchange", refresh);
       window.removeEventListener("resize", refresh);
+      for (const node of scrollAncestors) {
+        node.removeEventListener("scroll", refresh);
+      }
     };
   }, [containerRef, disabled]);
 

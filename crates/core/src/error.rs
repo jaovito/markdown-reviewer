@@ -36,6 +36,12 @@ pub enum AppError {
     #[error("process error: {message}")]
     Process { message: String },
 
+    /// Application-level validation failure (e.g. an illegal state
+    /// transition). Distinct from `Db` so the UI / telemetry can route it
+    /// correctly.
+    #[error("validation error: {message}")]
+    Validation { message: String },
+
     #[error("unexpected error: {message}")]
     Unexpected { message: String },
 }
@@ -53,6 +59,11 @@ impl AppError {
     }
     pub fn process(err: impl std::fmt::Display) -> Self {
         Self::Process {
+            message: err.to_string(),
+        }
+    }
+    pub fn validation(err: impl std::fmt::Display) -> Self {
+        Self::Validation {
             message: err.to_string(),
         }
     }

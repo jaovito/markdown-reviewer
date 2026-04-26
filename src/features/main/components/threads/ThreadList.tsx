@@ -77,9 +77,13 @@ export function ThreadList({
 }
 
 function getAnchorScrollLine(comment: ReviewComment): number {
+  // Inline thread cards / badges mount under `attachLine` (== endLine for
+  // ranges; see `groupCommentsByStartLine`). Scrolling to the start line
+  // of a long range can leave the actual card off-screen, so target the
+  // end line instead.
   const a = comment.anchor;
   if (a.kind === "singleLine") return a.line;
-  return a.startLine;
+  return a.endLine;
 }
 
 function groupByAnchor(comments: ReviewComment[]): ThreadGroup[] {

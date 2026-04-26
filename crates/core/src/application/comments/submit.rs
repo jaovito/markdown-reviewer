@@ -34,7 +34,7 @@ pub async fn run(
 
     for &id in comment_ids {
         let fetched = svc.store.get(id).await?;
-        let slot = classify(id, fetched, &mut head_shas);
+        let slot = classify(pr_number, id, fetched, &mut head_shas);
         slots.push((id, slot));
     }
 
@@ -134,7 +134,7 @@ pub async fn run(
                 // the classify pass already held one but burying it in the
                 // enum would couple unrelated branches.
                 match svc.store.get(id).await? {
-                    Some(comment) => {
+                    Some(comment) if comment.pr_number == pr_number => {
                         let input = build_input(id, &comment);
                         submit_single(
                             svc,
@@ -147,6 +147,15 @@ pub async fn run(
                         )
                         .await?
                     }
+                    Some(comment) => SubmittedReviewComment {
+                        local_id: id,
+                        github_id: None,
+                        submitted: false,
+                        error: Some(format!(
+                            "local comment {id} belongs to PR #{} (expected PR #{pr_number})",
+                            comment.pr_number
+                        )),
+                    },
                     None => SubmittedReviewComment {
                         local_id: id,
                         github_id: None,
@@ -166,12 +175,27 @@ pub async fn run(
     })
 }
 
-fn classify(id: i64, fetched: Option<ReviewComment>, head_shas: &mut Vec<String>) -> Slot {
+fn classify(
+    pr_number: u64,
+    id: i64,
+    fetched: Option<ReviewComment>,
+    head_shas: &mut Vec<String>,
+) -> Slot {
     let Some(comment) = fetched else {
         return Slot::Skipped {
             reason: format!("local comment {id} not found"),
         };
     };
+    // Guard against stale UI state — a comment id that belongs to a
+    // different PR must never be posted under this PR's review.
+    if comment.pr_number != pr_number {
+        return Slot::Skipped {
+            reason: format!(
+                "local comment {id} belongs to PR #{} (expected PR #{pr_number})",
+                comment.pr_number
+            ),
+        };
+    }
     // Already-published comments are reported as success (idempotent retry).
     if let Some(github_id) = comment.github_id {
         return Slot::AlreadySubmitted { github_id };

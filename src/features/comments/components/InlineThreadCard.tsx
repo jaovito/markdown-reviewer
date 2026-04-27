@@ -1,7 +1,7 @@
 import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import { CheckIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGhUser } from "../hooks/useGhUser";
 
@@ -13,6 +13,8 @@ interface InlineThreadCardProps {
   onHide?: (comment: ReviewComment) => void;
   onReply?: (head: ReviewComment) => void;
   onDelete?: (comment: ReviewComment) => void;
+  /** Click on the count badge — opens the stacked view in the threads panel. */
+  onShowStack?: (head: ReviewComment) => void;
 }
 
 function isRange(anchor: CommentAnchor): boolean {
@@ -87,6 +89,7 @@ export function InlineThreadCard({
   onHide,
   onReply,
   onDelete,
+  onShowStack,
 }: InlineThreadCardProps) {
   const { t } = useTranslation();
   const ghUser = useGhUser();
@@ -102,6 +105,7 @@ export function InlineThreadCard({
     ? "border-[hsl(var(--comment-range-border))]"
     : "border-[hsl(var(--border))]";
   const badge = badgeFor(t, head.state);
+  const total = comments.length;
 
   return (
     <div
@@ -126,6 +130,24 @@ export function InlineThreadCard({
         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[hsl(var(--foreground))]">
           {metaLabel(t, head)}
         </span>
+        {total > 1 ? (
+          <button
+            type="button"
+            onClick={() => onShowStack?.(head)}
+            aria-label={t("comments.markers.countBadgeAria", { count: total })}
+            title={t("comments.markers.countBadgeTooltip", { count: total })}
+            className={cn(
+              "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold",
+              "border border-[hsl(var(--comment-marker-border))] bg-[hsl(var(--comment-marker-bg))]",
+              "text-[hsl(var(--comment-marker-fg))] transition-colors",
+              "hover:bg-[hsl(var(--comment-marker-hover))]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
+            )}
+          >
+            <MessageSquareIcon className="h-3 w-3" aria-hidden="true" />
+            <span aria-hidden="true">{total}</span>
+          </button>
+        ) : null}
         <span
           className="inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[11px] font-medium"
           style={{

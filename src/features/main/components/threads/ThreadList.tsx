@@ -1,7 +1,7 @@
 import type { ReviewComment } from "@/shared/ipc/contract";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { scrollToAnchorLine } from "../../lib/scrollToAnchor";
 import { ThreadCard, type ThreadGroup } from "./ThreadCard";
@@ -26,6 +26,19 @@ export function ThreadList({
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   const select = useSelectedThread((s) => s.select);
   const groups = useMemo(() => groupByAnchor(comments), [comments]);
+  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  // When the selection changes (often from clicking an inline marker in the
+  // preview), bring the matching card into view so the stacked threads are
+  // visible without manual scrolling.
+  useEffect(() => {
+    if (selectedId === null) return;
+    const match = groups.find((g) => g.comments.some((c) => c.id === selectedId));
+    if (!match) return;
+    const node = cardRefs.current.get(match.key);
+    if (!node) return;
+    node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedId, groups]);
 
   if (isLoading) {
     return (
@@ -52,6 +65,10 @@ export function ThreadList({
         return (
           <ThreadCard
             key={group.key}
+            ref={(node) => {
+              if (node) cardRefs.current.set(group.key, node);
+              else cardRefs.current.delete(group.key);
+            }}
             group={group}
             selected={isSelected}
             hideFilePath={hideFilePath}

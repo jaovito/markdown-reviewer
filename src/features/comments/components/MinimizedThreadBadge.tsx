@@ -14,11 +14,16 @@ interface MinimizedThreadBadgeProps {
  */
 export function MinimizedThreadBadge({ count, onExpand }: MinimizedThreadBadgeProps) {
   const { t } = useTranslation();
+  const ariaLabel =
+    count > 1
+      ? t("comments.markers.expandAriaWithCount", { count })
+      : t("comments.markers.expandAria");
   return (
     <button
       type="button"
       onClick={onExpand}
-      aria-label={t("comments.markers.expandAria")}
+      aria-label={ariaLabel}
+      title={ariaLabel}
       className={cn(
         "inline-flex h-6 items-center gap-1 rounded-full px-1.5 align-middle text-[11px] font-semibold",
         "border border-[hsl(var(--comment-marker-border))] bg-[hsl(var(--comment-marker-bg))]",

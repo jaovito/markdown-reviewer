@@ -217,6 +217,7 @@ export function InlineThreads({
             onHide={() => minimize(minKey)}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
+            onShowStack={(c) => select(c.id)}
           />,
           slot,
           `thread-${slotKey}`,

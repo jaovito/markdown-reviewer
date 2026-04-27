@@ -217,7 +217,7 @@ export function InlineThreads({
             onHide={() => minimize(minKey)}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
-            onShowStack={(c) => select(c.id)}
+            onShowStack={(c) => select(pickPaneVisibleId(group.comments, c.id))}
           />,
           slot,
           `thread-${slotKey}`,
@@ -240,6 +240,18 @@ export function InlineThreads({
         : null}
     </>
   );
+}
+
+/**
+ * Picks the first comment likely to be visible in the threads pane (which
+ * defaults to showing `draft` and `submitted` only). Falls back to `fallback`
+ * — usually the head — if every comment is `resolved` or `hidden`, so the
+ * inline preview still has *something* selected even when the pane filter
+ * hides the whole group.
+ */
+function pickPaneVisibleId(comments: ReviewComment[], fallback: number): number {
+  const candidate = comments.find((c) => c.state === "draft" || c.state === "submitted");
+  return candidate?.id ?? fallback;
 }
 
 function mutationIsSignificant(record: MutationRecord): boolean {

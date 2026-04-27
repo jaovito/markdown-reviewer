@@ -2,6 +2,7 @@ import { usePullRequestComments } from "@/features/comments/hooks/usePullRequest
 import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { cn } from "@/shared/lib/cn";
+import { useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { useMemo, useState } from "react";
@@ -14,19 +15,13 @@ interface ThreadsPaneProps {
   filePath?: string;
 }
 
-const DEFAULT_FILTER: Record<FilterableState, boolean> = {
-  draft: true,
-  submitted: true,
-  resolved: false,
-  hidden: false,
-};
-
 type Scope = "currentFile" | "allFiles";
 
 export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
   const { t } = useTranslation();
   const query = usePullRequestComments(prNumber);
-  const [filter, setFilter] = useState<Record<FilterableState, boolean>>(DEFAULT_FILTER);
+  const filter = useThreadsFilter((s) => s.filter);
+  const toggleFilter = useThreadsFilter((s) => s.toggle);
   const [scope, setScope] = useState<Scope>("currentFile");
 
   const allComments = query.data ?? [];
@@ -66,10 +61,7 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
             allLabel={t("main.threads.allFiles")}
           />
         ) : null}
-        <ThreadFilterBar
-          enabled={filter}
-          onToggle={(s) => setFilter((prev) => ({ ...prev, [s]: !prev[s] }))}
-        />
+        <ThreadFilterBar enabled={filter} onToggle={toggleFilter} />
       </header>
       <ScrollArea className="flex-1">
         <div className="px-3 pb-4 pt-1">

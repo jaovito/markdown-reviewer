@@ -130,10 +130,10 @@ export function InlineThreadCard({
         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[hsl(var(--foreground))]">
           {metaLabel(t, head)}
         </span>
-        {total > 1 ? (
+        {total > 1 && onShowStack ? (
           <button
             type="button"
-            onClick={() => onShowStack?.(head)}
+            onClick={() => onShowStack(head)}
             aria-label={t("comments.markers.countBadgeAria", { count: total })}
             title={t("comments.markers.countBadgeTooltip", { count: total })}
             className={cn(
@@ -147,6 +147,19 @@ export function InlineThreadCard({
             <MessageSquareIcon className="h-3 w-3" aria-hidden="true" />
             <span aria-hidden="true">{total}</span>
           </button>
+        ) : total > 1 ? (
+          <span
+            aria-label={t("comments.markers.countBadgeAria", { count: total })}
+            title={t("comments.markers.countBadgeAria", { count: total })}
+            className={cn(
+              "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold",
+              "border border-[hsl(var(--comment-marker-border))] bg-[hsl(var(--comment-marker-bg))]",
+              "text-[hsl(var(--comment-marker-fg))]",
+            )}
+          >
+            <MessageSquareIcon className="h-3 w-3" aria-hidden="true" />
+            <span aria-hidden="true">{total}</span>
+          </span>
         ) : null}
         <span
           className="inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[11px] font-medium"

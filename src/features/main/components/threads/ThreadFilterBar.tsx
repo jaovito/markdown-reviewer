@@ -1,8 +1,8 @@
-import type { CommentState } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
+import type { FilterableState } from "@/shared/stores/useThreadsFilter";
 import { useTranslation } from "react-i18next";
 
-export type FilterableState = Exclude<CommentState, "deleted">;
+export type { FilterableState };
 
 interface ThreadFilterBarProps {
   enabled: Record<FilterableState, boolean>;

@@ -110,7 +110,9 @@
       "daysAgo": "{{n}}d ago",
       "justNow": "just now",
       "replyCount_one": "{{count}} reply",
-      "replyCount_other": "{{count}} replies"
+      "replyCount_other": "{{count}} replies",
+      "stackedCount_one": "{{count}} comment on this anchor",
+      "stackedCount_other": "{{count}} comments on this anchor"
     },
     "filter": {
       "label": "Show",
@@ -142,7 +144,13 @@
       "tooltipMore_one": "{{count}} comment",
       "tooltipMore_other": "{{count}} comments",
       "selectionAria": "Add comment for selected lines",
-      "expandAria": "Expand thread"
+      "expandAria": "Expand thread",
+      "expandAriaWithCount_one": "Expand thread ({{count}} comment)",
+      "expandAriaWithCount_other": "Expand thread ({{count}} comments)",
+      "countBadgeAria_one": "{{count}} comment on this anchor",
+      "countBadgeAria_other": "{{count}} comments on this anchor",
+      "countBadgeTooltip_one": "{{count}} comment — open in panel",
+      "countBadgeTooltip_other": "{{count}} comments — open in panel"
     },
     "thread": {
       "anonAuthor": "Someone",

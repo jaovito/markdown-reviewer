@@ -1,7 +1,7 @@
 import type { ReviewComment } from "@/shared/ipc/contract";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { scrollToAnchorLine } from "../../lib/scrollToAnchor";
 import { ThreadCard, type ThreadGroup } from "./ThreadCard";
@@ -26,6 +26,53 @@ export function ThreadList({
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   const select = useSelectedThread((s) => s.select);
   const groups = useMemo(() => groupByAnchor(comments), [comments]);
+  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
+  // Per-key callback cache so the same group key always yields the same
+  // callback ref across renders — avoids React calling the previous ref
+  // with `null` and the new one with the node on every render of the list.
+  const refSetters = useRef(new Map<string, (node: HTMLButtonElement | null) => void>());
+  const setCardRef = useCallback((key: string) => {
+    let cb = refSetters.current.get(key);
+    if (cb) return cb;
+    cb = (node: HTMLButtonElement | null) => {
+      if (node) cardRefs.current.set(key, node);
+      else cardRefs.current.delete(key);
+    };
+    refSetters.current.set(key, cb);
+    return cb;
+  }, []);
+
+  // Prune cached ref-setters and node refs for groups that no longer exist
+  // so the maps don't grow unbounded over a long review session.
+  useEffect(() => {
+    const live = new Set(groups.map((g) => g.key));
+    for (const key of refSetters.current.keys()) {
+      if (!live.has(key)) refSetters.current.delete(key);
+    }
+    for (const key of cardRefs.current.keys()) {
+      if (!live.has(key)) cardRefs.current.delete(key);
+    }
+  }, [groups]);
+
+  // When the selection changes (often from clicking an inline marker in the
+  // preview), bring the matching card into view so the stacked threads are
+  // visible without manual scrolling. Honor `prefers-reduced-motion` so the
+  // smooth scroll only kicks in for users who haven't opted out of motion.
+  useEffect(() => {
+    if (selectedId === null) return;
+    const match = groups.find((g) => g.comments.some((c) => c.id === selectedId));
+    if (!match) return;
+    const node = cardRefs.current.get(match.key);
+    if (!node) return;
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({
+      block: "nearest",
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [selectedId, groups]);
 
   if (isLoading) {
     return (
@@ -52,6 +99,7 @@ export function ThreadList({
         return (
           <ThreadCard
             key={group.key}
+            ref={setCardRef(group.key)}
             group={group}
             selected={isSelected}
             hideFilePath={hideFilePath}

@@ -2,6 +2,7 @@ import { ipc } from "@/shared/ipc/client";
 import type { CommentAnchor, CommentUpdate, ReviewComment } from "@/shared/ipc/contract";
 import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
+import { type FilterableState, useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -62,6 +63,8 @@ export function InlineThreads({
   const minimizedSet = useMinimizedThreads((s) => s.minimized);
   const minimize = useMinimizedThreads((s) => s.minimize);
   const expand = useMinimizedThreads((s) => s.expand);
+  const paneFilter = useThreadsFilter((s) => s.filter);
+  const ensurePaneVisible = useThreadsFilter((s) => s.ensureVisible);
   const queryClient = useQueryClient();
 
   const update = useMutation({
@@ -217,6 +220,15 @@ export function InlineThreads({
             onHide={() => minimize(minKey)}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
+            onShowStack={(c) => {
+              const target = pickPaneVisibleComment(group.comments, paneFilter, c);
+              // If every comment in the group is filtered out of the pane,
+              // flip on the chip for the head's state so the pane shows it.
+              if (!isPaneVisible(target, paneFilter)) {
+                ensurePaneVisible(target.state as FilterableState);
+              }
+              select(target.id);
+            }}
           />,
           slot,
           `thread-${slotKey}`,
@@ -239,6 +251,32 @@ export function InlineThreads({
         : null}
     </>
   );
+}
+
+/**
+ * Returns true when the comment's state is currently shown in the threads
+ * pane filter. `deleted` comments are never shown.
+ */
+function isPaneVisible(
+  comment: ReviewComment,
+  paneFilter: Record<FilterableState, boolean>,
+): boolean {
+  if (comment.state === "deleted") return false;
+  return paneFilter[comment.state] === true;
+}
+
+/**
+ * Picks a comment from the group that the threads pane is *currently* showing.
+ * Falls back to `fallback` (usually the head) when every comment in the group
+ * is filtered out — the caller can then flip the matching chip on so the
+ * selection becomes reachable in the pane.
+ */
+function pickPaneVisibleComment(
+  comments: ReviewComment[],
+  paneFilter: Record<FilterableState, boolean>,
+  fallback: ReviewComment,
+): ReviewComment {
+  return comments.find((c) => isPaneVisible(c, paneFilter)) ?? fallback;
 }
 
 function mutationIsSignificant(record: MutationRecord): boolean {

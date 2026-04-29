@@ -1,5 +1,6 @@
 import type { ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
+import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AnchorLabel } from "./AnchorLabel";
 import { StateBadge } from "./StateBadge";
@@ -28,16 +29,26 @@ interface ThreadCardProps {
   onSelect: (comment: ReviewComment) => void;
 }
 
-export function ThreadCard({ group, selected, hideFilePath, onSelect }: ThreadCardProps) {
+export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(function ThreadCard(
+  { group, selected, hideFilePath, onSelect },
+  ref,
+) {
   const head = group.comments[0];
   const { t } = useTranslation();
   if (!head) return null;
-  const replyCount = group.comments.length - 1;
+  const total = group.comments.length;
+  const replyCount = total - 1;
   const isResolved = head.state === "resolved";
+  // Selecting a multi-comment group expands the card into a stacked view —
+  // each comment fully rendered, top-down. Single-comment groups stay in the
+  // compact preview shape.
+  const isStacked = selected && total > 1;
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() => onSelect(head)}
+      aria-expanded={isStacked || undefined}
       className={cn(
         "flex w-full flex-col gap-2.5 rounded-lg border bg-[hsl(var(--card))] p-3 text-left text-sm transition-colors",
         "hover:border-[hsl(var(--foreground))]/30",
@@ -51,26 +62,54 @@ export function ThreadCard({ group, selected, hideFilePath, onSelect }: ThreadCa
         </span>
         <StateBadge state={head.state} className="shrink-0" />
       </div>
-      <p className="text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
-        {truncateBody(head.body)}
-      </p>
-      <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-        <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
-        <span className="flex items-center gap-2">
-          {replyCount > 0 ? (
-            <span>
-              {t("threads.row.replyCount", {
-                count: replyCount,
-                defaultValue: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
-              })}
+      {isStacked ? (
+        <>
+          <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
+            {t("threads.row.stackedCount", { count: total })}
+          </p>
+          <ul className="flex flex-col gap-2">
+            {group.comments.map((c) => (
+              <li
+                key={c.id}
+                className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2"
+              >
+                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                  <span className="truncate font-semibold text-[hsl(var(--foreground))]">
+                    {c.author ?? t("comments.thread.anonAuthor")}
+                  </span>
+                  <RelativeTime ms={c.createdAt} />
+                </div>
+                <p className="whitespace-pre-wrap text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
+                  {c.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <p className="text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
+            {truncateBody(head.body)}
+          </p>
+          <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+            <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
+            <span className="flex items-center gap-2">
+              {replyCount > 0 ? (
+                <span>
+                  {t("threads.row.replyCount", {
+                    count: replyCount,
+                    defaultValue: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
+                  })}
+                </span>
+              ) : null}
+              <RelativeTime ms={head.createdAt} />
             </span>
-          ) : null}
-          <RelativeTime ms={head.createdAt} />
-        </span>
-      </div>
+          </div>
+        </>
+      )}
     </button>
   );
-}
+});
 
 function truncateBody(body: string): string {
   const trimmed = body.trim().replace(/\s+/g, " ");

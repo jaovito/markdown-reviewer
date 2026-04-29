@@ -156,9 +156,9 @@
       "countBadgeAria_other": "{{count}} comments on this anchor",
       "countBadgeTooltip_one": "{{count}} comment — open in panel",
       "countBadgeTooltip_other": "{{count}} comments — open in panel",
-      "hiddenAria": "Hidden thread — show in panel",
-      "hiddenAriaWithCount_one": "{{count}} hidden comment — show in panel",
-      "hiddenAriaWithCount_other": "{{count}} hidden comments — show in panel"
+      "unhideAria": "Unhide thread",
+      "unhideAriaWithCount_one": "Unhide {{count}} comment",
+      "unhideAriaWithCount_other": "Unhide {{count}} comments"
     },
     "thread": {
       "anonAuthor": "Someone",
@@ -166,6 +166,8 @@
       "metaRange": "{{author}} on lines {{start}}–{{end}}",
       "reply": "Reply",
       "hide": "Hide",
+      "unhide": "Unhide",
+      "unhideAria": "Restore this hidden thread",
       "resolve": "Resolve",
       "delete": "Delete",
       "deleteAria": "Delete this comment",

@@ -219,17 +219,20 @@ export function InlineThreads({
         if (allHidden) {
           // `Hidden` is a persistent comment state, not the session-only
           // minimize toggle — render a discreet `MessageSquareOff` marker in
-          // the gutter instead of the full card. Clicking it flips the
-          // pane's `hidden` chip on and selects the head, so the user can
-          // unhide / reply from there.
+          // the gutter instead of the full card. Clicking it unhides every
+          // comment in the group: rows with a `githubId` go back to
+          // `submitted`, otherwise to `draft`. The Rust transition table
+          // (`Hidden → Draft | Submitted | Resolved | Deleted`) allows both.
           const badgeSlot = slots.badges.get(slotKey);
           if (!badgeSlot) return null;
           return createPortal(
             <HiddenThreadMarker
               key={slotKey}
               count={group.comments.length}
-              onReveal={() => {
-                ensurePaneVisible("hidden");
+              onUnhide={() => {
+                for (const c of group.comments) {
+                  update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+                }
                 const head = group.comments[0];
                 if (head) select(head.id);
               }}
@@ -275,6 +278,10 @@ export function InlineThreads({
               select(c.id);
               update.mutate({ id: c.id, patch: { state: "hidden" } });
             }}
+            onUnhide={(c) => {
+              select(c.id);
+              update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+            }}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
             onShowStack={(c) => {
@@ -308,6 +315,16 @@ export function InlineThreads({
         : null}
     </>
   );
+}
+
+/**
+ * Picks the unhide target for a comment. Submitted comments came back from
+ * the remote (have a `githubId`) so they go back to `submitted`; locally
+ * authored ones never hit GitHub yet, so they go back to `draft`. Both
+ * transitions are allowed by `CommentState::can_transition_to`.
+ */
+function targetUnhideState(comment: ReviewComment): "submitted" | "draft" {
+  return comment.githubId !== null ? "submitted" : "draft";
 }
 
 /**

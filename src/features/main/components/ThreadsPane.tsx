@@ -26,7 +26,6 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
   const query = usePullRequestComments(prNumber);
   const filter = useThreadsFilter((s) => s.filter);
   const toggleFilter = useThreadsFilter((s) => s.toggle);
-  const ensureFilterVisible = useThreadsFilter((s) => s.ensureVisible);
   const [scope, setScope] = useState<Scope>("currentFile");
   const queryClient = useQueryClient();
 
@@ -51,7 +50,8 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
   // "Hide all" applies to the threads currently surfaced in the pane (under
   // the active scope + filter). Comments already `hidden`, `resolved`, or
   // `deleted` are skipped — only `draft`/`submitted` are valid sources for
-  // the `Submitted → Hidden` transition that the Rust store allows.
+  // the `Draft → Hidden` and `Submitted → Hidden` transitions that the Rust
+  // `CommentState::can_transition_to` allows.
   const hideAll = useMutation({
     mutationFn: async (ids: number[]) => {
       const results = await Promise.all(
@@ -61,7 +61,10 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
       if (failure && !failure.ok) throw failure.error;
       return results.length;
     },
-    onSuccess: () => {
+    // Use `onSettled` so partial successes still trigger a refetch — even if
+    // some IDs failed, the rows that succeeded need to be reflected in the
+    // pane.
+    onSettled: () => {
       if (prNumber !== undefined) {
         queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
         if (filePath) {
@@ -115,7 +118,7 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => ensureFilterVisible("hidden")}
+            onClick={() => toggleFilter("hidden")}
             aria-pressed={filter.hidden}
             aria-label={t("main.threads.showHiddenAria")}
             className={cn(

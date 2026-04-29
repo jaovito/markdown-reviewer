@@ -4,25 +4,30 @@ import { useTranslation } from "react-i18next";
 
 interface HiddenThreadMarkerProps {
   count: number;
-  onReveal: () => void;
+  /**
+   * Restores the thread to a non-hidden state via IPC. The caller decides the
+   * target state (`submitted` when the comment has a `githubId`, otherwise
+   * `draft`) — this component only invokes the action.
+   */
+  onUnhide: () => void;
 }
 
 /**
  * Discreet gutter marker rendered in place of the inline thread card when
- * every comment on an anchor is in the `hidden` state. Clicking it expands
- * the thread back into view via the threads pane (the caller flips the
- * `hidden` filter on and selects the head comment).
+ * every comment on an anchor is in the `hidden` state. Clicking it unhides
+ * the thread (restores it to `submitted` or `draft` depending on whether it
+ * has a remote GitHub id) so the user can see and act on it again.
  */
-export function HiddenThreadMarker({ count, onReveal }: HiddenThreadMarkerProps) {
+export function HiddenThreadMarker({ count, onUnhide }: HiddenThreadMarkerProps) {
   const { t } = useTranslation();
   const ariaLabel =
     count > 1
-      ? t("comments.markers.hiddenAriaWithCount", { count })
-      : t("comments.markers.hiddenAria");
+      ? t("comments.markers.unhideAriaWithCount", { count })
+      : t("comments.markers.unhideAria");
   return (
     <button
       type="button"
-      onClick={onReveal}
+      onClick={onUnhide}
       aria-label={ariaLabel}
       title={ariaLabel}
       className={cn(

@@ -1,7 +1,7 @@
 import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import { CheckIcon, EyeIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, EyeIcon, MessageSquareIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGhUser } from "../hooks/useGhUser";
 
@@ -10,6 +10,7 @@ interface InlineThreadCardProps {
   /** When true, the thread is the currently selected one (clicked in pane). */
   selected?: boolean;
   onResolve?: (comment: ReviewComment) => void;
+  onReopen?: (comment: ReviewComment) => void;
   onHide?: (comment: ReviewComment) => void;
   /** Restores a hidden comment back to `submitted`/`draft` via the parent. */
   onUnhide?: (comment: ReviewComment) => void;
@@ -88,6 +89,7 @@ export function InlineThreadCard({
   comments,
   selected = false,
   onResolve,
+  onReopen,
   onHide,
   onUnhide,
   onReply,
@@ -220,7 +222,23 @@ export function InlineThreadCard({
           {t("comments.thread.reply")}
         </button>
         <div className="flex items-center gap-2">
-          {!isResolved ? (
+          {isResolved ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onReopen?.(head)}
+              aria-label={t("comments.thread.reopenAria")}
+              className={cn(
+                "h-7 gap-1.5 rounded-md border-[hsl(var(--border))] bg-transparent",
+                "px-2.5 text-[12px] font-medium text-[hsl(var(--foreground))]",
+                "hover:bg-[hsl(var(--accent))]",
+              )}
+            >
+              <RotateCcwIcon className="h-3 w-3" aria-hidden="true" />
+              <span>{t("comments.thread.reopen")}</span>
+            </Button>
+          ) : (
             <Button
               type="button"
               variant="outline"
@@ -235,7 +253,7 @@ export function InlineThreadCard({
               <CheckIcon className="h-3 w-3" aria-hidden="true" />
               <span>{t("comments.thread.resolve")}</span>
             </Button>
-          ) : null}
+          )}
           {isHidden ? (
             <Button
               type="button"

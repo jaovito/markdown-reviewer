@@ -1,6 +1,8 @@
-import type { ReviewComment } from "@/shared/ipc/contract";
+import { ipc } from "@/shared/ipc/client";
+import type { CommentUpdate, ReviewComment } from "@/shared/ipc/contract";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { scrollToAnchorLine } from "../../lib/scrollToAnchor";
@@ -11,6 +13,8 @@ interface ThreadListProps {
   isLoading: boolean;
   hideFilePath: boolean;
   hiddenCount: number;
+  /** PR number, used to invalidate the comments queries after a Reopen. */
+  prNumber?: number;
   /** File path of the currently open preview, when one is selected. */
   currentFilePath?: string;
 }
@@ -20,27 +24,54 @@ export function ThreadList({
   isLoading,
   hideFilePath,
   hiddenCount,
+  prNumber,
   currentFilePath,
 }: ThreadListProps) {
   const { t } = useTranslation();
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   const select = useSelectedThread((s) => s.select);
+  const queryClient = useQueryClient();
   const groups = useMemo(() => groupByAnchor(comments), [comments]);
-  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
   // Per-key callback cache so the same group key always yields the same
   // callback ref across renders — avoids React calling the previous ref
   // with `null` and the new one with the node on every render of the list.
-  const refSetters = useRef(new Map<string, (node: HTMLButtonElement | null) => void>());
+  const refSetters = useRef(new Map<string, (node: HTMLDivElement | null) => void>());
   const setCardRef = useCallback((key: string) => {
     let cb = refSetters.current.get(key);
     if (cb) return cb;
-    cb = (node: HTMLButtonElement | null) => {
+    cb = (node: HTMLDivElement | null) => {
       if (node) cardRefs.current.set(key, node);
       else cardRefs.current.delete(key);
     };
     refSetters.current.set(key, cb);
     return cb;
   }, []);
+
+  // `Reopen` flips a `resolved` comment back to `submitted` via the same
+  // command the inline card uses. Lives here (not in ThreadCard) so we can
+  // share the React Query mutation + cache invalidation with the rest of
+  // the comments feature.
+  const reopen = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: CommentUpdate }) =>
+      ipc.comments.update(id, patch).then((r) => {
+        if (!r.ok) throw r.error;
+        return r.value;
+      }),
+    onSuccess: (_data, vars) => {
+      if (prNumber !== undefined) {
+        queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+      }
+      // Always refresh the per-file slice — the comment carries its own
+      // `filePath`, so we can target the exact list it belongs to.
+      const target = comments.find((c) => c.id === vars.id);
+      if (target && prNumber !== undefined) {
+        queryClient.invalidateQueries({
+          queryKey: ["local-comments", prNumber, target.filePath],
+        });
+      }
+    },
+  });
 
   // Prune cached ref-setters and node refs for groups that no longer exist
   // so the maps don't grow unbounded over a long review session.
@@ -112,6 +143,14 @@ export function ThreadList({
                 scrollToAnchorLine(getAnchorScrollLine(comment));
               }
             }}
+            onReopen={
+              prNumber !== undefined
+                ? (comment) => {
+                    select(comment.id);
+                    reopen.mutate({ id: comment.id, patch: { state: "submitted" } });
+                  }
+                : undefined
+            }
           />
         );
       })}

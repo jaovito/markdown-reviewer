@@ -152,6 +152,7 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
               isLoading={query.isLoading}
               hideFilePath={effectiveScope === "currentFile"}
               hiddenCount={hiddenCount}
+              prNumber={prNumber}
               currentFilePath={filePath}
             />
           )}

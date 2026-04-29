@@ -13,6 +13,7 @@ import {
   groupCommentsByStartLine,
 } from "../lib/groupAnchors";
 import { CommentComposer } from "./CommentComposer";
+import { HiddenThreadMarker } from "./HiddenThreadMarker";
 import { InlineThreadCard } from "./InlineThreadCard";
 import { MinimizedThreadBadge } from "./MinimizedThreadBadge";
 
@@ -60,8 +61,10 @@ export function InlineThreads({
 }: InlineThreadsProps) {
   const select = useSelectedThread((s) => s.select);
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
+  // `useMinimizedThreads` still drives the multi-comment "expand stack" badge
+  // (#21). The persistent `Hide` button no longer touches this store — it
+  // updates `state = hidden` via IPC instead (see Issue #22).
   const minimizedSet = useMinimizedThreads((s) => s.minimized);
-  const minimize = useMinimizedThreads((s) => s.minimize);
   const expand = useMinimizedThreads((s) => s.expand);
   const paneFilter = useThreadsFilter((s) => s.filter);
   const ensurePaneVisible = useThreadsFilter((s) => s.ensureVisible);
@@ -116,6 +119,30 @@ export function InlineThreads({
     return out;
   }, [groups, minimizedSet, prNumber, filePath]);
 
+  // Groups whose every (non-deleted) comment is in the `hidden` state — the
+  // inline preview renders only a discreet gutter marker for these so the
+  // document content stays the focus, while the comment row itself still
+  // exists and shows up in the pane when the user enables the `hidden` chip.
+  const allHiddenSet = useMemo(() => {
+    const out = new Set<SlotKey>();
+    for (const g of groups) {
+      if (g.comments.length > 0 && g.comments.every((c) => c.state === "hidden")) {
+        out.add(slotKeyFor(g.startLine, g.endLine));
+      }
+    }
+    return out;
+  }, [groups]);
+
+  // Slot allocation collapses both cases into "render an inline badge instead
+  // of the card" — the underlying DOM machinery treats them the same. The
+  // distinction (minimized vs. all-hidden) is restored when picking which
+  // React component to portal into the badge slot.
+  const collapsedSet = useMemo(() => {
+    const out = new Set<SlotKey>(localMinimized);
+    for (const k of allHiddenSet) out.add(k);
+    return out;
+  }, [localMinimized, allHiddenSet]);
+
   // Slot map lives in a ref; we only bump `revision` when the slot identities
   // actually change so the React tree re-renders the portals minimally.
   const slotsRef = useRef<SlotMap>({
@@ -135,7 +162,7 @@ export function InlineThreads({
       container,
       slotsRef.current,
       groups,
-      localMinimized,
+      collapsedSet,
       composerStart,
       composerEnd,
       mutatingRef,
@@ -153,7 +180,7 @@ export function InlineThreads({
         });
       }
     };
-  }, [containerRef, groups, localMinimized, composerStart, composerEnd]);
+  }, [containerRef, groups, collapsedSet, composerStart, composerEnd]);
 
   // Re-sync when the rendered article DOM changes (a markdown re-render).
   useEffect(() => {
@@ -169,7 +196,7 @@ export function InlineThreads({
         container,
         slotsRef.current,
         groups,
-        localMinimized,
+        collapsedSet,
         composerStart,
         composerEnd,
         mutatingRef,
@@ -178,7 +205,7 @@ export function InlineThreads({
     });
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef, groups, localMinimized, composerStart, composerEnd]);
+  }, [containerRef, groups, collapsedSet, composerStart, composerEnd]);
 
   const slots = slotsRef.current;
 
@@ -188,6 +215,29 @@ export function InlineThreads({
         const slotKey = slotKeyFor(group.startLine, group.endLine);
         const minKey = minimizedKey(prNumber, filePath, group.startLine, group.endLine);
         const minimized = minimizedSet.has(minKey);
+        const allHidden = allHiddenSet.has(slotKey);
+        if (allHidden) {
+          // `Hidden` is a persistent comment state, not the session-only
+          // minimize toggle — render a discreet `MessageSquareOff` marker in
+          // the gutter instead of the full card. Clicking it flips the
+          // pane's `hidden` chip on and selects the head, so the user can
+          // unhide / reply from there.
+          const badgeSlot = slots.badges.get(slotKey);
+          if (!badgeSlot) return null;
+          return createPortal(
+            <HiddenThreadMarker
+              key={slotKey}
+              count={group.comments.length}
+              onReveal={() => {
+                ensurePaneVisible("hidden");
+                const head = group.comments[0];
+                if (head) select(head.id);
+              }}
+            />,
+            badgeSlot,
+            `thread-hidden-${slotKey}`,
+          );
+        }
         if (minimized) {
           const badgeSlot = slots.badges.get(slotKey);
           if (!badgeSlot) return null;
@@ -217,7 +267,14 @@ export function InlineThreads({
               select(c.id);
               update.mutate({ id: c.id, patch: { state: "resolved" } });
             }}
-            onHide={() => minimize(minKey)}
+            // `Hide` persists `state = hidden` via IPC so the choice survives
+            // restart and a remote refresh. The session-only `minimize` store
+            // still drives the count-badge expand UX (see #21) but it is no
+            // longer wired to this button.
+            onHide={(c) => {
+              select(c.id);
+              update.mutate({ id: c.id, patch: { state: "hidden" } });
+            }}
             onReply={(c) => select(c.id)}
             onDelete={(c) => remove.mutate(c.id)}
             onShowStack={(c) => {

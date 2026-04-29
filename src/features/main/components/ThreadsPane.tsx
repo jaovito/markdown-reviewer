@@ -1,10 +1,14 @@
 import { usePullRequestComments } from "@/features/comments/hooks/usePullRequestComments";
+import { ipc } from "@/shared/ipc/client";
 import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { cn } from "@/shared/lib/cn";
 import { useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
 import { ScrollArea } from "@/shared/ui/scroll-area";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type FilterableState, ThreadFilterBar } from "./threads/ThreadFilterBar";
@@ -22,7 +26,9 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
   const query = usePullRequestComments(prNumber);
   const filter = useThreadsFilter((s) => s.filter);
   const toggleFilter = useThreadsFilter((s) => s.toggle);
+  const ensureFilterVisible = useThreadsFilter((s) => s.ensureVisible);
   const [scope, setScope] = useState<Scope>("currentFile");
+  const queryClient = useQueryClient();
 
   const allComments = query.data ?? [];
 
@@ -41,6 +47,36 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
     () => partitionByFilter(scopedComments, filter),
     [scopedComments, filter],
   );
+
+  // "Hide all" applies to the threads currently surfaced in the pane (under
+  // the active scope + filter). Comments already `hidden`, `resolved`, or
+  // `deleted` are skipped — only `draft`/`submitted` are valid sources for
+  // the `Submitted → Hidden` transition that the Rust store allows.
+  const hideAll = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results = await Promise.all(
+        ids.map((id) => ipc.comments.update(id, { state: "hidden" })),
+      );
+      const failure = results.find((r) => !r.ok);
+      if (failure && !failure.ok) throw failure.error;
+      return results.length;
+    },
+    onSuccess: () => {
+      if (prNumber !== undefined) {
+        queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+        if (filePath) {
+          queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber, filePath] });
+        }
+      }
+    },
+  });
+
+  const hideableIds = useMemo(
+    () => visible.filter((c) => c.state === "draft" || c.state === "submitted").map((c) => c.id),
+    [visible],
+  );
+
+  const canHideAll = !hideAll.isPending && hideableIds.length > 0;
 
   return (
     <aside className="flex h-full w-[336px] shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
@@ -62,6 +98,37 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
           />
         ) : null}
         <ThreadFilterBar enabled={filter} onToggle={toggleFilter} />
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canHideAll}
+            onClick={() => hideAll.mutate(hideableIds)}
+            aria-label={t("main.threads.hideAllAria", { count: hideableIds.length })}
+            className="h-7 flex-1 gap-1.5 px-2.5 text-[12px] font-medium"
+          >
+            <EyeOffIcon className="h-3 w-3" aria-hidden="true" />
+            <span>{t("main.threads.hideAll")}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => ensureFilterVisible("hidden")}
+            aria-pressed={filter.hidden}
+            aria-label={t("main.threads.showHiddenAria")}
+            className={cn(
+              "h-7 flex-1 gap-1.5 px-2.5 text-[12px] font-medium",
+              filter.hidden
+                ? "border-[hsl(var(--foreground))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+                : null,
+            )}
+          >
+            <EyeIcon className="h-3 w-3" aria-hidden="true" />
+            <span>{t("main.threads.showHidden")}</span>
+          </Button>
+        </div>
       </header>
       <ScrollArea className="flex-1">
         <div className="px-3 pb-4 pt-1">

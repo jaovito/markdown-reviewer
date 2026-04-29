@@ -91,7 +91,12 @@
       "empty": "No threads yet — select text in the preview to start one.",
       "errorTitle": "Couldn't load comments",
       "hiddenCount_one": "+ {{count}} hidden thread",
-      "hiddenCount_other": "+ {{count}} hidden threads"
+      "hiddenCount_other": "+ {{count}} hidden threads",
+      "hideAll": "Hide all",
+      "hideAllAria_one": "Hide all {{count}} visible thread",
+      "hideAllAria_other": "Hide all {{count}} visible threads",
+      "showHidden": "Show hidden",
+      "showHiddenAria": "Show hidden threads in this pane"
     },
     "toolbar": {
       "backToRepositoriesAria": "Back to repositories"
@@ -150,7 +155,10 @@
       "countBadgeAria_one": "{{count}} comment on this anchor",
       "countBadgeAria_other": "{{count}} comments on this anchor",
       "countBadgeTooltip_one": "{{count}} comment — open in panel",
-      "countBadgeTooltip_other": "{{count}} comments — open in panel"
+      "countBadgeTooltip_other": "{{count}} comments — open in panel",
+      "hiddenAria": "Hidden thread — show in panel",
+      "hiddenAriaWithCount_one": "{{count}} hidden comment — show in panel",
+      "hiddenAriaWithCount_other": "{{count}} hidden comments — show in panel"
     },
     "thread": {
       "anonAuthor": "Someone",

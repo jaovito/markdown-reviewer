@@ -1,7 +1,7 @@
 import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import { CheckIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, EyeIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGhUser } from "../hooks/useGhUser";
 
@@ -11,6 +11,8 @@ interface InlineThreadCardProps {
   selected?: boolean;
   onResolve?: (comment: ReviewComment) => void;
   onHide?: (comment: ReviewComment) => void;
+  /** Restores a hidden comment back to `submitted`/`draft` via the parent. */
+  onUnhide?: (comment: ReviewComment) => void;
   onReply?: (head: ReviewComment) => void;
   onDelete?: (comment: ReviewComment) => void;
   /** Click on the count badge — opens the stacked view in the threads panel. */
@@ -87,6 +89,7 @@ export function InlineThreadCard({
   selected = false,
   onResolve,
   onHide,
+  onUnhide,
   onReply,
   onDelete,
   onShowStack,
@@ -233,7 +236,19 @@ export function InlineThreadCard({
               <span>{t("comments.thread.resolve")}</span>
             </Button>
           ) : null}
-          {!isHidden ? (
+          {isHidden ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onUnhide?.(head)}
+              aria-label={t("comments.thread.unhideAria")}
+              className="h-7 gap-1.5 rounded-md px-2.5 text-[12px] font-medium"
+            >
+              <EyeIcon className="h-3 w-3" aria-hidden="true" />
+              <span>{t("comments.thread.unhide")}</span>
+            </Button>
+          ) : (
             <Button
               type="button"
               size="sm"
@@ -242,7 +257,7 @@ export function InlineThreadCard({
             >
               {t("comments.thread.hide")}
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

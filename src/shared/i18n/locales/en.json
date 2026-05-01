@@ -102,11 +102,7 @@
         "fileCount_one": "{{count}} thread",
         "fileCount_other": "{{count}} threads",
         "anchorCount_one": "{{count}} comment",
-        "anchorCount_other": "{{count}} comments",
-        "expandFileAria": "Expand threads in {{file}}",
-        "collapseFileAria": "Collapse threads in {{file}}",
-        "expandAnchorAria": "Expand threads at {{anchor}}",
-        "collapseAnchorAria": "Collapse threads at {{anchor}}"
+        "anchorCount_other": "{{count}} comments"
       }
     },
     "toolbar": {

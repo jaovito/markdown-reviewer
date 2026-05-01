@@ -31,18 +31,17 @@ export const ThreadAnchorGroup = forwardRef<HTMLButtonElement, ThreadAnchorGroup
   ) {
     const { t } = useTranslation();
     const Chevron = expanded ? ChevronDownIcon : ChevronRightIcon;
-    const ariaLabel = expanded
-      ? t("main.threads.tree.collapseAnchorAria", { anchor: anchorLabel })
-      : t("main.threads.tree.expandAnchorAria", { anchor: anchorLabel });
     return (
-      <div className="flex flex-col gap-1.5">
+      // The wrapper carries `role="presentation"` so it doesn't appear
+      // between the parent `tree`/`group` and the `treeitem` button in the
+      // accessibility tree.
+      <div role="presentation" className="flex flex-col gap-1.5">
         {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: WAI-ARIA tree pattern uses role="treeitem" on the focusable header element; the button still triggers expand/collapse semantics. */}
         <button
           ref={ref}
           type="button"
           role="treeitem"
           aria-expanded={expanded}
-          aria-label={ariaLabel}
           tabIndex={tabIndex}
           onClick={onToggle}
           onFocus={onFocus}

@@ -235,6 +235,14 @@ body {
   animation: mr-comment-flash 1.4s ease-out 1;
   border-radius: 6px;
 }
+/* Inside `<pre>`, per-line spans live in a preformatted block — the rounded
+   corners of the regular-line flash would visibly punch out of the code
+   surface. Match the zero-radius rule used by the static highlight above
+   (`pre [data-code-line][data-has-comment]`) so the flash ring stays
+   flush with the rest of the code. */
+.prose-styles pre [data-code-line][data-comment-flash="true"] {
+  border-radius: 0;
+}
 @media (prefers-reduced-motion: reduce) {
   .prose-styles [data-source-line][data-comment-flash="true"],
   .prose-styles pre [data-code-line][data-comment-flash="true"] {

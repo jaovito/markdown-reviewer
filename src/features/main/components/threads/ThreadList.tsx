@@ -52,24 +52,25 @@ export function ThreadList({
   // command the inline card uses. Lives here (not in ThreadCard) so we can
   // share the React Query mutation + cache invalidation with the rest of
   // the comments feature.
+  //
+  // The mutation variables carry `filePath` so the per-file query
+  // invalidation uses the value captured at call time. Looking it up via
+  // `comments.find(...)` would race the user changing scope/filter while
+  // the mutation is in flight — by the time `onSuccess` runs, the
+  // reopened row may no longer be in `comments`, and the per-file slice
+  // would silently miss its refresh.
   const reopen = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: CommentUpdate }) =>
+    mutationFn: ({ id, patch }: { id: number; patch: CommentUpdate; filePath: string }) =>
       ipc.comments.update(id, patch).then((r) => {
         if (!r.ok) throw r.error;
         return r.value;
       }),
     onSuccess: (_data, vars) => {
-      if (prNumber !== undefined) {
-        queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
-      }
-      // Always refresh the per-file slice — the comment carries its own
-      // `filePath`, so we can target the exact list it belongs to.
-      const target = comments.find((c) => c.id === vars.id);
-      if (target && prNumber !== undefined) {
-        queryClient.invalidateQueries({
-          queryKey: ["local-comments", prNumber, target.filePath],
-        });
-      }
+      if (prNumber === undefined) return;
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+      queryClient.invalidateQueries({
+        queryKey: ["local-comments", prNumber, vars.filePath],
+      });
     },
   });
 
@@ -147,7 +148,11 @@ export function ThreadList({
               prNumber !== undefined
                 ? (comment) => {
                     select(comment.id);
-                    reopen.mutate({ id: comment.id, patch: { state: "submitted" } });
+                    reopen.mutate({
+                      id: comment.id,
+                      patch: { state: "submitted" },
+                      filePath: comment.filePath,
+                    });
                   }
                 : undefined
             }

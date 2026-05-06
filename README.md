@@ -199,6 +199,14 @@ markdown-reviewer/
 
 [`ARCHITECTURE.md`](./ARCHITECTURE.md) is the document to read before adding a new feature, command, crate, or migration.
 
+## Releases
+
+Releases are produced automatically by `.github/workflows/release.yml` on every push to `main`. To cut a release, bump the version **in the same PR** that warrants it: update `package.json`, `Cargo.toml` (`[workspace.package].version`), and `src-tauri/tauri.conf.json` to the same value (e.g. `0.2.0`) alongside your feature/fix. After the PR merges, the workflow publishes a GitHub Release tagged `app-v<version>` with `.dmg` (macOS, universal), `.msi` and `.exe` (Windows), `.AppImage` and `.deb` (Linux) attached. If none of the three version fields changed, the workflow no-ops.
+
+The `version-sync` CI job fails any PR where the three version fields drift out of alignment.
+
+Bundles are not code-signed yet — macOS Gatekeeper and Windows SmartScreen will require an explicit "Open anyway" the first time. Signing and the in-app updater are tracked separately.
+
 ## Scripts
 
 ### JavaScript / TypeScript

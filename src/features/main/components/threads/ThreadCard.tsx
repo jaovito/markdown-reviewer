@@ -27,6 +27,22 @@ interface ThreadCardProps {
   selected: boolean;
   /** When true, the card is showing comments from a single file context. */
   hideFilePath: boolean;
+  /**
+   * When true, omit the anchor label entirely — the card is rendered inside a
+   * wrapper group that already shows the file path and line range header, so
+   * the per-card label would be redundant.
+   */
+  hideAnchorLabel?: boolean;
+  /** Tab order for keyboard navigation; defaults to 0. */
+  tabIndex?: number;
+  /**
+   * When true, the card behaves as an ARIA treeitem (used inside the
+   * hierarchical threads panel). The wrapper container should provide
+   * `role="tree"`. Outside that context the card is a plain button.
+   */
+  asTreeItem?: boolean;
+  /** Forwarded to the underlying row button — used to track roving-tabindex focus. */
+  onFocus?: () => void;
   onSelect: (comment: ReviewComment) => void;
   /**
    * Optional `Reopen` action — surfaced when the row's head is `resolved` so
@@ -35,8 +51,23 @@ interface ThreadCardProps {
   onReopen?: (comment: ReviewComment) => void;
 }
 
-export const ThreadCard = forwardRef<HTMLDivElement, ThreadCardProps>(function ThreadCard(
-  { group, selected, hideFilePath, onSelect, onReopen },
+/**
+ * The forwarded ref reaches the *focusable* row `<button>` (not the wrapper
+ * `<div>`), so callers can move keyboard focus to the card from outside —
+ * required by the roving-tabindex inside the hierarchical threads panel.
+ */
+export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(function ThreadCard(
+  {
+    group,
+    selected,
+    hideFilePath,
+    hideAnchorLabel = false,
+    tabIndex,
+    asTreeItem = false,
+    onFocus,
+    onSelect,
+    onReopen,
+  },
   ref,
 ) {
   const head = group.comments[0];
@@ -49,28 +80,45 @@ export const ThreadCard = forwardRef<HTMLDivElement, ThreadCardProps>(function T
   // each comment fully rendered, top-down. Single-comment groups stay in the
   // compact preview shape.
   const isStacked = selected && total > 1;
+  const showReopen = isResolved && !!onReopen;
   // The row click target is a `<button>`, but resolved threads also surface a
   // `Reopen` action — `<button>` can't legally nest another `<button>`, so we
-  // wrap the row in a positioned `<div>` and stack the action on top.
+  // wrap the row in a positioned `<div>` and stack the action on top. The
+  // wrapper carries `role="presentation"` so it doesn't appear between the
+  // parent `tree`/`group` and the row's `treeitem` in the accessibility tree.
   return (
-    <div ref={ref} className="relative">
+    <div role="presentation" className="relative">
       <button
+        ref={ref}
         type="button"
+        role={asTreeItem ? "treeitem" : undefined}
+        aria-selected={asTreeItem ? selected : undefined}
         onClick={() => onSelect(head)}
-        aria-expanded={isStacked || undefined}
+        onFocus={onFocus}
+        // `aria-expanded` on a treeitem implies it owns a `role="group"` of
+        // child treeitems — which the card doesn't. Suppress it inside the
+        // tree; outside the tree it still flags the stacked-preview state.
+        aria-expanded={asTreeItem ? undefined : isStacked || undefined}
+        tabIndex={tabIndex}
         className={cn(
           "flex w-full flex-col gap-2.5 rounded-lg border bg-[hsl(var(--card))] p-3 text-left text-sm transition-colors",
-          "hover:border-[hsl(var(--foreground))]/30",
+          "hover:border-[hsl(var(--foreground))]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
           selected ? "border-[hsl(var(--foreground))]/40 shadow-sm" : "border-[hsl(var(--border))]",
           isResolved ? "opacity-70" : null,
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[hsl(var(--foreground))]">
-            <AnchorLabel filePath={group.filePath} anchor={head.anchor} lineOnly={hideFilePath} />
-          </span>
-          <StateBadge state={head.state} className="shrink-0" />
-        </div>
+        {hideAnchorLabel ? (
+          <div className="flex items-start justify-end gap-2">
+            <StateBadge state={head.state} className="shrink-0" />
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-2">
+            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[hsl(var(--foreground))]">
+              <AnchorLabel filePath={group.filePath} anchor={head.anchor} lineOnly={hideFilePath} />
+            </span>
+            <StateBadge state={head.state} className="shrink-0" />
+          </div>
+        )}
         {isStacked ? (
           <>
             <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
@@ -118,16 +166,21 @@ export const ThreadCard = forwardRef<HTMLDivElement, ThreadCardProps>(function T
         )}
         {/* Spacer so the absolutely-positioned Reopen action never overlaps
             the row's text on small thread previews. */}
-        {isResolved && onReopen ? <div className="h-7" aria-hidden="true" /> : null}
+        {showReopen ? <div className="h-7" aria-hidden="true" /> : null}
       </button>
-      {isResolved && onReopen ? (
+      {showReopen ? (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onReopen(head);
+            onReopen?.(head);
           }}
           aria-label={t("comments.thread.reopenAria")}
+          // Mirror the row's roving-tabindex state so Tab can't land on the
+          // Reopen button of an inactive card. When the row is the active
+          // treeitem (`tabIndex === 0`), Reopen is reachable as part of the
+          // active card's actions; on non-active cards it stays at -1.
+          tabIndex={tabIndex === 0 ? 0 : -1}
           className={cn(
             "absolute right-3 bottom-3 inline-flex h-7 items-center gap-1.5 rounded-md",
             "border border-[hsl(var(--border))] bg-[hsl(var(--card))]",

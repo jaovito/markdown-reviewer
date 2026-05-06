@@ -96,7 +96,14 @@
       "hideAllAria_one": "Hide all {{count}} visible thread",
       "hideAllAria_other": "Hide all {{count}} visible threads",
       "showHidden": "Show hidden",
-      "showHiddenAria": "Show hidden threads in this pane"
+      "showHiddenAria": "Show hidden threads in this pane",
+      "tree": {
+        "ariaLabel": "Threads grouped by file and line",
+        "fileCount_one": "{{count}} thread",
+        "fileCount_other": "{{count}} threads",
+        "anchorCount_one": "{{count}} comment",
+        "anchorCount_other": "{{count}} comments"
+      }
     },
     "toolbar": {
       "backToRepositoriesAria": "Back to repositories"

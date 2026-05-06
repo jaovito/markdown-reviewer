@@ -158,7 +158,10 @@
       "countBadgeTooltip_other": "{{count}} comments — open in panel",
       "unhideAria": "Unhide thread",
       "unhideAriaWithCount_one": "Unhide {{count}} comment",
-      "unhideAriaWithCount_other": "Unhide {{count}} comments"
+      "unhideAriaWithCount_other": "Unhide {{count}} comments",
+      "resolvedAria": "Expand resolved thread",
+      "resolvedAriaWithCount_one": "Expand resolved thread ({{count}} comment)",
+      "resolvedAriaWithCount_other": "Expand resolved thread ({{count}} comments)"
     },
     "thread": {
       "anonAuthor": "Someone",
@@ -169,6 +172,8 @@
       "unhide": "Unhide",
       "unhideAria": "Restore this hidden thread",
       "resolve": "Resolve",
+      "reopen": "Reopen",
+      "reopenAria": "Reopen this thread",
       "delete": "Delete",
       "deleteAria": "Delete this comment",
       "badgeOpen": "Open",

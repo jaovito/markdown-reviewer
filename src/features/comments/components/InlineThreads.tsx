@@ -4,7 +4,7 @@ import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedT
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { type FilterableState, useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   type CommentGroup,
@@ -16,6 +16,7 @@ import { CommentComposer } from "./CommentComposer";
 import { HiddenThreadMarker } from "./HiddenThreadMarker";
 import { InlineThreadCard } from "./InlineThreadCard";
 import { MinimizedThreadBadge } from "./MinimizedThreadBadge";
+import { ResolvedThreadMarker } from "./ResolvedThreadMarker";
 
 interface InlineThreadsProps {
   prNumber: number;
@@ -133,15 +134,37 @@ export function InlineThreads({
     return out;
   }, [groups]);
 
-  // Slot allocation collapses both cases into "render an inline badge instead
-  // of the card" — the underlying DOM machinery treats them the same. The
-  // distinction (minimized vs. all-hidden) is restored when picking which
-  // React component to portal into the badge slot.
+  // Resolved threads also collapse to a (different, more muted) gutter marker
+  // — but only when the thread isn't the currently selected one. Clicking the
+  // marker selects the head, which flips this set and re-mounts the full card.
+  // Hidden takes precedence over resolved if both somehow apply (e.g. mixed
+  // states won't reach here, but a fully-hidden thread that was previously
+  // resolved should still render as Hidden, not Resolved).
+  const resolvedCollapsed = useMemo(() => {
+    const out = new Set<SlotKey>();
+    for (const g of groups) {
+      const slotKey = slotKeyFor(g.startLine, g.endLine);
+      if (allHiddenSet.has(slotKey)) continue;
+      const allResolved = g.comments.every((c) => c.state === "resolved");
+      if (!allResolved) continue;
+      const isSelected = g.comments.some((c) => c.id === selectedId);
+      if (isSelected) continue;
+      out.add(slotKey);
+    }
+    return out;
+  }, [groups, allHiddenSet, selectedId]);
+
+  // Slot allocation collapses every "show a badge instead of the card" case
+  // (minimized, all-hidden, all-resolved-and-unselected) into one set — the
+  // underlying DOM machinery treats them the same. The distinction is
+  // restored when picking which React component to portal into the badge
+  // slot below.
   const collapsedSet = useMemo(() => {
     const out = new Set<SlotKey>(localMinimized);
     for (const k of allHiddenSet) out.add(k);
+    for (const k of resolvedCollapsed) out.add(k);
     return out;
-  }, [localMinimized, allHiddenSet]);
+  }, [localMinimized, allHiddenSet, resolvedCollapsed]);
 
   // Slot map lives in a ref; we only bump `revision` when the slot identities
   // actually change so the React tree re-renders the portals minimally.
@@ -155,6 +178,36 @@ export function InlineThreads({
   // injections (so the MutationObserver below ignores it).
   const mutatingRef = useRef(false);
 
+  // One-shot highlight ring on the line(s) of a thread the user just expanded
+  // from its resolved gutter marker. Cleared after ~1.5s so the document goes
+  // back to its normal look. `prefers-reduced-motion` is honored in the
+  // companion CSS rule (the keyframe is suppressed there).
+  const [flashKey, setFlashKey] = useState<SlotKey | null>(null);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerFlash = useCallback((key: SlotKey) => {
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    setFlashKey(key);
+    flashTimeoutRef.current = setTimeout(() => {
+      setFlashKey(null);
+      flashTimeoutRef.current = null;
+    }, 1500);
+  }, []);
+  useEffect(
+    () => () => {
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    },
+    [],
+  );
+
+  // Translate the flash slot key back into a (start, end) range for syncSlots
+  // to stamp on the right line nodes.
+  const flashRange = useMemo<{ start: number; end: number } | null>(() => {
+    if (!flashKey) return null;
+    const match = groups.find((g) => slotKeyFor(g.startLine, g.endLine) === flashKey);
+    if (!match) return null;
+    return { start: match.startLine, end: match.endLine };
+  }, [flashKey, groups]);
+
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -165,22 +218,41 @@ export function InlineThreads({
       collapsedSet,
       composerStart,
       composerEnd,
+      flashRange,
       mutatingRef,
     );
     if (changed) setRevision((r) => r + 1);
+    // NOTE: do NOT tear down all slots here on dep change. `syncSlots` is
+    // already incremental — when a single anchor flips from card to badge
+    // (or vice versa) it only mutates that one anchor's slots, leaving
+    // every other slot (including the draft `CommentComposer` slot) in
+    // place. A destructive cleanup on every render would unmount the
+    // composer's portal target whenever the user clicks a resolved thread
+    // marker (or any selection change that toggles `collapsedSet`),
+    // wiping the unsaved body text in `CommentComposer`'s local state.
+    // Final teardown lives in the unmount-only effect below.
+  }, [containerRef, groups, collapsedSet, composerStart, composerEnd, flashRange]);
+
+  // One-shot cleanup, tied only to the `containerRef`. React invokes this
+  // cleanup when the article element is swapped (different file rendered)
+  // or when `InlineThreads` itself unmounts — never on a routine state
+  // change. Keeps the slot DOM stable across selection / collapse flips
+  // so portals (and the composer's local body state) survive.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
     return () => {
       mutatingRef.current = true;
       try {
         removeAllSlots(container);
         slotsRef.current = { threads: new Map(), badges: new Map(), composerSlot: null };
       } finally {
-        // Allow the observer to see post-cleanup state.
         queueMicrotask(() => {
           mutatingRef.current = false;
         });
       }
     };
-  }, [containerRef, groups, collapsedSet, composerStart, composerEnd]);
+  }, [containerRef]);
 
   // Re-sync when the rendered article DOM changes (a markdown re-render).
   useEffect(() => {
@@ -199,13 +271,14 @@ export function InlineThreads({
         collapsedSet,
         composerStart,
         composerEnd,
+        flashRange,
         mutatingRef,
       );
       if (changed) setRevision((r) => r + 1);
     });
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef, groups, collapsedSet, composerStart, composerEnd]);
+  }, [containerRef, groups, collapsedSet, composerStart, composerEnd, flashRange]);
 
   const slots = slotsRef.current;
 
@@ -241,6 +314,10 @@ export function InlineThreads({
             `thread-hidden-${slotKey}`,
           );
         }
+        // `resolvedCollapsed` already excludes anchors that are all-hidden, so
+        // checking the set is enough — no need to recompute from the group.
+        const isSelected = group.comments.some((c) => c.id === selectedId);
+        const isResolvedCollapsed = resolvedCollapsed.has(slotKey);
         if (minimized) {
           const badgeSlot = slots.badges.get(slotKey);
           if (!badgeSlot) return null;
@@ -258,9 +335,25 @@ export function InlineThreads({
             `thread-badge-${slotKey}`,
           );
         }
+        if (isResolvedCollapsed) {
+          const badgeSlot = slots.badges.get(slotKey);
+          if (!badgeSlot) return null;
+          return createPortal(
+            <ResolvedThreadMarker
+              key={slotKey}
+              count={group.comments.length}
+              onExpand={() => {
+                const head = group.comments[0];
+                if (head) select(head.id);
+                triggerFlash(slotKey);
+              }}
+            />,
+            badgeSlot,
+            `thread-resolved-marker-${slotKey}`,
+          );
+        }
         const slot = slots.threads.get(slotKey);
         if (!slot) return null;
-        const isSelected = group.comments.some((c) => c.id === selectedId);
         return createPortal(
           <InlineThreadCard
             key={slotKey}
@@ -269,6 +362,10 @@ export function InlineThreads({
             onResolve={(c) => {
               select(c.id);
               update.mutate({ id: c.id, patch: { state: "resolved" } });
+            }}
+            onReopen={(c) => {
+              select(c.id);
+              update.mutate({ id: c.id, patch: { state: "submitted" } });
             }}
             // `Hide` persists `state = hidden` via IPC so the choice survives
             // restart and a remote refresh. The session-only `minimize` store
@@ -374,14 +471,20 @@ function mutationIsSignificant(record: MutationRecord): boolean {
  * Reconciles the DOM slots under each commented line and the optional draft
  * composer slot. Mutates the article in place. Returns `true` when the slot
  * identity map changed (callers re-render to update portal targets).
+ *
+ * `collapsed` covers both user-minimized threads (Hide) and resolved threads
+ * that are auto-collapsed to the gutter marker. The DOM treats them
+ * identically — a single badge slot under the anchor line — and only the
+ * React portal layer differentiates the two visuals.
  */
 function syncSlots(
   container: HTMLElement,
   current: SlotMap,
   groups: CommentGroup[],
-  minimized: Set<SlotKey>,
+  collapsed: Set<SlotKey>,
   composerStart: number | null,
   composerEnd: number | null,
+  flashRange: { start: number; end: number } | null,
   mutatingRef: { current: boolean },
 ): boolean {
   mutatingRef.current = true;
@@ -402,13 +505,13 @@ function syncSlots(
     }
     splitCodeBlocks(container, wantedLines);
 
-    // A group needs a card slot ONLY when it isn't minimized; otherwise it
+    // A group needs a card slot ONLY when it isn't collapsed; otherwise it
     // needs a badge slot inside the line element.
     const wantsCard = new Set<SlotKey>();
     const wantsBadge = new Set<SlotKey>();
     for (const g of groups) {
       const key = slotKeyFor(g.startLine, g.endLine);
-      if (minimized.has(key)) wantsBadge.add(key);
+      if (collapsed.has(key)) wantsBadge.add(key);
       else wantsCard.add(key);
     }
 
@@ -453,6 +556,12 @@ function syncSlots(
     for (const n of container.querySelectorAll<HTMLElement>("[data-comment-minimized]")) {
       delete n.dataset.commentMinimized;
     }
+    for (const n of container.querySelectorAll<HTMLElement>("[data-comment-resolved]")) {
+      delete n.dataset.commentResolved;
+    }
+    for (const n of container.querySelectorAll<HTMLElement>("[data-comment-flash]")) {
+      delete n.dataset.commentFlash;
+    }
 
     // 4. Insert missing slots and tag every commented line in the range.
     //    Card slot mounts AFTER `attachLine` (== endLine) so the expanded
@@ -460,11 +569,12 @@ function syncSlots(
     //    `attachLine` as a trailing inline element on that line.
     for (const group of groups) {
       const key = slotKeyFor(group.startLine, group.endLine);
-      const isMinimized = minimized.has(key);
-      markRange(lineNodes, group.startLine, group.endLine, isMinimized);
+      const isCollapsed = collapsed.has(key);
+      const allResolved = group.comments.every((c) => c.state === "resolved");
+      markRange(lineNodes, group.startLine, group.endLine, isCollapsed, allResolved);
       const anchor = lineNodes.get(group.attachLine);
       if (!anchor) continue;
-      if (isMinimized) {
+      if (isCollapsed) {
         if (current.badges.has(key)) continue;
         const badge = document.createElement("span");
         badge.dataset.threadBadge = "true";
@@ -484,9 +594,19 @@ function syncSlots(
       }
     }
 
+    // 4b. Stamp the temporary flash attribute so the CSS animation paints
+    //     the highlight ring on the user's freshly-expanded thread.
+    if (flashRange) {
+      for (let line = flashRange.start; line <= flashRange.end; line++) {
+        const el = lineNodes.get(line);
+        if (!el) continue;
+        el.dataset.commentFlash = "true";
+      }
+    }
+
     // 5. Insert the composer slot if needed.
     if (composerStart !== null && composerEnd !== null) {
-      markRange(lineNodes, composerStart, composerEnd, false);
+      markRange(lineNodes, composerStart, composerEnd, false, false);
       if (!current.composerSlot) {
         const anchor = lineNodes.get(composerEnd);
         if (anchor?.parentNode) {
@@ -510,20 +630,24 @@ function syncSlots(
 
 /**
  * Tags every line in `[start, end]` that has a rendered DOM element. When
- * `minimized` is true, also stamps `data-comment-minimized="true"` so the
- * highlight CSS can render a softer background.
+ * `collapsed` is true, also stamps `data-comment-minimized="true"` so the
+ * highlight CSS can render a softer background. `resolved` adds an extra
+ * `data-comment-resolved="true"` flag so the CSS can mute the strip even
+ * further for resolved threads regardless of why they collapsed.
  */
 function markRange(
   lineNodes: Map<number, HTMLElement>,
   start: number,
   end: number,
-  minimized: boolean,
+  collapsed: boolean,
+  resolved: boolean,
 ) {
   for (let line = start; line <= end; line++) {
     const el = lineNodes.get(line);
     if (!el) continue;
     el.dataset.hasComment = "true";
-    if (minimized) el.dataset.commentMinimized = "true";
+    if (collapsed) el.dataset.commentMinimized = "true";
+    if (resolved) el.dataset.commentResolved = "true";
   }
 }
 
@@ -539,6 +663,12 @@ function removeAllSlots(container: HTMLElement) {
   }
   for (const n of container.querySelectorAll<HTMLElement>("[data-comment-minimized]")) {
     delete n.dataset.commentMinimized;
+  }
+  for (const n of container.querySelectorAll<HTMLElement>("[data-comment-resolved]")) {
+    delete n.dataset.commentResolved;
+  }
+  for (const n of container.querySelectorAll<HTMLElement>("[data-comment-flash]")) {
+    delete n.dataset.commentFlash;
   }
 }
 

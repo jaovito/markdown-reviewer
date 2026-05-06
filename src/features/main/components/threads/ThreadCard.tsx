@@ -1,5 +1,6 @@
 import type { ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
+import { RotateCcwIcon } from "lucide-react";
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AnchorLabel } from "./AnchorLabel";
@@ -27,10 +28,15 @@ interface ThreadCardProps {
   /** When true, the card is showing comments from a single file context. */
   hideFilePath: boolean;
   onSelect: (comment: ReviewComment) => void;
+  /**
+   * Optional `Reopen` action — surfaced when the row's head is `resolved` so
+   * the user can flip it back without leaving the threads pane.
+   */
+  onReopen?: (comment: ReviewComment) => void;
 }
 
-export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(function ThreadCard(
-  { group, selected, hideFilePath, onSelect },
+export const ThreadCard = forwardRef<HTMLDivElement, ThreadCardProps>(function ThreadCard(
+  { group, selected, hideFilePath, onSelect, onReopen },
   ref,
 ) {
   const head = group.comments[0];
@@ -43,71 +49,98 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
   // each comment fully rendered, top-down. Single-comment groups stay in the
   // compact preview shape.
   const isStacked = selected && total > 1;
+  // The row click target is a `<button>`, but resolved threads also surface a
+  // `Reopen` action — `<button>` can't legally nest another `<button>`, so we
+  // wrap the row in a positioned `<div>` and stack the action on top.
   return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={() => onSelect(head)}
-      aria-expanded={isStacked || undefined}
-      className={cn(
-        "flex w-full flex-col gap-2.5 rounded-lg border bg-[hsl(var(--card))] p-3 text-left text-sm transition-colors",
-        "hover:border-[hsl(var(--foreground))]/30",
-        selected ? "border-[hsl(var(--foreground))]/40 shadow-sm" : "border-[hsl(var(--border))]",
-        isResolved ? "opacity-70" : null,
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[hsl(var(--foreground))]">
-          <AnchorLabel filePath={group.filePath} anchor={head.anchor} lineOnly={hideFilePath} />
-        </span>
-        <StateBadge state={head.state} className="shrink-0" />
-      </div>
-      {isStacked ? (
-        <>
-          <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            {t("threads.row.stackedCount", { count: total })}
-          </p>
-          <ul className="flex flex-col gap-2">
-            {group.comments.map((c) => (
-              <li
-                key={c.id}
-                className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2"
-              >
-                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-                  <span className="truncate font-semibold text-[hsl(var(--foreground))]">
-                    {c.author ?? t("comments.thread.anonAuthor")}
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => onSelect(head)}
+        aria-expanded={isStacked || undefined}
+        className={cn(
+          "flex w-full flex-col gap-2.5 rounded-lg border bg-[hsl(var(--card))] p-3 text-left text-sm transition-colors",
+          "hover:border-[hsl(var(--foreground))]/30",
+          selected ? "border-[hsl(var(--foreground))]/40 shadow-sm" : "border-[hsl(var(--border))]",
+          isResolved ? "opacity-70" : null,
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[hsl(var(--foreground))]">
+            <AnchorLabel filePath={group.filePath} anchor={head.anchor} lineOnly={hideFilePath} />
+          </span>
+          <StateBadge state={head.state} className="shrink-0" />
+        </div>
+        {isStacked ? (
+          <>
+            <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
+              {t("threads.row.stackedCount", { count: total })}
+            </p>
+            <ul className="flex flex-col gap-2">
+              {group.comments.map((c) => (
+                <li
+                  key={c.id}
+                  className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                    <span className="truncate font-semibold text-[hsl(var(--foreground))]">
+                      {c.author ?? t("comments.thread.anonAuthor")}
+                    </span>
+                    <RelativeTime ms={c.createdAt} />
+                  </div>
+                  <p className="whitespace-pre-wrap text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
+                    {c.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <p className="text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
+              {truncateBody(head.body)}
+            </p>
+            <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+              <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
+              <span className="flex items-center gap-2">
+                {replyCount > 0 ? (
+                  <span>
+                    {t("threads.row.replyCount", {
+                      count: replyCount,
+                      defaultValue: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
+                    })}
                   </span>
-                  <RelativeTime ms={c.createdAt} />
-                </div>
-                <p className="whitespace-pre-wrap text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
-                  {c.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <>
-          <p className="text-[12px] leading-snug text-[hsl(var(--muted-foreground))]">
-            {truncateBody(head.body)}
-          </p>
-          <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-            <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
-            <span className="flex items-center gap-2">
-              {replyCount > 0 ? (
-                <span>
-                  {t("threads.row.replyCount", {
-                    count: replyCount,
-                    defaultValue: replyCount === 1 ? "1 reply" : `${replyCount} replies`,
-                  })}
-                </span>
-              ) : null}
-              <RelativeTime ms={head.createdAt} />
-            </span>
-          </div>
-        </>
-      )}
-    </button>
+                ) : null}
+                <RelativeTime ms={head.createdAt} />
+              </span>
+            </div>
+          </>
+        )}
+        {/* Spacer so the absolutely-positioned Reopen action never overlaps
+            the row's text on small thread previews. */}
+        {isResolved && onReopen ? <div className="h-7" aria-hidden="true" /> : null}
+      </button>
+      {isResolved && onReopen ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onReopen(head);
+          }}
+          aria-label={t("comments.thread.reopenAria")}
+          className={cn(
+            "absolute right-3 bottom-3 inline-flex h-7 items-center gap-1.5 rounded-md",
+            "border border-[hsl(var(--border))] bg-[hsl(var(--card))]",
+            "px-2.5 text-[11px] font-medium text-[hsl(var(--foreground))]",
+            "transition-colors hover:bg-[hsl(var(--accent))]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
+          )}
+        >
+          <RotateCcwIcon className="h-3 w-3" aria-hidden="true" />
+          <span>{t("comments.thread.reopen")}</span>
+        </button>
+      ) : null}
+    </div>
   );
 });
 

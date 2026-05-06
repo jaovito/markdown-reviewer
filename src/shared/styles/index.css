@@ -174,6 +174,14 @@ body {
   background: hsl(var(--comment-selection-bg) / 0.35);
   border-left-color: hsl(var(--comment-marker-fg) / 0.4);
 }
+/* Resolved threads collapse to a subtle gutter marker by default — drop the
+   line wash entirely and keep just a thin neutral bar so the anchor stays
+   traceable without competing with the document. */
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-resolved="true"][data-comment-minimized="true"] {
+  background: transparent;
+  border-left-color: hsl(var(--border));
+}
 
 /* Per-line spans inserted into `<pre>` by InlineThreads.splitCodeBlocks —
    they need block layout so the highlight strip spans the full code width
@@ -195,6 +203,51 @@ body {
   background: hsl(var(--comment-selection-bg) / 0.35);
   border-left-color: hsl(var(--comment-marker-fg) / 0.4);
   color: inherit;
+}
+.prose-styles
+  pre
+  [data-code-line][data-has-comment="true"][data-comment-resolved="true"][data-comment-minimized="true"] {
+  background: transparent;
+  border-left-color: hsl(var(--border));
+  color: inherit;
+}
+
+/* Temporary highlight ring on the line(s) of a thread the user just expanded
+   from its resolved gutter marker. Fades over ~1.5s. Suppressed entirely for
+   users who prefer reduced motion — the static base styles still mark the
+   anchor, so functionality is preserved without animation. */
+@keyframes mr-comment-flash {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--comment-marker-fg) / 0.55);
+    background: hsl(var(--comment-selection-bg));
+  }
+  60% {
+    box-shadow: 0 0 0 4px hsl(var(--comment-marker-fg) / 0);
+    background: hsl(var(--comment-selection-bg));
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--comment-marker-fg) / 0);
+    background: transparent;
+  }
+}
+.prose-styles [data-source-line][data-comment-flash="true"],
+.prose-styles pre [data-code-line][data-comment-flash="true"] {
+  animation: mr-comment-flash 1.4s ease-out 1;
+  border-radius: 6px;
+}
+/* Inside `<pre>`, per-line spans live in a preformatted block — the rounded
+   corners of the regular-line flash would visibly punch out of the code
+   surface. Match the zero-radius rule used by the static highlight above
+   (`pre [data-code-line][data-has-comment]`) so the flash ring stays
+   flush with the rest of the code. */
+.prose-styles pre [data-code-line][data-comment-flash="true"] {
+  border-radius: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prose-styles [data-source-line][data-comment-flash="true"],
+  .prose-styles pre [data-code-line][data-comment-flash="true"] {
+    animation: none;
+  }
 }
 
 /* Inline thread / composer slots inserted by InlineThreads — make them sit

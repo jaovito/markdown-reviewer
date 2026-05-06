@@ -176,6 +176,11 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
             onReopen?.(head);
           }}
           aria-label={t("comments.thread.reopenAria")}
+          // Mirror the row's roving-tabindex state so Tab can't land on the
+          // Reopen button of an inactive card. When the row is the active
+          // treeitem (`tabIndex === 0`), Reopen is reachable as part of the
+          // active card's actions; on non-active cards it stays at -1.
+          tabIndex={tabIndex === 0 ? 0 : -1}
           className={cn(
             "absolute right-3 bottom-3 inline-flex h-7 items-center gap-1.5 rounded-md",
             "border border-[hsl(var(--border))] bg-[hsl(var(--card))]",

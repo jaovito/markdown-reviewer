@@ -467,11 +467,12 @@ export function ThreadList({
           );
         });
         if (hideFilePath) {
-          // Single-file scope — render anchors flat under an implicit `group`
-          // wrapper so the tree structure stays valid for AT users.
+          // Single-file scope — there's no file header (no owning treeitem),
+          // so the wrapper carries `role="presentation"` rather than `group`:
+          // a `role="group"` in a tree must be owned by a `treeitem`. This
+          // keeps the anchor headers as direct children of the `tree`.
           return (
-            // biome-ignore lint/a11y/useSemanticElements: WAI-ARIA tree groups are role="group" on a generic container; <fieldset> is for form controls only.
-            <div key={file.filePath} role="group" className="flex flex-col gap-2">
+            <div key={file.filePath} role="presentation" className="flex flex-col gap-2">
               {anchorChildren}
             </div>
           );

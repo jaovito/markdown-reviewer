@@ -31,16 +31,38 @@ jobs:
           echo "tag=app-v$version" >> "$GITHUB_OUTPUT"
 
       - id: check
-        name: Skip if release already exists
+        name: Skip if a published release already exists for this version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.read.outputs.tag }}
         run: |
-          if gh release view "${{ steps.read.outputs.tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release ${{ steps.read.outputs.tag }} already exists; skipping."
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          fi
+          set -euo pipefail
+          http=$(curl -sS -o /tmp/release.json -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
+          case "$http" in
+            200)
+              draft=$(jq -r '.draft' /tmp/release.json)
+              if [ "$draft" = "true" ]; then
+                echo "Draft release $TAG exists (likely from a previous failed run); rebuilding to overwrite it."
+                echo "should_release=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "Published release $TAG already exists; skipping."
+                echo "should_release=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            404)
+              echo "No release tagged $TAG yet; will build."
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unexpected HTTP $http checking release $TAG; aborting so we don't double-publish."
+              cat /tmp/release.json || true
+              exit 1
+              ;;
+          esac
 
   release:
     name: Bundle (${{ matrix.platform }})
@@ -94,7 +116,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Tauri bundles and upload to release draft
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # action-v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

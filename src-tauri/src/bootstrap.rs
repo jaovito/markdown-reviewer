@@ -13,6 +13,14 @@ use markdown_reviewer_ipc::AppState;
 use tauri::Manager;
 
 pub(crate) fn run() {
+    // Inherit the user's real PATH from their login shell so `gh`/`git`
+    // installed via Homebrew/asdf/mise/nix are reachable when the .app is
+    // launched from Finder/Dock (where launchd's PATH is just /usr/bin:/bin).
+    // Best-effort: if reading the shell fails we keep going with whatever
+    // PATH we inherited — better to surface a "tool missing" error in-app
+    // than to abort startup.
+    let _ = fix_path_env::fix();
+
     let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
 
     let builder = markdown_reviewer_ipc::register(builder);

@@ -29,5 +29,10 @@ tracing-appender = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 
+# Pinned fork of tauri-apps/fix-path-env-rs (not on crates.io). Spawns a login
+# shell at startup to inherit the user's real PATH so `Command::new("gh"|"git")`
+# works when the .app is launched from Finder/Dock instead of a terminal.
+fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs", rev = "c4c45d503ea115a839aae718d02f79e7c7f0f673" }
+
 [lints]
 workspace = true

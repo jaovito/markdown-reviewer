@@ -29,5 +29,14 @@ tracing-appender = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 
+# Pinned upstream tauri-apps/fix-path-env-rs (not published to crates.io;
+# `rev` keeps the build reproducible). On macOS/Linux it spawns a login shell
+# at startup to inherit the user's real PATH so `Command::new("gh"|"git")`
+# resolves when the .app is launched from Finder/Dock/`.desktop` instead of
+# a terminal. On Windows it refreshes inherited env vars to work around the
+# known std::process::Command PATH-inheritance bug, so the dep is wanted on
+# every supported target — no `cfg(target_os)` gate.
+fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs", rev = "c4c45d503ea115a839aae718d02f79e7c7f0f673" }
+
 [lints]
 workspace = true

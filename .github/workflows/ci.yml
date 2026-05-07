@@ -12,6 +12,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  version-sync:
+    name: Version sync (package.json, Cargo.toml, tauri.conf.json)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify all three version fields match
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          tauri=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(awk '/^\[workspace\.package\]/{p=1; next} /^\[/{p=0} p && $1=="version"{gsub(/"/,"",$3); print $3; exit}' Cargo.toml)
+          echo "package.json=$pkg"
+          echo "Cargo.toml=$cargo"
+          echo "tauri.conf.json=$tauri"
+          if [ "$pkg" != "$tauri" ] || [ "$pkg" != "$cargo" ]; then
+            echo "::error::Version fields out of sync. Set the same value in package.json, Cargo.toml ([workspace.package].version), and src-tauri/tauri.conf.json."
+            exit 1
+          fi
+
   frontend:
     name: Frontend (lint, typecheck, build, test)
     runs-on: ubuntu-24.04

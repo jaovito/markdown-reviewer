@@ -160,26 +160,62 @@ body {
 }
 
 /* Lines that already carry at least one comment get a soft persistent
-   highlight + 3px brand bar on the left, matching the `mrexSameLine` style. */
-.prose-styles [data-source-line][data-has-comment="true"] {
+   highlight + 3px brand bar on the left, matching the `mrexSameLine` style.
+   The full wash applies only to single-line anchors — multi-line ranges use
+   the lighter left-rail rules further below. */
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="single"] {
   background: hsl(var(--comment-selection-bg));
   border-left: 3px solid hsl(var(--comment-marker-fg));
   border-radius: 6px;
   padding-left: 0.6em;
   margin-left: -0.6em;
 }
-/* Minimized threads keep the anchor visible with a much softer wash so the
-   document content stays the focus. */
-.prose-styles [data-source-line][data-has-comment="true"][data-comment-minimized="true"] {
+/* Minimized single-line threads keep the anchor visible with a much softer
+   wash so the document content stays the focus. */
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="single"][data-comment-minimized="true"] {
   background: hsl(var(--comment-selection-bg) / 0.35);
   border-left-color: hsl(var(--comment-marker-fg) / 0.4);
 }
-/* Resolved threads collapse to a subtle gutter marker by default — drop the
-   line wash entirely and keep just a thin neutral bar so the anchor stays
-   traceable without competing with the document. */
+/* Resolved single-line threads collapse to a subtle gutter marker by default —
+   drop the line wash entirely and keep just a thin neutral bar. */
 .prose-styles
-  [data-source-line][data-has-comment="true"][data-comment-resolved="true"][data-comment-minimized="true"] {
+  [data-source-line][data-has-comment="true"][data-comment-range="single"][data-comment-resolved="true"][data-comment-minimized="true"] {
   background: transparent;
+  border-left-color: hsl(var(--border));
+}
+
+/* Multi-line range anchors get a continuous 3px left rail spanning every
+   covered line — much lighter visually than the per-line wash, scales from
+   2 lines to 50+ without dominating the document. The head line gets the
+   top corner rounded; the tail line gets the bottom corner rounded. */
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="head"],
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="body"],
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="tail"] {
+  border-left: 3px solid hsl(var(--comment-marker-fg));
+  padding-left: 0.6em;
+  margin-left: -0.6em;
+}
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="head"] {
+  border-top-left-radius: 6px;
+}
+.prose-styles [data-source-line][data-has-comment="true"][data-comment-range="tail"] {
+  border-bottom-left-radius: 6px;
+}
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="head"][data-comment-minimized="true"],
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="body"][data-comment-minimized="true"],
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="tail"][data-comment-minimized="true"] {
+  border-left-color: hsl(var(--comment-marker-fg) / 0.4);
+}
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="head"][data-comment-resolved="true"][data-comment-minimized="true"],
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="body"][data-comment-resolved="true"][data-comment-minimized="true"],
+.prose-styles
+  [data-source-line][data-has-comment="true"][data-comment-range="tail"][data-comment-resolved="true"][data-comment-minimized="true"] {
   border-left-color: hsl(var(--border));
 }
 
@@ -189,7 +225,7 @@ body {
 .prose-styles pre [data-code-line] {
   display: block;
 }
-.prose-styles pre [data-code-line][data-has-comment="true"] {
+.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-range="single"] {
   background: hsl(var(--comment-selection-bg));
   border-left: 3px solid hsl(var(--comment-marker-fg));
   /* Keep the highlight tight to the line — no rounded corners, no negative
@@ -199,17 +235,40 @@ body {
   margin-left: -0.5em;
   color: hsl(var(--comment-selection-fg));
 }
-.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-minimized="true"] {
+.prose-styles
+  pre
+  [data-code-line][data-has-comment="true"][data-comment-range="single"][data-comment-minimized="true"] {
   background: hsl(var(--comment-selection-bg) / 0.35);
   border-left-color: hsl(var(--comment-marker-fg) / 0.4);
   color: inherit;
 }
 .prose-styles
   pre
-  [data-code-line][data-has-comment="true"][data-comment-resolved="true"][data-comment-minimized="true"] {
+  [data-code-line][data-has-comment="true"][data-comment-range="single"][data-comment-resolved="true"][data-comment-minimized="true"] {
   background: transparent;
   border-left-color: hsl(var(--border));
   color: inherit;
+}
+
+/* Mirror the rail on per-line code spans inside <pre> for multi-line ranges. */
+.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-range="head"],
+.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-range="body"],
+.prose-styles pre [data-code-line][data-has-comment="true"][data-comment-range="tail"] {
+  border-left: 3px solid hsl(var(--comment-marker-fg));
+  border-radius: 0;
+  padding-left: 0.5em;
+  margin-left: -0.5em;
+}
+.prose-styles
+  pre
+  [data-code-line][data-has-comment="true"][data-comment-range="head"][data-comment-minimized="true"],
+.prose-styles
+  pre
+  [data-code-line][data-has-comment="true"][data-comment-range="body"][data-comment-minimized="true"],
+.prose-styles
+  pre
+  [data-code-line][data-has-comment="true"][data-comment-range="tail"][data-comment-minimized="true"] {
+  border-left-color: hsl(var(--comment-marker-fg) / 0.4);
 }
 
 /* Temporary highlight ring on the line(s) of a thread the user just expanded
@@ -254,6 +313,18 @@ body {
    flush in the document flow under the anchor line. */
 .prose-styles [data-thread-slot] {
   margin: 0;
+}
+
+/* Sticky range header chip mounted above the first line of a multi-line
+   range. Sticks to the top of the preview's scroll container so the reader
+   keeps a "there is a comment here" affordance even when scrolled into the
+   middle of a long range. */
+.prose-styles [data-thread-slot="header"] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 4px;
+  background: hsl(var(--background));
 }
 
 /* Minimized "open" badge inserted at the end of the highlighted line. Pushed

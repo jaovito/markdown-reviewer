@@ -19,6 +19,10 @@ interface ThreadListProps {
   prNumber?: number;
   /** File path of the currently open preview, when one is selected. */
   currentFilePath?: string;
+  /** Repo absolute path — forwarded to ThreadCard for the snippet read. */
+  repoPath?: string;
+  /** PR head sha — forwarded to ThreadCard for the snippet cache key. */
+  sha?: string;
 }
 
 /**
@@ -50,6 +54,8 @@ export function ThreadList({
   hiddenCount,
   prNumber,
   currentFilePath,
+  repoPath,
+  sha,
 }: ThreadListProps) {
   const { t } = useTranslation();
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
@@ -454,6 +460,8 @@ export function ThreadList({
                 asTreeItem
                 tabIndex={effectiveActiveId === cId ? 0 : -1}
                 onFocus={() => setActiveId(cId)}
+                repoPath={repoPath}
+                sha={sha}
                 onSelect={(comment) => {
                   setActiveId(cId);
                   select(comment.id);

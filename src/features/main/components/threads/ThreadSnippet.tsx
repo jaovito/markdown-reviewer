@@ -23,6 +23,11 @@ export function ThreadSnippet({ repoPath, sha, filePath, startLine, endLine }: T
     [lines, startLine, endLine],
   );
 
+  // Without repoPath/sha the query is disabled and never produces lines or an
+  // error, so the loading branch below would show a skeleton forever. Omit
+  // the snippet entirely instead.
+  if (!repoPath || !sha) return null;
+
   if (isLoading || (!lines && !error)) {
     return (
       <div className="my-1.5 flex flex-col gap-1">

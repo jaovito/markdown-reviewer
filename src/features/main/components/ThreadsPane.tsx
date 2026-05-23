@@ -17,11 +17,15 @@ import { ThreadList } from "./threads/ThreadList";
 interface ThreadsPaneProps {
   prNumber?: number;
   filePath?: string;
+  /** Repo absolute path — forwarded to ThreadList for the snippet read. */
+  repoPath?: string;
+  /** PR head sha — forwarded to ThreadList for the snippet cache key. */
+  sha?: string;
 }
 
 type Scope = "currentFile" | "allFiles";
 
-export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
+export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPaneProps) {
   const { t } = useTranslation();
   const query = usePullRequestComments(prNumber);
   const filter = useThreadsFilter((s) => s.filter);
@@ -154,6 +158,8 @@ export function ThreadsPane({ prNumber, filePath }: ThreadsPaneProps) {
               hiddenCount={hiddenCount}
               prNumber={prNumber}
               currentFilePath={filePath}
+              repoPath={repoPath}
+              sha={sha}
             />
           )}
         </div>

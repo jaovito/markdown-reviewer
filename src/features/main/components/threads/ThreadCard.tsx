@@ -1,10 +1,16 @@
-import type { ReviewComment } from "@/shared/ipc/contract";
+import type { CommentAnchor, ReviewComment } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { RotateCcwIcon } from "lucide-react";
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AnchorLabel } from "./AnchorLabel";
 import { StateBadge } from "./StateBadge";
+import { ThreadSnippet } from "./ThreadSnippet";
+
+function rangeOf(anchor: CommentAnchor): { startLine: number; endLine: number } {
+  if (anchor.kind === "singleLine") return { startLine: anchor.line, endLine: anchor.line };
+  return { startLine: anchor.startLine, endLine: anchor.endLine };
+}
 
 const PREVIEW_LIMIT = 120;
 
@@ -41,6 +47,10 @@ interface ThreadCardProps {
    * `role="tree"`. Outside that context the card is a plain button.
    */
   asTreeItem?: boolean;
+  /** Forwarded to ThreadSnippet's `useFileSource` — undefined disables the snippet. */
+  repoPath?: string;
+  /** Head sha for the snippet's cache key. */
+  sha?: string;
   /** Forwarded to the underlying row button — used to track roving-tabindex focus. */
   onFocus?: () => void;
   onSelect: (comment: ReviewComment) => void;
@@ -64,12 +74,17 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
     hideAnchorLabel = false,
     tabIndex,
     asTreeItem = false,
+    repoPath,
+    sha,
     onFocus,
     onSelect,
     onReopen,
   },
   ref,
 ) {
+  const { startLine: snippetStart, endLine: snippetEnd } = group.comments[0]
+    ? rangeOf(group.comments[0].anchor)
+    : { startLine: 0, endLine: 0 };
   const head = group.comments[0];
   const { t } = useTranslation();
   if (!head) return null;
@@ -119,6 +134,13 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
             <StateBadge state={head.state} className="shrink-0" />
           </div>
         )}
+        <ThreadSnippet
+          repoPath={repoPath}
+          sha={sha}
+          filePath={group.filePath}
+          startLine={snippetStart}
+          endLine={snippetEnd}
+        />
         {isStacked ? (
           <>
             <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">

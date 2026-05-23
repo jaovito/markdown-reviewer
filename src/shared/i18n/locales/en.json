@@ -139,6 +139,10 @@
       "hidden": "Hidden",
       "resolved": "Resolved",
       "deleted": "Deleted"
+    },
+    "snippet": {
+      "moreLines_one": "… +{{count}} more line",
+      "moreLines_other": "… +{{count}} more lines"
     }
   },
   "comments": {
@@ -188,6 +192,12 @@
       "badgeResolved": "Resolved",
       "badgeHidden": "Hidden",
       "badgeDeleted": "Deleted"
+    },
+    "range": {
+      "headerLabel_one": "L{{start}}–L{{end}} · {{count}} comment",
+      "headerLabel_other": "L{{start}}–L{{end}} · {{count}} comments",
+      "jump": "Jump",
+      "jumpAria": "Jump to comment thread"
     }
   },
   "errors": {

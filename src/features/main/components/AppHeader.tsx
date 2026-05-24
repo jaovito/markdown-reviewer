@@ -8,7 +8,7 @@ import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon, GitBranchIcon } from "lucide-react";
+import { CheckIcon, GitBranchIcon, Loader2Icon } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
@@ -124,7 +124,11 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
                 : t("app.finishReview.tooltip", { count: draftIds.length })
             }
           >
-            <CheckIcon className="size-3.5" />
+            {submit.isPending ? (
+              <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckIcon className="size-3.5" aria-hidden="true" />
+            )}
             {t("app.actions.finishReview")}
             {draftIds.length > 0 ? (
               <span className="ml-1 rounded-full bg-[hsl(var(--primary-foreground))]/20 px-1.5 text-[10px]">

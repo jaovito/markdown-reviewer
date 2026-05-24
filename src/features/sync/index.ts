@@ -1,1 +1,10 @@
-// Placeholder for Phase 2+ — this feature lives here.
+export { RemoteThreadCard } from "./components/RemoteThreadCard";
+export { UnmappedThreadsSection } from "./components/UnmappedThreadsSection";
+export { useRemoteThreads, remoteThreadsKey } from "./hooks/useRemoteThreads";
+export { useReplyRemoteThread } from "./hooks/useReplyRemoteThread";
+export { useEditRemoteComment } from "./hooks/useEditRemoteComment";
+export { useDeleteRemoteComment } from "./hooks/useDeleteRemoteComment";
+export { useResolveRemoteThread } from "./hooks/useResolveRemoteThread";
+export { useReopenRemoteThread } from "./hooks/useReopenRemoteThread";
+export { mergeLocalAndRemote } from "./lib/mergeLocalAndRemote";
+export type { MergedEntry } from "./lib/mergeLocalAndRemote";

@@ -1,6 +1,7 @@
 import { ipc } from "@/shared/ipc/client";
 import type { RefreshResult, RemoteComment, RemoteThread } from "@/shared/ipc/contract";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { showMutationError } from "../lib/showError";
 import { remoteThreadsKey } from "./useRemoteThreads";
 
 interface Vars {
@@ -26,6 +27,7 @@ export function useReplyRemoteThread() {
           prev && patchThread(prev, threadId, (t) => ({ ...t, comments: [...t.comments, added] })),
       );
     },
+    onError: showMutationError,
   });
 }
 

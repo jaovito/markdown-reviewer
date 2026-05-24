@@ -1,6 +1,7 @@
 import { ipc } from "@/shared/ipc/client";
 import type { RefreshResult, RemoteComment } from "@/shared/ipc/contract";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { showMutationError } from "../lib/showError";
 import { remoteThreadsKey } from "./useRemoteThreads";
 
 interface Vars {
@@ -35,5 +36,6 @@ export function useEditRemoteComment() {
         };
       });
     },
+    onError: showMutationError,
   });
 }

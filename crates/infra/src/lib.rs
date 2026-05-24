@@ -8,5 +8,6 @@ pub mod sqlite;
 
 pub use clock::SystemClock;
 pub use gh::GhCli;
+pub use gh::GitWithGhFallback;
 pub use git::GitCli;
 pub use paths::Paths;

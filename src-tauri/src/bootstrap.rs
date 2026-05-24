@@ -4,10 +4,11 @@ use markdown_reviewer_core::application::comments::Comments;
 use markdown_reviewer_core::application::files::Files;
 use markdown_reviewer_core::application::pull_requests::PullRequests;
 use markdown_reviewer_core::application::repo_selection::RepoSelection;
+use markdown_reviewer_core::application::sync::Sync;
 use markdown_reviewer_infra::{
     logging,
-    sqlite::{open_and_migrate, SqliteCommentsStore, SqliteRecentsStore},
-    GhCli, GitCli, Paths, SystemClock,
+    sqlite::{open_and_migrate, SqliteCommentsStore, SqliteRecentsStore, SqliteRemoteThreadsStore},
+    GhCli, GitCli, GitWithGhFallback, Paths, SystemClock,
 };
 use markdown_reviewer_ipc::AppState;
 use tauri::Manager;
@@ -42,6 +43,11 @@ pub(crate) fn run() {
             let gh = Arc::new(GhCli);
             let clock = Arc::new(SystemClock);
             let comments_store = Arc::new(SqliteCommentsStore::new(db.clone()));
+            let remote_store = Arc::new(SqliteRemoteThreadsStore::new(db.clone()));
+            let file_resolver = Arc::new(GitWithGhFallback {
+                git: git.clone(),
+                gh: gh.clone(),
+            });
             let state = AppState {
                 repo_selection: RepoSelection {
                     git: git.clone(),
@@ -59,8 +65,14 @@ pub(crate) fn run() {
                 },
                 comments: Comments {
                     store: comments_store,
-                    clock,
+                    clock: clock.clone(),
                     gh: gh.clone(),
+                },
+                sync: Sync {
+                    gh: gh.clone(),
+                    store: remote_store,
+                    files: file_resolver,
+                    clock,
                 },
             };
             app.manage(state);

@@ -19,7 +19,7 @@ impl FileResolver for GitWithGhFallback {
             Ok(Some(text)) => Ok(text),
             // Local clone doesn't have the ref or file — fall back to the GitHub API.
             Ok(None) => self.gh.get_file_content(repo_path, sha, path).await,
-            Err(AppError::FileNotFound { .. }) | Err(AppError::Process { .. }) => {
+            Err(AppError::FileNotFound { .. } | AppError::Process { .. }) => {
                 self.gh.get_file_content(repo_path, sha, path).await
             }
             Err(other) => Err(other),

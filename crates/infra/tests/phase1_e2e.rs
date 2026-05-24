@@ -85,7 +85,8 @@ impl GhClient for StubGh {
         &self,
         _repo_path: &str,
         _pr_number: u64,
-    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::ports::FetchedReviewThreads>
+    {
         unimplemented!("not used in this test")
     }
     async fn reply_review_comment(

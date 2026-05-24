@@ -32,7 +32,14 @@ pub async fn reply_remote_thread(
     in_reply_to_comment_id: i64,
     body: String,
 ) -> Result<RemoteComment, AppError> {
-    mutations::reply(&state.sync, &repo_path, pr_number, in_reply_to_comment_id, &body).await
+    mutations::reply(
+        &state.sync,
+        &repo_path,
+        pr_number,
+        in_reply_to_comment_id,
+        &body,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "camelCase")]

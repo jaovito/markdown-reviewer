@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use markdown_reviewer_core::application::sync::{refresh, Sync};
 use markdown_reviewer_core::domain::{
-    ChangedFile, MappingStatus, PullRequestDetail, PullRequestSummary, RemoteComment,
-    RemoteThread, ThreadState,
+    ChangedFile, MappingStatus, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread,
+    ThreadState,
 };
 use markdown_reviewer_core::ports::{
     CachedRefresh, Clock, FetchedReviewThreads, FileResolver, GhAuthReport, GhClient,
@@ -39,24 +39,68 @@ struct FakeGh {
 
 #[async_trait]
 impl GhClient for FakeGh {
-    async fn version(&self) -> AppResult<String> { unimplemented!() }
-    async fn auth_status(&self) -> AppResult<GhAuthReport> { unimplemented!() }
-    async fn list_pull_requests(&self, _: &str) -> AppResult<Vec<PullRequestSummary>> { unimplemented!() }
-    async fn load_pull_request(&self, _: &str, _: u64) -> AppResult<PullRequestDetail> { unimplemented!() }
-    async fn list_changed_files(&self, _: &str, _: u64) -> AppResult<Vec<ChangedFile>> { unimplemented!() }
-    async fn get_file_content(&self, _: &str, _: &str, _: &str) -> AppResult<String> { unimplemented!() }
-    async fn submit_review_batch(&self, _: &str, _: u64, _: &str, _: &[ReviewCommentInput]) -> AppResult<Vec<i64>> { unimplemented!() }
-    async fn submit_review_comment(&self, _: &str, _: u64, _: &str, _: &ReviewCommentInput) -> AppResult<i64> { unimplemented!() }
+    async fn version(&self) -> AppResult<String> {
+        unimplemented!()
+    }
+    async fn auth_status(&self) -> AppResult<GhAuthReport> {
+        unimplemented!()
+    }
+    async fn list_pull_requests(&self, _: &str) -> AppResult<Vec<PullRequestSummary>> {
+        unimplemented!()
+    }
+    async fn load_pull_request(&self, _: &str, _: u64) -> AppResult<PullRequestDetail> {
+        unimplemented!()
+    }
+    async fn list_changed_files(&self, _: &str, _: u64) -> AppResult<Vec<ChangedFile>> {
+        unimplemented!()
+    }
+    async fn get_file_content(&self, _: &str, _: &str, _: &str) -> AppResult<String> {
+        unimplemented!()
+    }
+    async fn submit_review_batch(
+        &self,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        unimplemented!()
+    }
+    async fn submit_review_comment(
+        &self,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        unimplemented!()
+    }
 
     async fn list_review_threads(&self, _: &str, _: u64) -> AppResult<FetchedReviewThreads> {
         Ok(self.payload.lock().unwrap().clone())
     }
 
-    async fn reply_review_comment(&self, _: &str, _: u64, _: i64, _: &str) -> AppResult<RemoteComment> { unimplemented!() }
-    async fn edit_review_comment(&self, _: &str, _: i64, _: &str) -> AppResult<RemoteComment> { unimplemented!() }
-    async fn delete_review_comment(&self, _: &str, _: i64) -> AppResult<()> { unimplemented!() }
-    async fn resolve_review_thread(&self, _: &str, _: &str) -> AppResult<RemoteThread> { unimplemented!() }
-    async fn unresolve_review_thread(&self, _: &str, _: &str) -> AppResult<RemoteThread> { unimplemented!() }
+    async fn reply_review_comment(
+        &self,
+        _: &str,
+        _: u64,
+        _: i64,
+        _: &str,
+    ) -> AppResult<RemoteComment> {
+        unimplemented!()
+    }
+    async fn edit_review_comment(&self, _: &str, _: i64, _: &str) -> AppResult<RemoteComment> {
+        unimplemented!()
+    }
+    async fn delete_review_comment(&self, _: &str, _: i64) -> AppResult<()> {
+        unimplemented!()
+    }
+    async fn resolve_review_thread(&self, _: &str, _: &str) -> AppResult<RemoteThread> {
+        unimplemented!()
+    }
+    async fn unresolve_review_thread(&self, _: &str, _: &str) -> AppResult<RemoteThread> {
+        unimplemented!()
+    }
 }
 
 #[derive(Default)]
@@ -82,7 +126,9 @@ impl Clock for FixedClock {
     fn now(&self) -> time::OffsetDateTime {
         time::OffsetDateTime::from_unix_timestamp(1_700_000_000).unwrap()
     }
-    fn now_unix_ms(&self) -> i64 { 1_700_000_000_000 }
+    fn now_unix_ms(&self) -> i64 {
+        1_700_000_000_000
+    }
 }
 
 fn thread(thread_id: &str, path: &str, line: u32, original_sha: &str) -> RemoteThread {

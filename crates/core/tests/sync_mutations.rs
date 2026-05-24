@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use markdown_reviewer_core::application::sync::{mutations, Sync};
 use markdown_reviewer_core::domain::{
-    ChangedFile, MappingStatus, PullRequestDetail, PullRequestSummary, RemoteComment,
-    RemoteThread, ThreadState,
+    ChangedFile, MappingStatus, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread,
+    ThreadState,
 };
 use markdown_reviewer_core::ports::{
     CachedRefresh, Clock, FetchedReviewThreads, FileResolver, GhAuthReport, GhClient,
@@ -29,8 +29,12 @@ impl FileResolver for FakeFiles {
 struct FakeStore;
 #[async_trait]
 impl RemoteThreadsStore for FakeStore {
-    async fn get(&self, _: &str, _: u64) -> AppResult<Option<CachedRefresh>> { Ok(None) }
-    async fn put(&self, _: &str, _: u64, _: &str, _: &CachedRefresh) -> AppResult<()> { Ok(()) }
+    async fn get(&self, _: &str, _: u64) -> AppResult<Option<CachedRefresh>> {
+        Ok(None)
+    }
+    async fn put(&self, _: &str, _: u64, _: &str, _: &CachedRefresh) -> AppResult<()> {
+        Ok(())
+    }
 }
 
 struct FixedClock;
@@ -38,7 +42,9 @@ impl Clock for FixedClock {
     fn now(&self) -> time::OffsetDateTime {
         time::OffsetDateTime::from_unix_timestamp(0).unwrap()
     }
-    fn now_unix_ms(&self) -> i64 { 0 }
+    fn now_unix_ms(&self) -> i64 {
+        0
+    }
 }
 
 #[derive(Default)]
@@ -86,38 +92,87 @@ fn sample_thread(id: &str) -> RemoteThread {
 
 #[async_trait]
 impl GhClient for GhSpy {
-    async fn version(&self) -> AppResult<String> { unimplemented!() }
-    async fn auth_status(&self) -> AppResult<GhAuthReport> { unimplemented!() }
-    async fn list_pull_requests(&self, _: &str) -> AppResult<Vec<PullRequestSummary>> { unimplemented!() }
-    async fn load_pull_request(&self, _: &str, _: u64) -> AppResult<PullRequestDetail> { unimplemented!() }
-    async fn list_changed_files(&self, _: &str, _: u64) -> AppResult<Vec<ChangedFile>> { unimplemented!() }
-    async fn get_file_content(&self, _: &str, _: &str, _: &str) -> AppResult<String> { unimplemented!() }
-    async fn submit_review_batch(&self, _: &str, _: u64, _: &str, _: &[ReviewCommentInput]) -> AppResult<Vec<i64>> { unimplemented!() }
-    async fn submit_review_comment(&self, _: &str, _: u64, _: &str, _: &ReviewCommentInput) -> AppResult<i64> { unimplemented!() }
-    async fn list_review_threads(&self, _: &str, _: u64) -> AppResult<FetchedReviewThreads> { unimplemented!() }
+    async fn version(&self) -> AppResult<String> {
+        unimplemented!()
+    }
+    async fn auth_status(&self) -> AppResult<GhAuthReport> {
+        unimplemented!()
+    }
+    async fn list_pull_requests(&self, _: &str) -> AppResult<Vec<PullRequestSummary>> {
+        unimplemented!()
+    }
+    async fn load_pull_request(&self, _: &str, _: u64) -> AppResult<PullRequestDetail> {
+        unimplemented!()
+    }
+    async fn list_changed_files(&self, _: &str, _: u64) -> AppResult<Vec<ChangedFile>> {
+        unimplemented!()
+    }
+    async fn get_file_content(&self, _: &str, _: &str, _: &str) -> AppResult<String> {
+        unimplemented!()
+    }
+    async fn submit_review_batch(
+        &self,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &[ReviewCommentInput],
+    ) -> AppResult<Vec<i64>> {
+        unimplemented!()
+    }
+    async fn submit_review_comment(
+        &self,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &ReviewCommentInput,
+    ) -> AppResult<i64> {
+        unimplemented!()
+    }
+    async fn list_review_threads(&self, _: &str, _: u64) -> AppResult<FetchedReviewThreads> {
+        unimplemented!()
+    }
 
-    async fn reply_review_comment(&self, _: &str, _: u64, in_reply: i64, body: &str) -> AppResult<RemoteComment> {
-        if let Some(err) = self.fail_with.lock().unwrap().clone() { return Err(err); }
-        self.reply_calls.lock().unwrap().push((in_reply, body.into()));
+    async fn reply_review_comment(
+        &self,
+        _: &str,
+        _: u64,
+        in_reply: i64,
+        body: &str,
+    ) -> AppResult<RemoteComment> {
+        if let Some(err) = self.fail_with.lock().unwrap().clone() {
+            return Err(err);
+        }
+        self.reply_calls
+            .lock()
+            .unwrap()
+            .push((in_reply, body.into()));
         Ok(sample_comment(99))
     }
     async fn edit_review_comment(&self, _: &str, id: i64, body: &str) -> AppResult<RemoteComment> {
-        if let Some(err) = self.fail_with.lock().unwrap().clone() { return Err(err); }
+        if let Some(err) = self.fail_with.lock().unwrap().clone() {
+            return Err(err);
+        }
         self.edit_calls.lock().unwrap().push((id, body.into()));
         Ok(sample_comment(id))
     }
     async fn delete_review_comment(&self, _: &str, id: i64) -> AppResult<()> {
-        if let Some(err) = self.fail_with.lock().unwrap().clone() { return Err(err); }
+        if let Some(err) = self.fail_with.lock().unwrap().clone() {
+            return Err(err);
+        }
         self.delete_calls.lock().unwrap().push(id);
         Ok(())
     }
     async fn resolve_review_thread(&self, _: &str, id: &str) -> AppResult<RemoteThread> {
-        if let Some(err) = self.fail_with.lock().unwrap().clone() { return Err(err); }
+        if let Some(err) = self.fail_with.lock().unwrap().clone() {
+            return Err(err);
+        }
         self.resolve_calls.lock().unwrap().push(id.into());
         Ok(sample_thread(id))
     }
     async fn unresolve_review_thread(&self, _: &str, id: &str) -> AppResult<RemoteThread> {
-        if let Some(err) = self.fail_with.lock().unwrap().clone() { return Err(err); }
+        if let Some(err) = self.fail_with.lock().unwrap().clone() {
+            return Err(err);
+        }
         self.unresolve_calls.lock().unwrap().push(id.into());
         Ok(sample_thread(id))
     }
@@ -138,14 +193,19 @@ async fn reply_delegates_to_gh() {
     let svc = svc_with(gh.clone());
     let out = mutations::reply(&svc, "/repo", 7, 42, "ok").await.unwrap();
     assert_eq!(out.comment_id, 99);
-    assert_eq!(gh.reply_calls.lock().unwrap().as_slice(), &[(42, "ok".to_string())]);
+    assert_eq!(
+        gh.reply_calls.lock().unwrap().as_slice(),
+        &[(42, "ok".to_string())]
+    );
 }
 
 #[tokio::test]
 async fn edit_passes_body() {
     let gh = Arc::new(GhSpy::default());
     let svc = svc_with(gh.clone());
-    mutations::edit(&svc, "/repo", 11, "new body").await.unwrap();
+    mutations::edit(&svc, "/repo", 11, "new body")
+        .await
+        .unwrap();
     assert_eq!(
         gh.edit_calls.lock().unwrap().as_slice(),
         &[(11, "new body".to_string())]
@@ -166,8 +226,14 @@ async fn resolve_and_reopen_delegate() {
     let svc = svc_with(gh.clone());
     mutations::resolve(&svc, "/repo", "PRRT_1").await.unwrap();
     mutations::reopen(&svc, "/repo", "PRRT_1").await.unwrap();
-    assert_eq!(gh.resolve_calls.lock().unwrap().as_slice(), &["PRRT_1".to_string()]);
-    assert_eq!(gh.unresolve_calls.lock().unwrap().as_slice(), &["PRRT_1".to_string()]);
+    assert_eq!(
+        gh.resolve_calls.lock().unwrap().as_slice(),
+        &["PRRT_1".to_string()]
+    );
+    assert_eq!(
+        gh.unresolve_calls.lock().unwrap().as_slice(),
+        &["PRRT_1".to_string()]
+    );
 }
 
 #[tokio::test]

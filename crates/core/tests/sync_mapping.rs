@@ -95,7 +95,10 @@ async fn maps_multi_line_range_when_head_matches() {
     assert_eq!(status, MappingStatus::Mapped);
     assert_eq!(
         anchor,
-        Some(CommentAnchor::LineRange { start_line: 4, end_line: 7 })
+        Some(CommentAnchor::LineRange {
+            start_line: 4,
+            end_line: 7
+        })
     );
 }
 

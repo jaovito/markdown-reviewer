@@ -532,14 +532,7 @@ impl GhClient for GhCli {
     ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
         let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/comments/{comment_id}");
         let body_arg = format!("body={body}");
-        let args = vec![
-            "api",
-            "-X",
-            "PATCH",
-            &endpoint,
-            "--raw-field",
-            &body_arg,
-        ];
+        let args = vec!["api", "-X", "PATCH", &endpoint, "--raw-field", &body_arg];
         let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
         if !out.ok() {
             return Err(classify_rest_error(&out.stderr));
@@ -603,9 +596,7 @@ fn classify_rest_error(stderr: &str) -> AppError {
     AppError::process(redact(stderr.trim()))
 }
 
-fn parse_review_comment(
-    raw: &str,
-) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+fn parse_review_comment(raw: &str) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
     #[derive(serde::Deserialize)]
     struct UserField {
         login: String,
@@ -651,11 +642,7 @@ fn parse_review_comment(
     })
 }
 
-async fn run_thread_mutation(
-    repo_path: &str,
-    thread_id: &str,
-    mutation: &str,
-) -> AppResult<()> {
+async fn run_thread_mutation(repo_path: &str, thread_id: &str, mutation: &str) -> AppResult<()> {
     let query_arg = format!("query={mutation}");
     let id_arg = format!("id={thread_id}");
     let args = vec![
@@ -733,8 +720,7 @@ async fn refetch_thread(
             }
         }
     });
-    let fetched =
-        crate::gh::review_threads::parse_review_threads(&wrapped.to_string())?;
+    let fetched = crate::gh::review_threads::parse_review_threads(&wrapped.to_string())?;
     let mut thread = fetched
         .threads
         .into_iter()

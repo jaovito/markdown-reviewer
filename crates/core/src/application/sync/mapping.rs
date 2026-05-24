@@ -22,14 +22,15 @@ pub async fn map_anchor(
             },
         );
     }
-    let end_line = thread
-        .line
-        .expect("checked is_some() in the guard above");
+    let end_line = thread.line.expect("checked is_some() in the guard above");
     let start_line = thread.start_line.unwrap_or(end_line);
 
     // 2. Same-commit fast path.
     if thread.original_commit_id == head_sha {
-        return (Some(build_anchor(start_line, end_line)), MappingStatus::Mapped);
+        return (
+            Some(build_anchor(start_line, end_line)),
+            MappingStatus::Mapped,
+        );
     }
 
     // 3. Cross-commit — find the original snippet in the new head.

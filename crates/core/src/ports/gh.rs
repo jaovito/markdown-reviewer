@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{ChangedFile, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread};
+use crate::domain::{
+    ChangedFile, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread,
+};
 use crate::AppResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

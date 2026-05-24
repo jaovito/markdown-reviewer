@@ -2,9 +2,7 @@
 //! `gh api graphql -F query=…`. Stays self-contained so a fixture-based
 //! test can run without going through the gh CLI.
 
-use markdown_reviewer_core::domain::{
-    MappingStatus, RemoteComment, RemoteThread, ThreadState,
-};
+use markdown_reviewer_core::domain::{MappingStatus, RemoteComment, RemoteThread, ThreadState};
 use markdown_reviewer_core::ports::FetchedReviewThreads;
 use markdown_reviewer_core::{AppError, AppResult};
 use serde::Deserialize;

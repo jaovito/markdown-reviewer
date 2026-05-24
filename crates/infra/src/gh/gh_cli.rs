@@ -624,6 +624,12 @@ fn parse_review_comment(
     }
     let c: RawComment = serde_json::from_str(raw)
         .map_err(|e| AppError::process(format!("gh api comments: invalid JSON: {e}")))?;
+    // The REST POST/PATCH/reply responses don't carry `viewerCanUpdate`, so we
+    // infer it from `author_association`. This over-reports for non-author
+    // team members, but in practice this parser only runs against responses
+    // to OUR mutations (reply/edit), where the viewer IS the author and the
+    // permission is always true. The next refresh round-trip pulls the
+    // authoritative `viewerCan*` flags via GraphQL `list_review_threads`.
     let viewer_can_update = matches!(
         c.author_association.as_deref(),
         Some("OWNER" | "MEMBER" | "COLLABORATOR" | "CONTRIBUTOR")
@@ -711,6 +717,10 @@ async fn refetch_thread(
     }
     let env: NodeEnvelope = serde_json::from_str(out.stdout.trim())
         .map_err(|e| AppError::process(format!("gh graphql node: {e}")))?;
+    // Wrap the single node in the multi-thread envelope so we can reuse
+    // `parse_review_threads` instead of duplicating its serde scaffolding.
+    // If that parser grows assumptions specific to the list query, this
+    // call-site is the one to revisit.
     let wrapped = serde_json::json!({
         "data": {
             "repository": {

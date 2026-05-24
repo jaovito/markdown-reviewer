@@ -1,6 +1,11 @@
+import { useRepoPath } from "@/features/pull-requests/hooks/useRepoPath";
+import { useRemoteThreads } from "@/features/sync";
+import { ipc } from "@/shared/ipc/client";
+import type { AppError, PullRequestDetail } from "@/shared/ipc/contract";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, GitBranchIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
@@ -17,6 +22,21 @@ interface AppHeaderProps {
 export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHeaderProps) {
   const { t } = useTranslation();
   const title = usePullRequestTitle(owner, repo, prNumber);
+
+  const repoPath = useRepoPath(owner, repo).data ?? undefined;
+
+  const prDetail = useQuery<PullRequestDetail, AppError>({
+    queryKey: ["pull-request", repoPath, prNumber],
+    enabled: Boolean(repoPath && prNumber),
+    queryFn: async () => {
+      const res = await ipc.pullRequests.load(repoPath as string, prNumber as number);
+      if (!res.ok) throw res.error;
+      return res.value;
+    },
+  });
+  const headSha = prDetail.data?.headSha;
+
+  const remote = useRemoteThreads({ repoPath, prNumber, headSha });
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-5">
@@ -39,7 +59,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       ) : null}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {rightAction}
-        <RefreshButton />
+        <RefreshButton onRefresh={remote.refresh} />
         {branch ? (
           <span className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-2.5 text-xs">
             <GitBranchIcon className="size-3.5 text-[hsl(var(--muted-foreground))]" />

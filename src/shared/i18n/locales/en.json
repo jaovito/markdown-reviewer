@@ -200,6 +200,50 @@
       "jumpAria": "Jump to comment thread"
     }
   },
+  "sync": {
+    "section": {
+      "remoteHeading": "GitHub threads",
+      "unmappedHeading": "Unmapped threads",
+      "unmappedSubtitle": "These remote threads couldn't be anchored to a line in the current head.",
+      "truncatedWarning": "Showing the first 100 review threads. Older threads will sync once pagination is implemented.",
+      "emptyMapped": "No remote review threads on this pull request yet.",
+      "openOnGithub": "Open on GitHub"
+    },
+    "actions": {
+      "reply": "Reply",
+      "edit": "Edit",
+      "delete": "Delete",
+      "resolve": "Mark as resolved",
+      "reopen": "Reopen thread",
+      "cancel": "Cancel",
+      "save": "Save",
+      "send": "Send reply",
+      "deleteConfirm": "Delete this comment? This cannot be undone."
+    },
+    "thread": {
+      "replyPlaceholder": "Write a reply…",
+      "editPlaceholder": "Edit your comment…",
+      "byAuthor": "by {{author}}",
+      "edited": "edited",
+      "resolvedBadge": "Resolved",
+      "openBadge": "Open",
+      "outdatedBadge": "Outdated",
+      "readOnlyTooltip": "You can only edit or delete your own comments."
+    },
+    "unmapped": {
+      "fileMissing": "File no longer in this PR head ({{path}})",
+      "lineMoved": "Original snippet no longer found at {{path}}:{{line}}",
+      "ambiguous": "Snippet matches multiple positions in {{path}}",
+      "outdated": "GitHub marked this thread as outdated"
+    },
+    "errors": {
+      "refreshFailedTitle": "Couldn't refresh remote threads",
+      "refreshFailedDescription": "We kept the cached threads. Try refreshing again.",
+      "mutationFailedTitle": "Action failed",
+      "readOnlyTitle": "Read-only on GitHub",
+      "readOnlyDescription": "GitHub didn't allow this action — you may need write access on the repository."
+    }
+  },
   "errors": {
     "invalidPath": {
       "title": "Invalid folder",

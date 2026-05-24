@@ -12,6 +12,16 @@
       "somethingWrong": "Something went wrong",
       "notFoundTitle": "Not found",
       "notFoundDescription": "The screen you tried to open doesn't exist."
+    },
+    "finishReview": {
+      "noDraftsTooltip": "Write at least one draft comment before finishing the review.",
+      "tooltip_one": "Submit {{count}} draft comment to GitHub.",
+      "tooltip_other": "Submit {{count}} draft comments to GitHub.",
+      "success_one": "Sent {{count}} comment to GitHub.",
+      "success_other": "Sent {{count}} comments to GitHub.",
+      "partial": "Sent {{submitted}} of {{total}} comments. {{failed}} failed — check the threads pane for details.",
+      "allFailed": "None of the {{total}} comments could be sent.\n\n{{error}}",
+      "failedTitle": "Couldn't submit the review"
     }
   },
   "rail": {

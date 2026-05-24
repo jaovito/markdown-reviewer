@@ -81,6 +81,51 @@ impl GhClient for StubGh {
     ) -> markdown_reviewer_core::AppResult<i64> {
         Err(AppError::process("not implemented in test fake"))
     }
+    async fn list_review_threads(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
+        unimplemented!("not used in this test")
+    }
+    async fn reply_review_comment(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _in_reply_to_comment_id: i64,
+        _body: &str,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        unimplemented!("not used in this test")
+    }
+    async fn edit_review_comment(
+        &self,
+        _repo_path: &str,
+        _comment_id: i64,
+        _body: &str,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        unimplemented!("not used in this test")
+    }
+    async fn delete_review_comment(
+        &self,
+        _repo_path: &str,
+        _comment_id: i64,
+    ) -> markdown_reviewer_core::AppResult<()> {
+        unimplemented!("not used in this test")
+    }
+    async fn resolve_review_thread(
+        &self,
+        _repo_path: &str,
+        _thread_id: &str,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        unimplemented!("not used in this test")
+    }
+    async fn unresolve_review_thread(
+        &self,
+        _repo_path: &str,
+        _thread_id: &str,
+    ) -> markdown_reviewer_core::AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        unimplemented!("not used in this test")
+    }
 }
 
 fn svc(db_dir: &std::path::Path, authed: bool) -> RepoSelection {

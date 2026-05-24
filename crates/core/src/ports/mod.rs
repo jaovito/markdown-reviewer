@@ -10,7 +10,8 @@ pub use clock::Clock;
 pub use comments_store::{CommentsStore, NewComment, SubmitOutcome};
 pub use file_resolver::FileResolver;
 pub use gh::{
-    GhAuthReport, GhClient, ReviewCommentInput, ReviewSubmissionResult, SubmittedReviewComment,
+    FetchedReviewThreads, GhAuthReport, GhClient, ReviewCommentInput, ReviewSubmissionResult,
+    SubmittedReviewComment,
 };
 pub use git::GitClient;
 pub use recents_store::{RecentRepository, RecentsStore};

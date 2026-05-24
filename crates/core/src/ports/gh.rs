@@ -48,6 +48,16 @@ pub struct ReviewSubmissionResult {
     pub all_submitted: bool,
 }
 
+/// Raw GraphQL payload as returned by the adapter. The mapping use case is
+/// the only consumer; `truncated` lets the UI surface a banner when we
+/// stopped at the first page.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchedReviewThreads {
+    pub threads: Vec<crate::domain::RemoteThread>,
+    pub truncated: bool,
+}
+
 /// Abstracts the GitHub CLI (`gh`).
 #[async_trait]
 pub trait GhClient: Send + Sync {
@@ -92,4 +102,52 @@ pub trait GhClient: Send + Sync {
         head_sha: &str,
         comment: &ReviewCommentInput,
     ) -> AppResult<i64>;
+
+    /// Fetches every review thread on a PR via the GraphQL endpoint
+    /// `repository.pullRequest.reviewThreads(first: 100)`. Includes the
+    /// thread node id (for resolve/unresolve), `isResolved`, `isOutdated`,
+    /// and every comment's `viewerCan*` flags. Truncation past 100 threads
+    /// is logged inside the adapter and surfaced via `truncated == true`.
+    async fn list_review_threads(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+    ) -> AppResult<FetchedReviewThreads>;
+
+    /// Posts a reply to an existing review thread via REST
+    /// `POST /repos/{owner}/{repo}/pulls/{n}/comments` with `in_reply_to`.
+    /// Returns the freshly-created `RemoteComment`.
+    async fn reply_review_comment(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        in_reply_to_comment_id: i64,
+        body: &str,
+    ) -> AppResult<crate::domain::RemoteComment>;
+
+    /// `PATCH /repos/{owner}/{repo}/pulls/comments/{id}`.
+    async fn edit_review_comment(
+        &self,
+        repo_path: &str,
+        comment_id: i64,
+        body: &str,
+    ) -> AppResult<crate::domain::RemoteComment>;
+
+    /// `DELETE /repos/{owner}/{repo}/pulls/comments/{id}` — 204 on success.
+    async fn delete_review_comment(&self, repo_path: &str, comment_id: i64) -> AppResult<()>;
+
+    /// GraphQL `resolveReviewThread(threadId: <node id>)`. Returns the
+    /// updated thread (refetched via `list_review_threads_by_id`).
+    async fn resolve_review_thread(
+        &self,
+        repo_path: &str,
+        thread_id: &str,
+    ) -> AppResult<crate::domain::RemoteThread>;
+
+    /// GraphQL `unresolveReviewThread(threadId: <node id>)`.
+    async fn unresolve_review_thread(
+        &self,
+        repo_path: &str,
+        thread_id: &str,
+    ) -> AppResult<crate::domain::RemoteThread>;
 }

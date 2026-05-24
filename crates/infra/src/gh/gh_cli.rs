@@ -467,6 +467,53 @@ impl GhClient for GhCli {
         })?;
         Ok(id)
     }
+
+    async fn list_review_threads(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+    ) -> AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
+
+    async fn reply_review_comment(
+        &self,
+        _repo_path: &str,
+        _pr_number: u64,
+        _in_reply_to_comment_id: i64,
+        _body: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
+
+    async fn edit_review_comment(
+        &self,
+        _repo_path: &str,
+        _comment_id: i64,
+        _body: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
+
+    async fn delete_review_comment(&self, _repo_path: &str, _comment_id: i64) -> AppResult<()> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
+
+    async fn resolve_review_thread(
+        &self,
+        _repo_path: &str,
+        _thread_id: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
+
+    async fn unresolve_review_thread(
+        &self,
+        _repo_path: &str,
+        _thread_id: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        unimplemented!("Phase 6 — implemented in later task")
+    }
 }
 
 /// Stable-lifetime owned strings used to assemble each batch-comment entry's

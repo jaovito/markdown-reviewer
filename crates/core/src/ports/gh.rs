@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{ChangedFile, PullRequestDetail, PullRequestSummary};
+use crate::domain::{ChangedFile, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread};
 use crate::AppResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -54,7 +54,7 @@ pub struct ReviewSubmissionResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FetchedReviewThreads {
-    pub threads: Vec<crate::domain::RemoteThread>,
+    pub threads: Vec<RemoteThread>,
     pub truncated: bool,
 }
 
@@ -123,7 +123,7 @@ pub trait GhClient: Send + Sync {
         pr_number: u64,
         in_reply_to_comment_id: i64,
         body: &str,
-    ) -> AppResult<crate::domain::RemoteComment>;
+    ) -> AppResult<RemoteComment>;
 
     /// `PATCH /repos/{owner}/{repo}/pulls/comments/{id}`.
     async fn edit_review_comment(
@@ -131,7 +131,7 @@ pub trait GhClient: Send + Sync {
         repo_path: &str,
         comment_id: i64,
         body: &str,
-    ) -> AppResult<crate::domain::RemoteComment>;
+    ) -> AppResult<RemoteComment>;
 
     /// `DELETE /repos/{owner}/{repo}/pulls/comments/{id}` — 204 on success.
     async fn delete_review_comment(&self, repo_path: &str, comment_id: i64) -> AppResult<()>;
@@ -142,12 +142,12 @@ pub trait GhClient: Send + Sync {
         &self,
         repo_path: &str,
         thread_id: &str,
-    ) -> AppResult<crate::domain::RemoteThread>;
+    ) -> AppResult<RemoteThread>;
 
     /// GraphQL `unresolveReviewThread(threadId: <node id>)`.
     async fn unresolve_review_thread(
         &self,
         repo_path: &str,
         thread_id: &str,
-    ) -> AppResult<crate::domain::RemoteThread>;
+    ) -> AppResult<RemoteThread>;
 }

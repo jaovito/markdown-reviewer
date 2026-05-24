@@ -16,6 +16,7 @@ import { CommentComposer } from "./CommentComposer";
 import { HiddenThreadMarker } from "./HiddenThreadMarker";
 import { InlineThreadCard } from "./InlineThreadCard";
 import { MinimizedThreadBadge } from "./MinimizedThreadBadge";
+import { RangeHeaderChip } from "./RangeHeaderChip";
 import { ResolvedThreadMarker } from "./ResolvedThreadMarker";
 
 interface InlineThreadsProps {
@@ -42,6 +43,8 @@ interface SlotMap {
   threads: Map<SlotKey, HTMLDivElement>;
   /** key → portal target span for the minimized "open" badge */
   badges: Map<SlotKey, HTMLSpanElement>;
+  /** key → portal target div for the sticky range header (multi-line ranges only) */
+  headers: Map<SlotKey, HTMLDivElement>;
   composerSlot: HTMLDivElement | null;
 }
 
@@ -171,6 +174,7 @@ export function InlineThreads({
   const slotsRef = useRef<SlotMap>({
     threads: new Map(),
     badges: new Map(),
+    headers: new Map(),
     composerSlot: null,
   });
   const [, setRevision] = useState(0);
@@ -245,7 +249,12 @@ export function InlineThreads({
       mutatingRef.current = true;
       try {
         removeAllSlots(container);
-        slotsRef.current = { threads: new Map(), badges: new Map(), composerSlot: null };
+        slotsRef.current = {
+          threads: new Map(),
+          badges: new Map(),
+          headers: new Map(),
+          composerSlot: null,
+        };
       } finally {
         queueMicrotask(() => {
           mutatingRef.current = false;
@@ -284,11 +293,51 @@ export function InlineThreads({
 
   return (
     <>
-      {groups.map((group) => {
+      {groups.flatMap((group) => {
         const slotKey = slotKeyFor(group.startLine, group.endLine);
         const minKey = minimizedKey(prNumber, filePath, group.startLine, group.endLine);
         const minimized = minimizedSet.has(minKey);
         const allHidden = allHiddenSet.has(slotKey);
+        const isResolvedCollapsedEarly = resolvedCollapsed.has(slotKey);
+        const headerSlot = slots.headers.get(slotKey);
+        const wantsHeader =
+          group.startLine !== group.endLine &&
+          !minimized &&
+          !allHidden &&
+          !isResolvedCollapsedEarly;
+        const headerNode =
+          wantsHeader && headerSlot
+            ? createPortal(
+                <RangeHeaderChip
+                  key={`hdr-${slotKey}`}
+                  startLine={group.startLine}
+                  endLine={group.endLine}
+                  count={group.comments.length}
+                  state={group.comments[0]?.state ?? "submitted"}
+                  onJump={() => {
+                    const head = group.comments[0];
+                    if (head) select(head.id);
+                    const cardSlot = slotsRef.current.threads.get(slotKey);
+                    if (cardSlot) {
+                      const reduce =
+                        typeof window !== "undefined" &&
+                        typeof window.matchMedia === "function" &&
+                        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                      cardSlot.scrollIntoView({
+                        block: "center",
+                        behavior: reduce ? "auto" : "smooth",
+                      });
+                    }
+                  }}
+                />,
+                headerSlot,
+                `thread-header-${slotKey}`,
+              )
+            : null;
+
+        const isSelected = group.comments.some((c) => c.id === selectedId);
+        const isResolvedCollapsed = resolvedCollapsed.has(slotKey);
+        let body: React.ReactNode = null;
         if (allHidden) {
           // `Hidden` is a persistent comment state, not the session-only
           // minimize toggle — render a discreet `MessageSquareOff` marker in
@@ -297,103 +346,103 @@ export function InlineThreads({
           // `submitted`, otherwise to `draft`. The Rust transition table
           // (`Hidden → Draft | Submitted | Resolved | Deleted`) allows both.
           const badgeSlot = slots.badges.get(slotKey);
-          if (!badgeSlot) return null;
-          return createPortal(
-            <HiddenThreadMarker
-              key={slotKey}
-              count={group.comments.length}
-              onUnhide={() => {
-                for (const c of group.comments) {
-                  update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
-                }
-                const head = group.comments[0];
-                if (head) select(head.id);
-              }}
-            />,
-            badgeSlot,
-            `thread-hidden-${slotKey}`,
-          );
-        }
-        // `resolvedCollapsed` already excludes anchors that are all-hidden, so
-        // checking the set is enough — no need to recompute from the group.
-        const isSelected = group.comments.some((c) => c.id === selectedId);
-        const isResolvedCollapsed = resolvedCollapsed.has(slotKey);
-        if (minimized) {
+          body = badgeSlot
+            ? createPortal(
+                <HiddenThreadMarker
+                  key={slotKey}
+                  count={group.comments.length}
+                  onUnhide={() => {
+                    for (const c of group.comments) {
+                      update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+                    }
+                    const head = group.comments[0];
+                    if (head) select(head.id);
+                  }}
+                />,
+                badgeSlot,
+                `thread-hidden-${slotKey}`,
+              )
+            : null;
+        } else if (minimized) {
           const badgeSlot = slots.badges.get(slotKey);
-          if (!badgeSlot) return null;
-          return createPortal(
-            <MinimizedThreadBadge
-              key={slotKey}
-              count={group.comments.length}
-              onExpand={() => {
-                expand(minKey);
-                const head = group.comments[0];
-                if (head) select(head.id);
-              }}
-            />,
-            badgeSlot,
-            `thread-badge-${slotKey}`,
-          );
-        }
-        if (isResolvedCollapsed) {
+          body = badgeSlot
+            ? createPortal(
+                <MinimizedThreadBadge
+                  key={slotKey}
+                  count={group.comments.length}
+                  onExpand={() => {
+                    expand(minKey);
+                    const head = group.comments[0];
+                    if (head) select(head.id);
+                  }}
+                />,
+                badgeSlot,
+                `thread-badge-${slotKey}`,
+              )
+            : null;
+        } else if (isResolvedCollapsed) {
           const badgeSlot = slots.badges.get(slotKey);
-          if (!badgeSlot) return null;
-          return createPortal(
-            <ResolvedThreadMarker
-              key={slotKey}
-              count={group.comments.length}
-              onExpand={() => {
-                const head = group.comments[0];
-                if (head) select(head.id);
-                triggerFlash(slotKey);
-              }}
-            />,
-            badgeSlot,
-            `thread-resolved-marker-${slotKey}`,
-          );
+          body = badgeSlot
+            ? createPortal(
+                <ResolvedThreadMarker
+                  key={slotKey}
+                  count={group.comments.length}
+                  onExpand={() => {
+                    const head = group.comments[0];
+                    if (head) select(head.id);
+                    triggerFlash(slotKey);
+                  }}
+                />,
+                badgeSlot,
+                `thread-resolved-marker-${slotKey}`,
+              )
+            : null;
+        } else {
+          const slot = slots.threads.get(slotKey);
+          body = slot
+            ? createPortal(
+                <InlineThreadCard
+                  key={slotKey}
+                  comments={group.comments}
+                  selected={isSelected}
+                  onResolve={(c) => {
+                    select(c.id);
+                    update.mutate({ id: c.id, patch: { state: "resolved" } });
+                  }}
+                  onReopen={(c) => {
+                    select(c.id);
+                    update.mutate({ id: c.id, patch: { state: "submitted" } });
+                  }}
+                  // `Hide` persists `state = hidden` via IPC so the choice survives
+                  // restart and a remote refresh. The session-only `minimize` store
+                  // still drives the count-badge expand UX (see #21) but it is no
+                  // longer wired to this button.
+                  onHide={(c) => {
+                    select(c.id);
+                    update.mutate({ id: c.id, patch: { state: "hidden" } });
+                  }}
+                  onUnhide={(c) => {
+                    select(c.id);
+                    update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+                  }}
+                  onReply={(c) => select(c.id)}
+                  onDelete={(c) => remove.mutate(c.id)}
+                  onShowStack={(c) => {
+                    const target = pickPaneVisibleComment(group.comments, paneFilter, c);
+                    // If every comment in the group is filtered out of the pane,
+                    // flip on the chip for the head's state so the pane shows it.
+                    if (!isPaneVisible(target, paneFilter)) {
+                      ensurePaneVisible(target.state as FilterableState);
+                    }
+                    select(target.id);
+                  }}
+                />,
+                slot,
+                `thread-${slotKey}`,
+              )
+            : null;
         }
-        const slot = slots.threads.get(slotKey);
-        if (!slot) return null;
-        return createPortal(
-          <InlineThreadCard
-            key={slotKey}
-            comments={group.comments}
-            selected={isSelected}
-            onResolve={(c) => {
-              select(c.id);
-              update.mutate({ id: c.id, patch: { state: "resolved" } });
-            }}
-            onReopen={(c) => {
-              select(c.id);
-              update.mutate({ id: c.id, patch: { state: "submitted" } });
-            }}
-            // `Hide` persists `state = hidden` via IPC so the choice survives
-            // restart and a remote refresh. The session-only `minimize` store
-            // still drives the count-badge expand UX (see #21) but it is no
-            // longer wired to this button.
-            onHide={(c) => {
-              select(c.id);
-              update.mutate({ id: c.id, patch: { state: "hidden" } });
-            }}
-            onUnhide={(c) => {
-              select(c.id);
-              update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
-            }}
-            onReply={(c) => select(c.id)}
-            onDelete={(c) => remove.mutate(c.id)}
-            onShowStack={(c) => {
-              const target = pickPaneVisibleComment(group.comments, paneFilter, c);
-              // If every comment in the group is filtered out of the pane,
-              // flip on the chip for the head's state so the pane shows it.
-              if (!isPaneVisible(target, paneFilter)) {
-                ensurePaneVisible(target.state as FilterableState);
-              }
-              select(target.id);
-            }}
-          />,
-          slot,
-          `thread-${slotKey}`,
-        );
+        return [headerNode, body];
       })}
       {composerAnchor && slots.composerSlot
         ? createPortal(
@@ -537,6 +586,23 @@ function syncSlots(
       }
     }
 
+    // 1c. Remove obsolete header slots — only multi-line non-collapsed groups
+    //     keep one.
+    const wantsHeaderKeys = new Set<SlotKey>();
+    for (const g of groups) {
+      if (g.startLine === g.endLine) continue;
+      const key = slotKeyFor(g.startLine, g.endLine);
+      if (collapsed.has(key)) continue;
+      wantsHeaderKeys.add(key);
+    }
+    for (const [key, node] of current.headers) {
+      if (!wantsHeaderKeys.has(key) || !node.isConnected) {
+        node.remove();
+        current.headers.delete(key);
+        changed = true;
+      }
+    }
+
     // 2. Remove obsolete composer slot.
     if (
       current.composerSlot &&
@@ -552,6 +618,9 @@ function syncSlots(
     // 3. Clear and reapply the data-has-comment attribute on commented lines.
     for (const n of container.querySelectorAll<HTMLElement>("[data-has-comment]")) {
       delete n.dataset.hasComment;
+    }
+    for (const n of container.querySelectorAll<HTMLElement>("[data-comment-range]")) {
+      delete n.dataset.commentRange;
     }
     for (const n of container.querySelectorAll<HTMLElement>("[data-comment-minimized]")) {
       delete n.dataset.commentMinimized;
@@ -583,14 +652,28 @@ function syncSlots(
         current.badges.set(key, badge);
         changed = true;
       } else {
-        if (current.threads.has(key)) continue;
-        if (!anchor.parentNode) continue;
-        const slot = document.createElement("div");
-        slot.dataset.threadSlot = "thread";
-        slot.dataset.threadSlotLine = String(group.line);
-        anchor.parentNode.insertBefore(slot, anchor.nextSibling);
-        current.threads.set(key, slot);
-        changed = true;
+        if (!current.threads.has(key)) {
+          if (!anchor.parentNode) continue;
+          const slot = document.createElement("div");
+          slot.dataset.threadSlot = "thread";
+          slot.dataset.threadSlotLine = String(group.line);
+          anchor.parentNode.insertBefore(slot, anchor.nextSibling);
+          current.threads.set(key, slot);
+          changed = true;
+        }
+        // Multi-line ranges also get a sticky header chip mounted before the
+        // start-line node. Single-line ranges keep the existing wash only.
+        if (group.startLine !== group.endLine && !current.headers.has(key)) {
+          const startNode = lineNodes.get(group.startLine);
+          if (startNode?.parentNode) {
+            const header = document.createElement("div");
+            header.dataset.threadSlot = "header";
+            header.dataset.threadSlotLine = String(group.startLine);
+            startNode.parentNode.insertBefore(header, startNode);
+            current.headers.set(key, header);
+            changed = true;
+          }
+        }
       }
     }
 
@@ -642,10 +725,18 @@ function markRange(
   collapsed: boolean,
   resolved: boolean,
 ) {
+  const single = start === end;
   for (let line = start; line <= end; line++) {
     const el = lineNodes.get(line);
     if (!el) continue;
     el.dataset.hasComment = "true";
+    el.dataset.commentRange = single
+      ? "single"
+      : line === start
+        ? "head"
+        : line === end
+          ? "tail"
+          : "body";
     if (collapsed) el.dataset.commentMinimized = "true";
     if (resolved) el.dataset.commentResolved = "true";
   }
@@ -660,6 +751,9 @@ function removeAllSlots(container: HTMLElement) {
   }
   for (const n of container.querySelectorAll<HTMLElement>("[data-has-comment]")) {
     delete n.dataset.hasComment;
+  }
+  for (const n of container.querySelectorAll<HTMLElement>("[data-comment-range]")) {
+    delete n.dataset.commentRange;
   }
   for (const n of container.querySelectorAll<HTMLElement>("[data-comment-minimized]")) {
     delete n.dataset.commentMinimized;

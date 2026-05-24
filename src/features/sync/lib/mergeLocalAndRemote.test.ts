@@ -1,4 +1,4 @@
-import { test, expect } from "bun:test";
+import { expect, test } from "bun:test";
 import type { RemoteThread, ReviewComment } from "@/shared/ipc/contract";
 import { mergeLocalAndRemote } from "./mergeLocalAndRemote";
 
@@ -60,7 +60,7 @@ test("orders entries by file then start line", () => {
 test("drops local submitted comment when its githubId matches a remote one", () => {
   const merged = mergeLocalAndRemote([local(1, 100)], [remote("T1", 100, 4)]);
   expect(merged.length).toBe(1);
-  expect(merged[0].kind).toBe("remote");
+  expect(merged[0]?.kind).toBe("remote");
 });
 
 test("keeps local drafts even at the same anchor", () => {

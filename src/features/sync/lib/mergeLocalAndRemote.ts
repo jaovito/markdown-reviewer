@@ -17,10 +17,7 @@ function anchorStart(anchor: CommentAnchor): number {
  * Sort key: filePath, then anchor start line, then a stable tiebreaker
  * (`threadId` for remote, `id` for local).
  */
-export function mergeLocalAndRemote(
-  local: ReviewComment[],
-  remote: RemoteThread[],
-): MergedEntry[] {
+export function mergeLocalAndRemote(local: ReviewComment[], remote: RemoteThread[]): MergedEntry[] {
   const remoteCommentIds = new Set<number>();
   for (const thread of remote) {
     for (const c of thread.comments) remoteCommentIds.add(c.commentId);

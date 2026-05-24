@@ -40,18 +40,16 @@ pub async fn map_anchor(
         Ok(text) => text,
         // The original blob is unreachable — treat as unmapped, not as a
         // hard error. The thread is still surfaced under "Unmapped".
-        Err(AppError::FileNotFound { .. }) | Err(_) => {
+        Err(AppError::FileNotFound { .. } | _) => {
             return (None, MappingStatus::FileMissing);
         }
     };
-    let new = match files.read(repo_path, head_sha, &thread.path).await {
-        Ok(text) => text,
-        Err(_) => return (None, MappingStatus::FileMissing),
+    let Ok(new) = files.read(repo_path, head_sha, &thread.path).await else {
+        return (None, MappingStatus::FileMissing);
     };
 
-    let snippet = match extract_lines(&original, start_line, end_line) {
-        Some(s) => s,
-        None => return (None, MappingStatus::LineMoved),
+    let Some(snippet) = extract_lines(&original, start_line, end_line) else {
+        return (None, MappingStatus::LineMoved);
     };
 
     let matches = find_snippet_positions(&new, &snippet);
@@ -104,7 +102,7 @@ fn find_snippet_positions(haystack: &str, snippet: &str) -> Vec<u32> {
     let last_start = hay.len() - needle.len();
     for start in 0..=last_start {
         if hay[start..start + needle.len()] == needle[..] {
-            out.push((start as u32) + 1);
+            out.push(u32::try_from(start).unwrap_or(u32::MAX) + 1);
         }
     }
     out

@@ -1,5 +1,5 @@
 //! Refresh + map + cache pipeline. Always hits the network — caller is
-//! responsible for invalidating React Query / SQLite cache as needed.
+//! responsible for invalidating React Query / `SQLite` cache as needed.
 
 use crate::domain::{MappingStatus, RefreshResult, RemoteThread};
 use crate::ports::CachedRefresh;
@@ -31,8 +31,8 @@ pub async fn run(
 
     // Deterministic ordering: file path, then start line, then thread id.
     mapped.sort_by(|a, b| {
-        let a_line = a.anchor.as_ref().map(|x| x.start_line()).unwrap_or(0);
-        let b_line = b.anchor.as_ref().map(|x| x.start_line()).unwrap_or(0);
+        let a_line = a.anchor.as_ref().map_or(0, crate::domain::comment::CommentAnchor::start_line);
+        let b_line = b.anchor.as_ref().map_or(0, crate::domain::comment::CommentAnchor::start_line);
         a.path
             .cmp(&b.path)
             .then(a_line.cmp(&b_line))

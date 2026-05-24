@@ -11,5 +11,5 @@ pub async fn get_cached(
     pr_number: u64,
 ) -> AppResult<Option<RefreshResult>> {
     let row = svc.store.get(repo_path, pr_number).await?;
-    Ok(row.map(|c| c.into_refresh_result()))
+    Ok(row.map(crate::ports::remote_threads_store::CachedRefresh::into_refresh_result))
 }

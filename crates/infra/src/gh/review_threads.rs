@@ -44,6 +44,7 @@ struct PageInfo {
     has_next_page: bool,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]
 struct ThreadNode {
     id: String,
@@ -180,7 +181,7 @@ fn into_comment(c: CommentNode) -> RemoteComment {
 /// Static GraphQL query used by both `list_review_threads` and the
 /// post-mutation refetch helpers. Variables: `$owner: String!`,
 /// `$name: String!`, `$pr: Int!`.
-pub const REVIEW_THREADS_QUERY: &str = r#"
+pub const REVIEW_THREADS_QUERY: &str = r"
 query($owner: String!, $name: String!, $pr: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $pr) {
@@ -215,4 +216,4 @@ query($owner: String!, $name: String!, $pr: Int!) {
     }
   }
 }
-"#;
+";

@@ -470,10 +470,31 @@ impl GhClient for GhCli {
 
     async fn list_review_threads(
         &self,
-        _repo_path: &str,
-        _pr_number: u64,
+        repo_path: &str,
+        pr_number: u64,
     ) -> AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
-        unimplemented!("Phase 6 — implemented in later task")
+        let query_arg = format!("query={}", crate::gh::review_threads::REVIEW_THREADS_QUERY);
+        let pr_arg = format!("-F=pr={pr_number}");
+        // gh fills `{owner}` / `{repo}` from the cwd when we use `-F owner={owner}` style,
+        // but graphql variables need explicit values. `gh api graphql` accepts
+        // `-F owner=:owner -F name=:repo` shortcuts that expand against the
+        // current repo — use them to avoid a second round-trip.
+        let args: Vec<&str> = vec![
+            "api",
+            "graphql",
+            "-F",
+            "owner=:owner",
+            "-F",
+            "name=:repo",
+            &pr_arg,
+            "--raw-field",
+            &query_arg,
+        ];
+        let out = run("gh", &args, Some(repo_path), PR_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+        crate::gh::review_threads::parse_review_threads(out.stdout.trim())
     }
 
     async fn reply_review_comment(

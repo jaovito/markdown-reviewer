@@ -228,7 +228,8 @@
       "cancel": "Cancel",
       "save": "Save",
       "send": "Send reply",
-      "deleteConfirm": "Delete this comment? This cannot be undone."
+      "deleteConfirm": "Delete this comment? This cannot be undone.",
+      "openInPreview": "Open {{path}} at line {{line}}"
     },
     "thread": {
       "replyPlaceholder": "Write a reply…",

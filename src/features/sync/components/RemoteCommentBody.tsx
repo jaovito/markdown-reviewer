@@ -36,7 +36,10 @@ export function RemoteCommentBody({ comment, onEdit, onDelete }: Props) {
                     variant="ghost"
                     size="icon"
                     className="size-7"
-                    onClick={onEdit}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit?.();
+                    }}
                     aria-label={t("sync.actions.edit")}
                   >
                     <PencilIcon className="size-3.5" />
@@ -53,7 +56,10 @@ export function RemoteCommentBody({ comment, onEdit, onDelete }: Props) {
                     variant="ghost"
                     size="icon"
                     className="size-7"
-                    onClick={onDelete}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete?.();
+                    }}
                     aria-label={t("sync.actions.delete")}
                   >
                     <TrashIcon className="size-3.5" />

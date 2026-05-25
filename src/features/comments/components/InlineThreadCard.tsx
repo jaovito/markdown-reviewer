@@ -1,4 +1,9 @@
-import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
+import type {
+  CommentAnchor,
+  CommentState,
+  RemoteComment,
+  ReviewComment,
+} from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
@@ -29,6 +34,13 @@ interface InlineThreadCardProps {
   onDelete?: (comment: ReviewComment) => void;
   /** Click on the count badge — opens the stacked view in the threads panel. */
   onShowStack?: (head: ReviewComment) => void;
+  /**
+   * Remote-only replies that belong to the same GitHub thread as the head
+   * comment (matched via `head.githubId`). Rendered after the local comment
+   * list so the inline conversation mirrors what shows up in the right-rail
+   * GitHub-threads card.
+   */
+  remoteReplies?: RemoteComment[];
 }
 
 function isRange(anchor: CommentAnchor): boolean {
@@ -107,6 +119,7 @@ export function InlineThreadCard({
   replyPending = false,
   onDelete,
   onShowStack,
+  remoteReplies,
 }: InlineThreadCardProps) {
   const { t } = useTranslation();
   const ghUser = useGhUser();
@@ -118,6 +131,14 @@ export function InlineThreadCard({
   if (!head) return null;
   const isResolved = head.state === "resolved";
   const isHidden = head.state === "hidden";
+  // Drop any remote reply that is already represented by a local row — we
+  // mirror Phase 6's pane-side dedupe (githubId ↔ commentId) so a reply the
+  // user just made via this card doesn't render twice.
+  const localGithubIds = new Set<number>();
+  for (const c of comments) {
+    if (c.githubId !== null) localGithubIds.add(c.githubId);
+  }
+  const replies = (remoteReplies ?? []).filter((r) => !localGithubIds.has(r.commentId));
   // Reply is meaningful only when there's a real GitHub thread to attach the
   // reply to. Drafts don't qualify yet — they'll get a remote thread on the
   // next "Finish review".
@@ -227,6 +248,22 @@ export function InlineThreadCard({
                 <Trash2Icon className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             ) : null}
+          </div>
+        </div>
+      ))}
+
+      {replies.map((r) => (
+        <div
+          key={`remote-${r.commentId}`}
+          className="mt-1 border-[hsl(var(--border))] border-t px-1 pt-2 text-[12px] leading-snug text-[hsl(var(--foreground))]/85"
+        >
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-[11px] font-semibold text-[hsl(var(--foreground))]">
+                {r.author}
+              </p>
+              <p className="whitespace-pre-wrap">{r.body}</p>
+            </div>
           </div>
         </div>
       ))}

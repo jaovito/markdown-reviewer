@@ -16,12 +16,17 @@ interface Props {
   repoPath: string;
   prNumber: number;
   /**
-   * When set, the file:line breadcrumb at the top of the card becomes a
-   * button that calls back with the thread's anchor — used by the threads
-   * pane to jump from the right rail into the rendered markdown.
+   * When set, the card becomes clickable as a whole — anywhere outside the
+   * action buttons (Resolve / Reply / edit / delete / composer) calls back
+   * with the thread's anchor so the right rail can jump into the rendered
+   * markdown. Buttons inside the card stop propagation so they don't
+   * also trigger navigation.
    */
   onNavigate?: (filePath: string, line: number) => void;
 }
+
+/** Stops a synthetic event from bubbling up to the card's clickable wrapper. */
+const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
 
 export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Props) {
   const { t } = useTranslation();
@@ -39,19 +44,40 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
       ? thread.anchor.line
       : (thread.anchor?.startLine ?? thread.line ?? thread.originalLine);
 
+  const navigate = onNavigate ? () => onNavigate(thread.path, anchorLine) : undefined;
+  // The whole card is wrapped in a div with onClick + role="button" so keyboard
+  // users can also fire it via Space/Enter. The action buttons inside call
+  // `stop()` on their click handlers so they don't also trigger navigation.
+  const wrapperProps = navigate
+    ? {
+        onClick: navigate,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navigate();
+          }
+        },
+        role: "button" as const,
+        tabIndex: 0,
+        "aria-label": t("sync.actions.openInPreview", {
+          path: thread.path,
+          line: anchorLine,
+        }),
+        className:
+          "flex cursor-pointer flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3 transition-colors hover:border-[hsl(var(--foreground))]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]",
+      }
+    : {
+        className:
+          "flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3",
+      };
+
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3">
-      {onNavigate ? (
-        <button
-          type="button"
-          onClick={() => onNavigate(thread.path, anchorLine)}
-          className="flex items-baseline gap-1.5 self-start rounded px-1 py-0.5 text-left text-[11px] text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]/40 hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-        >
+    <div {...wrapperProps}>
+      <header className="flex items-center justify-between gap-2">
+        <span className="flex items-baseline gap-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
           <span className="truncate font-medium">{thread.path}</span>
           <span className="font-mono">L{anchorLine}</span>
-        </button>
-      ) : null}
-      <header className="flex items-center justify-between gap-2">
+        </span>
         <div className="flex items-center gap-2">
           <Badge tone={thread.state === "resolved" ? "success" : "default"}>
             {thread.state === "resolved"
@@ -62,16 +88,16 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
             <Badge tone="warning">{t("sync.thread.outdatedBadge")}</Badge>
           ) : null}
         </div>
+      </header>
+
+      <div className="flex items-center justify-end gap-2">
         {thread.state === "open" && thread.viewerCanResolve ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              console.log("[sync-debug] resolve click", {
-                threadId: thread.threadId,
-                viewerCanResolve: thread.viewerCanResolve,
-              });
+            onClick={(e) => {
+              stop(e);
               resolve.mutate({ repoPath, prNumber, threadId: thread.threadId });
             }}
             disabled={resolve.isPending}
@@ -84,13 +110,16 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => reopen.mutate({ repoPath, prNumber, threadId: thread.threadId })}
+            onClick={(e) => {
+              stop(e);
+              reopen.mutate({ repoPath, prNumber, threadId: thread.threadId });
+            }}
             disabled={reopen.isPending}
           >
             {t("sync.actions.reopen")}
           </Button>
         ) : null}
-      </header>
+      </div>
 
       <ol className="flex flex-col gap-2">
         {thread.comments.map((c) => (
@@ -98,8 +127,11 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
             {editingId === c.commentId ? (
               <form
                 className="flex flex-col gap-2"
+                onClick={stop}
+                onKeyDown={stop}
                 onSubmit={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   const trimmed = editingBody.trim();
                   if (!trimmed) return;
                   edit.mutate(
@@ -124,7 +156,10 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditingId(null)}
+                    onClick={(e) => {
+                      stop(e);
+                      setEditingId(null);
+                    }}
                   >
                     {t("sync.actions.cancel")}
                   </Button>
@@ -157,24 +192,21 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
       </ol>
 
       {thread.state === "open" && lastReplyTarget !== undefined ? (
-        <RemoteReplyComposer
-          pending={reply.isPending}
-          onSubmit={(body) => {
-            console.log("[sync-debug] reply mutate", {
-              threadId: thread.threadId,
-              inReplyToCommentId: lastReplyTarget,
-              bodyLen: body.length,
-            });
-            reply.mutate({
-              repoPath,
-              prNumber,
-              threadId: thread.threadId,
-              inReplyToCommentId: lastReplyTarget,
-              body,
-            });
-          }}
-        />
+        <div onClick={stop} onKeyDown={stop}>
+          <RemoteReplyComposer
+            pending={reply.isPending}
+            onSubmit={(body) =>
+              reply.mutate({
+                repoPath,
+                prNumber,
+                threadId: thread.threadId,
+                inReplyToCommentId: lastReplyTarget,
+                body,
+              })
+            }
+          />
+        </div>
       ) : null}
-    </section>
+    </div>
   );
 }

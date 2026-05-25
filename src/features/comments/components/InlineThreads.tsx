@@ -9,6 +9,7 @@ import type {
   CommentAnchor,
   CommentUpdate,
   RefreshResult,
+  RemoteComment,
   ReviewComment,
 } from "@/shared/ipc/contract";
 import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
@@ -230,6 +231,22 @@ export function InlineThreads({
     },
     [queryClient, remote, repoPath, prNumber],
   );
+
+  // Lookup table from a comment's `github_id` to the remote thread's comment
+  // list. Lets the inline card show GitHub-originated replies inline (not
+  // just in the right-rail pane), so the user sees their reply land in the
+  // same conversation they opened the composer from.
+  const remoteRepliesByGithubId = useMemo(() => {
+    const out = new Map<number, RemoteComment[]>();
+    if (!remote.data) return out;
+    const allThreads = [...remote.data.threads, ...remote.data.unmapped];
+    for (const t of allThreads) {
+      for (const c of t.comments) {
+        out.set(c.commentId, t.comments);
+      }
+    }
+    return out;
+  }, [remote.data]);
 
   // Memoize groups directly from `comments` — the previous fingerprint missed
   // anchor end-line / kind changes, which left portals pointing at stale
@@ -538,6 +555,12 @@ export function InlineThreads({
                   key={slotKey}
                   comments={group.comments}
                   selected={isSelected}
+                  remoteReplies={
+                    group.comments[0]?.githubId !== null &&
+                    group.comments[0]?.githubId !== undefined
+                      ? remoteRepliesByGithubId.get(group.comments[0].githubId)
+                      : undefined
+                  }
                   onResolve={(c) => {
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: "resolved" } });

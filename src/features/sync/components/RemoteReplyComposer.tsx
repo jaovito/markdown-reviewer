@@ -13,7 +13,11 @@ export function RemoteReplyComposer({ pending, onSubmit }: Props) {
   const [body, setBody] = useState("");
   const submit = () => {
     const trimmed = body.trim();
-    if (!trimmed) return;
+    console.log("[sync-debug] reply composer submit", { bodyLen: trimmed.length, pending });
+    if (!trimmed) {
+      console.log("[sync-debug] reply: empty body, aborting");
+      return;
+    }
     onSubmit(trimmed);
     setBody("");
   };

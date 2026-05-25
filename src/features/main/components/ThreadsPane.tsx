@@ -172,7 +172,7 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
           </Button>
         </div>
       </header>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="px-3 pb-4 pt-1">
           {query.isError && query.error ? (
             <Alert tone="destructive">

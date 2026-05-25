@@ -15,9 +15,15 @@ interface Props {
   thread: RemoteThread;
   repoPath: string;
   prNumber: number;
+  /**
+   * When set, the file:line breadcrumb at the top of the card becomes a
+   * button that calls back with the thread's anchor — used by the threads
+   * pane to jump from the right rail into the rendered markdown.
+   */
+  onNavigate?: (filePath: string, line: number) => void;
 }
 
-export function RemoteThreadCard({ thread, repoPath, prNumber }: Props) {
+export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Props) {
   const { t } = useTranslation();
   const reply = useReplyRemoteThread();
   const edit = useEditRemoteComment();
@@ -28,9 +34,23 @@ export function RemoteThreadCard({ thread, repoPath, prNumber }: Props) {
   const [editingBody, setEditingBody] = useState("");
 
   const lastReplyTarget = thread.comments.at(-1)?.commentId ?? thread.comments[0]?.commentId;
+  const anchorLine =
+    thread.anchor?.kind === "singleLine"
+      ? thread.anchor.line
+      : (thread.anchor?.startLine ?? thread.line ?? thread.originalLine);
 
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3">
+      {onNavigate ? (
+        <button
+          type="button"
+          onClick={() => onNavigate(thread.path, anchorLine)}
+          className="flex items-baseline gap-1.5 self-start rounded px-1 py-0.5 text-left text-[11px] text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]/40 hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+        >
+          <span className="truncate font-medium">{thread.path}</span>
+          <span className="font-mono">L{anchorLine}</span>
+        </button>
+      ) : null}
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Badge tone={thread.state === "resolved" ? "success" : "default"}>

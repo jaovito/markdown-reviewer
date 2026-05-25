@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigateToComment } from "../lib/navigateToComment";
 import { type FilterableState, ThreadFilterBar } from "./threads/ThreadFilterBar";
 import { ThreadList } from "./threads/ThreadList";
 
@@ -119,6 +120,7 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
   );
 
   const canHideAll = !hideAll.isPending && hideableIds.length > 0;
+  const navigateToComment = useNavigateToComment(prNumber, filePath);
 
   return (
     <aside className="flex h-full w-[336px] shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
@@ -206,6 +208,7 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
                       thread={thread}
                       repoPath={repoPath}
                       prNumber={prNumber}
+                      onNavigate={navigateToComment}
                     />
                   ))}
                 </section>

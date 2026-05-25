@@ -127,6 +127,62 @@ export function InlineThreads({
   // first (the existing `update.mutate` call) so the UI feedback is instant;
   // any GitHub failure surfaces via `showMutationError` without rolling the
   // local state back — the next refresh will reconcile.
+  // Reply on a `submitted` inline card posts to the matching GitHub thread.
+  // Same lookup pattern as `syncStateToRemote`: prefer cache, refresh if
+  // the thread isn't loaded yet. The result is appended to the cached
+  // thread so the reply shows up immediately in the right-pane card too.
+  const replyOnRemoteThread = useMutation({
+    mutationFn: async ({ head, body }: { head: ReviewComment; body: string }) => {
+      if (head.githubId === null) {
+        throw new Error("Cannot reply to a draft on GitHub — submit the review first.");
+      }
+      if (!repoPath || prNumber === undefined) {
+        throw new Error("Missing repo context for reply.");
+      }
+      let cache = queryClient.getQueryData<RefreshResult | null>(
+        remoteThreadsKey(repoPath, prNumber),
+      );
+      let thread = findThreadByCommentId(cache ?? null, head.githubId);
+      if (!thread) {
+        const refreshed = await remote.refresh();
+        thread = findThreadByCommentId(refreshed, head.githubId);
+        cache = refreshed;
+      }
+      if (!thread) {
+        throw new Error(
+          "Couldn't find the GitHub thread for this comment. Try clicking Refresh and try again.",
+        );
+      }
+      const lastTarget = thread.comments.at(-1)?.commentId ?? head.githubId;
+      const result = await ipc.sync.reply(repoPath, prNumber, lastTarget, body);
+      if (!result.ok) throw result.error;
+      return { threadId: thread.threadId, added: result.value };
+    },
+    onSuccess: ({ threadId, added }) => {
+      if (!repoPath || prNumber === undefined) return;
+      queryClient.setQueryData<RefreshResult | null>(
+        remoteThreadsKey(repoPath, prNumber),
+        (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            threads: prev.threads.map((t) =>
+              t.threadId === threadId ? { ...t, comments: [...t.comments, added] } : t,
+            ),
+          };
+        },
+      );
+    },
+    onError: showMutationError,
+  });
+
+  const handleReplySubmit = useCallback(
+    async (head: ReviewComment, body: string) => {
+      await replyOnRemoteThread.mutateAsync({ head, body });
+    },
+    [replyOnRemoteThread],
+  );
+
   const syncStateToRemote = useCallback(
     async (comment: ReviewComment, next: "resolved" | "reopen") => {
       if (comment.githubId === null) return;
@@ -504,7 +560,8 @@ export function InlineThreads({
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
                   }}
-                  onReply={(c) => select(c.id)}
+                  onReplySubmit={handleReplySubmit}
+                  replyPending={replyOnRemoteThread.isPending}
                   onDelete={(c) => remove.mutate(c.id)}
                   onShowStack={(c) => {
                     const target = pickPaneVisibleComment(group.comments, paneFilter, c);

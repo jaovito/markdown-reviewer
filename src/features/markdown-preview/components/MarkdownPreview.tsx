@@ -10,6 +10,7 @@ interface MarkdownPreviewProps {
   className?: string;
   hunks?: DiffHunk[];
   /** When prNumber + filePath + headSha are present, mounts the comments UI. */
+  repoPath?: string;
   prNumber?: number;
   filePath?: string;
   headSha?: string;
@@ -19,6 +20,7 @@ export function MarkdownPreview({
   source,
   className,
   hunks,
+  repoPath,
   prNumber,
   filePath,
   headSha,
@@ -42,6 +44,7 @@ export function MarkdownPreview({
       {commentsEnabled ? (
         <>
           <InlineThreads
+            repoPath={repoPath}
             prNumber={prNumber as number}
             filePath={filePath as string}
             headSha={headSha as string}

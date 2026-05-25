@@ -6,5 +6,7 @@ export { useEditRemoteComment } from "./hooks/useEditRemoteComment";
 export { useDeleteRemoteComment } from "./hooks/useDeleteRemoteComment";
 export { useResolveRemoteThread } from "./hooks/useResolveRemoteThread";
 export { useReopenRemoteThread } from "./hooks/useReopenRemoteThread";
+export { findThreadByCommentId } from "./lib/findThreadByCommentId";
 export { mergeLocalAndRemote } from "./lib/mergeLocalAndRemote";
 export type { MergedEntry } from "./lib/mergeLocalAndRemote";
+export { showMutationError } from "./lib/showError";

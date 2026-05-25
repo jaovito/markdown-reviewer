@@ -63,6 +63,7 @@ export function PreviewArea({
     <MarkdownPreview
       source={file.data ?? ""}
       hunks={diff.data?.hunks}
+      repoPath={repoPath}
       prNumber={prNumber}
       filePath={filePath}
       headSha={sha}

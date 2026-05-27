@@ -42,8 +42,7 @@ pub async fn map_anchor(
     let original_end = thread.original_line;
     let original_start = thread.original_start_line.unwrap_or(original_end);
 
-    let original = match read_blob(files, repo_path, &thread.original_commit_id, &thread.path)
-        .await
+    let original = match read_blob(files, repo_path, &thread.original_commit_id, &thread.path).await
     {
         Ok(text) => text,
         Err(status) => return (None, status),

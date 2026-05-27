@@ -474,11 +474,13 @@ impl GhClient for GhCli {
         pr_number: u64,
     ) -> AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
         let query_arg = format!("query={}", crate::gh::review_threads::REVIEW_THREADS_QUERY);
-        let pr_arg = format!("-F=pr={pr_number}");
+        let pr_arg = format!("pr={pr_number}");
         // gh fills `{owner}` / `{repo}` from the cwd when we use `-F owner={owner}` style,
         // but graphql variables need explicit values. `gh api graphql` accepts
         // `-F owner=:owner -F name=:repo` shortcuts that expand against the
-        // current repo — use them to avoid a second round-trip.
+        // current repo — use them to avoid a second round-trip. Flags and
+        // values stay as separate argv entries (`-F` then `pr=N`) — the
+        // `-F=pr=N` single-token form isn't reliably accepted by gh.
         let args: Vec<&str> = vec![
             "api",
             "graphql",
@@ -486,6 +488,7 @@ impl GhClient for GhCli {
             "owner=:owner",
             "-F",
             "name=:repo",
+            "-F",
             &pr_arg,
             "--raw-field",
             &query_arg,
@@ -504,11 +507,6 @@ impl GhClient for GhCli {
         in_reply_to_comment_id: i64,
         body: &str,
     ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
-        tracing::info!(
-            in_reply_to = in_reply_to_comment_id,
-            body_len = body.len(),
-            "reply_review_comment"
-        );
         let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments");
         let in_reply_arg = format!("in_reply_to={in_reply_to_comment_id}");
         let body_arg = format!("body={body}");
@@ -523,12 +521,6 @@ impl GhClient for GhCli {
             &body_arg,
         ];
         let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
-        tracing::info!(
-            status = out.status,
-            stdout_preview = %out.stdout.chars().take(200).collect::<String>(),
-            stderr = %redact(&out.stderr),
-            "reply_review_comment result"
-        );
         if !out.ok() {
             return Err(classify_rest_error(&out.stderr));
         }
@@ -654,7 +646,6 @@ fn parse_review_comment(raw: &str) -> AppResult<markdown_reviewer_core::domain::
 }
 
 async fn run_thread_mutation(repo_path: &str, thread_id: &str, mutation: &str) -> AppResult<()> {
-    tracing::info!(thread_id, "run_thread_mutation start");
     let query_arg = format!("query={mutation}");
     let id_arg = format!("id={thread_id}");
     let args = vec![
@@ -666,12 +657,6 @@ async fn run_thread_mutation(repo_path: &str, thread_id: &str, mutation: &str) -
         &id_arg,
     ];
     let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
-    tracing::info!(
-        status = out.status,
-        stdout = %out.stdout.trim(),
-        stderr = %redact(&out.stderr),
-        "run_thread_mutation result"
-    );
     if !out.ok() {
         return Err(classify_rest_error(&out.stderr));
     }

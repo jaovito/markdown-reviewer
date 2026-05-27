@@ -252,7 +252,11 @@
       "refreshFailedDescription": "We kept the cached threads. Try refreshing again.",
       "mutationFailedTitle": "Action failed",
       "readOnlyTitle": "Read-only on GitHub",
-      "readOnlyDescription": "GitHub didn't allow this action — you may need write access on the repository."
+      "readOnlyDescription": "GitHub didn't allow this action — you may need write access on the repository.",
+      "replyDraftBlocked": "Submit the review before replying — drafts don't have a GitHub thread yet.",
+      "missingRepoContext": "Reload the pull request and try again.",
+      "threadNotFoundOnReply": "Couldn't find this comment's GitHub thread. Click Refresh and try again.",
+      "threadNotFoundOnResolve": "Couldn't find this comment's GitHub thread. Click Refresh and resolve again."
     }
   },
   "errors": {

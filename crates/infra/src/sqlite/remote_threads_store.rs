@@ -29,21 +29,27 @@ impl RemoteThreadsStore for SqliteRemoteThreadsStore {
         let repo = repo_path.to_string();
         tokio::task::spawn_blocking(move || {
             let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
-            let row = conn
-                .query_row(
-                    "SELECT head_sha, refreshed_at_ms, payload_json \
+            // Match `QueryReturnedNoRows` explicitly — any other rusqlite
+            // error (schema mismatch, locked DB, corruption) propagates as
+            // `AppError::Db` so the UI can show something useful instead
+            // of silently treating it as an empty cache.
+            let row = match conn.query_row(
+                "SELECT head_sha, refreshed_at_ms, payload_json \
                      FROM remote_threads_cache \
                      WHERE repo_path = ?1 AND pr_number = ?2",
-                    params![repo, pr_signed],
-                    |r| {
-                        Ok((
-                            r.get::<_, String>(0)?,
-                            r.get::<_, i64>(1)?,
-                            r.get::<_, String>(2)?,
-                        ))
-                    },
-                )
-                .ok();
+                params![repo, pr_signed],
+                |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, i64>(1)?,
+                        r.get::<_, String>(2)?,
+                    ))
+                },
+            ) {
+                Ok(row) => Some(row),
+                Err(rusqlite::Error::QueryReturnedNoRows) => None,
+                Err(e) => return Err(AppError::db(e)),
+            };
             let Some((head_sha, refreshed_at_ms, payload_json)) = row else {
                 return Ok::<_, AppError>(None);
             };
@@ -76,7 +82,8 @@ impl RemoteThreadsStore for SqliteRemoteThreadsStore {
             threads: cached.threads.clone(),
             unmapped: cached.unmapped.clone(),
         };
-        let json = serde_json::to_string(&payload).expect("Payload always serializes");
+        let json = serde_json::to_string(&payload)
+            .map_err(|e| AppError::db(format!("cache payload serialize: {e}")))?;
         tokio::task::spawn_blocking(move || {
             let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
             conn.execute(

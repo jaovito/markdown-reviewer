@@ -18,6 +18,7 @@ import { type FilterableState, useThreadsFilter } from "@/shared/stores/useThrea
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import {
   type CommentGroup,
   anchorEndLine,
@@ -81,6 +82,7 @@ export function InlineThreads({
   composerAnchor,
   onComposerClose,
 }: InlineThreadsProps) {
+  const { t } = useTranslation();
   const select = useSelectedThread((s) => s.select);
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   // `useMinimizedThreads` still drives the multi-comment "expand stack" badge
@@ -135,10 +137,10 @@ export function InlineThreads({
   const replyOnRemoteThread = useMutation({
     mutationFn: async ({ head, body }: { head: ReviewComment; body: string }) => {
       if (head.githubId === null) {
-        throw new Error("Cannot reply to a draft on GitHub — submit the review first.");
+        throw new Error(t("sync.errors.replyDraftBlocked"));
       }
       if (!repoPath || prNumber === undefined) {
-        throw new Error("Missing repo context for reply.");
+        throw new Error(t("sync.errors.missingRepoContext"));
       }
       let cache = queryClient.getQueryData<RefreshResult | null>(
         remoteThreadsKey(repoPath, prNumber),
@@ -150,9 +152,7 @@ export function InlineThreads({
         cache = refreshed;
       }
       if (!thread) {
-        throw new Error(
-          "Couldn't find the GitHub thread for this comment. Try clicking Refresh and try again.",
-        );
+        throw new Error(t("sync.errors.threadNotFoundOnReply"));
       }
       const lastTarget = thread.comments.at(-1)?.commentId ?? head.githubId;
       const result = await ipc.sync.reply(repoPath, prNumber, lastTarget, body);
@@ -199,11 +199,7 @@ export function InlineThreads({
           cache = refreshed;
         }
         if (!thread) {
-          showMutationError(
-            new Error(
-              "Couldn't find the GitHub thread for this comment. Try clicking Refresh and resolve again.",
-            ),
-          );
+          showMutationError(new Error(t("sync.errors.threadNotFoundOnResolve")));
           return;
         }
         const result =
@@ -229,7 +225,7 @@ export function InlineThreads({
         showMutationError(err);
       }
     },
-    [queryClient, remote, repoPath, prNumber],
+    [queryClient, remote, repoPath, prNumber, t],
   );
 
   // Lookup table from a comment's `github_id` to the remote thread's comment

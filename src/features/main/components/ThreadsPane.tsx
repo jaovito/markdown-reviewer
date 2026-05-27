@@ -77,15 +77,19 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
 
   // Drop local comments whose githubId matches a remote thread comment — they
   // are already represented by the RemoteThreadCard and would be duplicates.
+  // Includes both mapped and unmapped threads: a local "submitted" comment
+  // whose remote twin lives on an unmapped thread would otherwise show twice
+  // (once in the local list, once under the Unmapped section).
   const dedupedVisible = useMemo(() => {
     const remoteCommentIds = new Set<number>();
-    for (const t of remoteThreads) {
+    const allThreads = remoteData ? [...remoteData.threads, ...remoteData.unmapped] : remoteThreads;
+    for (const t of allThreads) {
       for (const c of t.comments) {
         remoteCommentIds.add(c.commentId);
       }
     }
     return visible.filter((v) => v.githubId === null || !remoteCommentIds.has(v.githubId));
-  }, [visible, remoteThreads]);
+  }, [visible, remoteData, remoteThreads]);
 
   // "Hide all" applies to the threads currently surfaced in the pane (under
   // the active scope + filter). Comments already `hidden`, `resolved`, or

@@ -34,22 +34,26 @@ pub async fn map_anchor(
     }
 
     // 3. Cross-commit — find the original snippet in the new head.
-    let original = match files
-        .read(repo_path, &thread.original_commit_id, &thread.path)
+    // Snippet extraction uses the *original* commit's line positions
+    // (`original_line` / `original_start_line`); the current head positions
+    // (`line` / `start_line`) describe where GitHub thinks the line is in
+    // the head — but we have to first read the snippet from the historical
+    // file before searching for it in the new head.
+    let original_end = thread.original_line;
+    let original_start = thread.original_start_line.unwrap_or(original_end);
+
+    let original = match read_blob(files, repo_path, &thread.original_commit_id, &thread.path)
         .await
     {
         Ok(text) => text,
-        // The original blob is unreachable — treat as unmapped, not as a
-        // hard error. The thread is still surfaced under "Unmapped".
-        Err(AppError::FileNotFound { .. } | _) => {
-            return (None, MappingStatus::FileMissing);
-        }
+        Err(status) => return (None, status),
     };
-    let Ok(new) = files.read(repo_path, head_sha, &thread.path).await else {
-        return (None, MappingStatus::FileMissing);
+    let new = match read_blob(files, repo_path, head_sha, &thread.path).await {
+        Ok(text) => text,
+        Err(status) => return (None, status),
     };
 
-    let Some(snippet) = extract_lines(&original, start_line, end_line) else {
+    let Some(snippet) = extract_lines(&original, original_start, original_end) else {
         return (None, MappingStatus::LineMoved);
     };
 
@@ -57,7 +61,7 @@ pub async fn map_anchor(
     match matches.len() {
         1 => {
             let new_start = matches[0];
-            let span = end_line - start_line;
+            let span = original_end - original_start;
             (
                 Some(build_anchor(new_start, new_start + span)),
                 MappingStatus::Mapped,
@@ -65,6 +69,30 @@ pub async fn map_anchor(
         }
         0 => (None, MappingStatus::LineMoved),
         _ => (None, MappingStatus::Ambiguous),
+    }
+}
+
+/// Reads `(sha, path)` for the mapping pipeline. `FileNotFound` is the only
+/// "expected" failure (the file truly doesn't exist at that ref) and maps to
+/// `MappingStatus::FileMissing`. Anything else (IO, gh/git process errors)
+/// is logged and surfaced as `Outdated { reason }` so the thread still
+/// reaches the unmapped panel with a useful message instead of being
+/// silently turned into "file missing".
+async fn read_blob(
+    files: &dyn FileResolver,
+    repo_path: &str,
+    sha: &str,
+    path: &str,
+) -> Result<String, MappingStatus> {
+    match files.read(repo_path, sha, path).await {
+        Ok(text) => Ok(text),
+        Err(AppError::FileNotFound { .. }) => Err(MappingStatus::FileMissing),
+        Err(err) => {
+            tracing::warn!(error = %err, sha, path, "mapping: failed to read blob");
+            Err(MappingStatus::Outdated {
+                reason: format!("read failed: {err}"),
+            })
+        }
     }
 }
 

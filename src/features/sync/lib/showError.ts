@@ -1,3 +1,4 @@
+import { i18next } from "@/shared/i18n";
 import { describeError, isAppError } from "@/shared/ipc/errors";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -14,8 +15,12 @@ const log = createLogger("sync");
  */
 export function showMutationError(error: unknown) {
   log.error("sync mutation failed", error);
+  const t = i18next.t.bind(i18next);
   const view = isAppError(error)
     ? describeError(error)
-    : { title: "Something went wrong", description: String(error) };
+    : {
+        title: t("errors.generic.title"),
+        description: error instanceof Error ? error.message : String(error),
+      };
   window.alert(`${view.title}\n\n${view.description}`);
 }

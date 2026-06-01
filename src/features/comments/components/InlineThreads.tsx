@@ -262,12 +262,53 @@ export function InlineThreads({
     return out;
   }, [remote.data]);
 
+  // Synthesize a fake "local submitted" ReviewComment for each remote thread
+  // on this file that has no local row representing it (e.g. comments posted
+  // by other reviewers, or comments from a session prior to a DB reset). The
+  // `id` is intentionally negative so it never collides with SQLite's
+  // positive AUTOINCREMENT ids, and the handlers below skip `update.mutate`
+  // for negative ids since there's no local row to write to.
+  const remoteOnlyHeads = useMemo<ReviewComment[]>(() => {
+    if (!remote.data) return [];
+    const localCommentIds = new Set<number>();
+    for (const c of comments) {
+      if (c.githubId !== null) localCommentIds.add(c.githubId);
+    }
+    const out: ReviewComment[] = [];
+    for (const thread of remote.data.threads) {
+      if (thread.path !== filePath) continue;
+      if (!thread.anchor) continue;
+      const head = thread.comments[0];
+      if (!head) continue;
+      // If any of the thread's comments already has a local row, that row
+      // is the head — skip this thread to avoid rendering the card twice.
+      if (thread.comments.some((c) => localCommentIds.has(c.commentId))) continue;
+      out.push({
+        id: -head.commentId, // negative ⇒ "synthetic, no local row"
+        prNumber,
+        filePath,
+        headSha,
+        body: head.body,
+        author: head.author,
+        state: thread.state === "resolved" ? "resolved" : "submitted",
+        anchor: thread.anchor,
+        createdAt: Date.parse(head.createdAt) || 0,
+        updatedAt: Date.parse(head.updatedAt) || 0,
+        githubId: head.commentId,
+        submitError: null,
+      });
+    }
+    return out;
+  }, [comments, remote.data, filePath, prNumber, headSha]);
+
+  const allComments = useMemo(() => [...comments, ...remoteOnlyHeads], [comments, remoteOnlyHeads]);
+
   // Memoize groups directly from `comments` — the previous fingerprint missed
   // anchor end-line / kind changes, which left portals pointing at stale
   // slots when an anchor moved. React Query already returns a stable array
   // identity until the underlying data changes, so this re-runs precisely
   // when needed.
-  const groups = useMemo(() => groupCommentsByStartLine(comments), [comments]);
+  const groups = useMemo(() => groupCommentsByStartLine(allComments), [allComments]);
 
   const composerStart = composerAnchor ? anchorStartLine(composerAnchor) : null;
   const composerEnd = composerAnchor
@@ -577,29 +618,43 @@ export function InlineThreads({
                   }
                   onResolve={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "resolved" } });
+                    // Synthetic remote-only rows (id < 0) have no local DB
+                    // record — skip the local update and go straight to
+                    // GitHub. The remote success path patches the cache
+                    // and a future refresh keeps things in sync.
+                    if (c.id >= 0) {
+                      update.mutate({ id: c.id, patch: { state: "resolved" } });
+                    }
                     void syncStateToRemote(c, "resolved");
                   }}
                   onReopen={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "submitted" } });
+                    if (c.id >= 0) {
+                      update.mutate({ id: c.id, patch: { state: "submitted" } });
+                    }
                     void syncStateToRemote(c, "reopen");
                   }}
                   // `Hide` persists `state = hidden` via IPC so the choice survives
                   // restart and a remote refresh. The session-only `minimize` store
                   // still drives the count-badge expand UX (see #21) but it is no
-                  // longer wired to this button.
+                  // longer wired to this button. Hide/Unhide/Delete are local-only
+                  // operations, so we no-op them for remote-only synthetic rows.
                   onHide={(c) => {
+                    if (c.id < 0) return;
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: "hidden" } });
                   }}
                   onUnhide={(c) => {
+                    if (c.id < 0) return;
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
                   }}
                   onReplySubmit={handleReplySubmit}
                   replyPending={replyOnRemoteThread.isPending}
-                  onDelete={(c) => remove.mutate(c.id)}
+                  onDelete={(c) => {
+                    if (c.id < 0) return;
+                    remove.mutate(c.id);
+                  }}
                   onShowStack={(c) => {
                     const target = pickPaneVisibleComment(group.comments, paneFilter, c);
                     // If every comment in the group is filtered out of the pane,

@@ -256,7 +256,8 @@
       "replyDraftBlocked": "Submit the review before replying — drafts don't have a GitHub thread yet.",
       "missingRepoContext": "Reload the pull request and try again.",
       "threadNotFoundOnReply": "Couldn't find this comment's GitHub thread. Click Refresh and try again.",
-      "threadNotFoundOnResolve": "Couldn't find this comment's GitHub thread. Click Refresh and resolve again."
+      "threadNotFoundOnResolve": "Couldn't find this comment's GitHub thread. Click Refresh and resolve again.",
+      "localOnlyHint": "The comment is marked as {{state}} locally, but the GitHub thread didn't sync. The next refresh will reconcile."
     }
   },
   "errors": {

@@ -19,19 +19,20 @@ export function useDeleteRemoteComment() {
       if (!result.ok) throw result.error;
     },
     onSuccess: (_void, { repoPath, prNumber, threadId, commentId }) => {
+      // Walk both buckets so a delete on a thread whose anchor went
+      // unmapped also drops the comment from the cache.
+      const dropComment = (t: import("@/shared/ipc/contract").RemoteThread) =>
+        t.threadId === threadId
+          ? { ...t, comments: t.comments.filter((c) => c.commentId !== commentId) }
+          : t;
       qc.setQueryData<RefreshResult | null>(remoteThreadsKey(repoPath, prNumber), (prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          threads: prev.threads
-            .map((t) =>
-              t.threadId === threadId
-                ? { ...t, comments: t.comments.filter((c) => c.commentId !== commentId) }
-                : t,
-            )
-            // Drop the thread when its last comment is gone — matches what
-            // GitHub does on the web.
-            .filter((t) => t.comments.length > 0),
+          // Drop the thread when its last comment is gone — matches what
+          // GitHub does on the web.
+          threads: prev.threads.map(dropComment).filter((t) => t.comments.length > 0),
+          unmapped: prev.unmapped.map(dropComment).filter((t) => t.comments.length > 0),
         };
       });
     },

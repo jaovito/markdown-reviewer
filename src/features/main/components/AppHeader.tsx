@@ -1,13 +1,13 @@
 import { usePullRequestComments } from "@/features/comments/hooks/usePullRequestComments";
+import { usePullRequestDetail } from "@/features/markdown-preview";
 import { useRepoPath } from "@/features/pull-requests/hooks/useRepoPath";
 import { useRemoteThreads } from "@/features/sync";
 import { ipc } from "@/shared/ipc/client";
-import type { AppError, PullRequestDetail } from "@/shared/ipc/contract";
-import { describeError } from "@/shared/ipc/errors";
+import { describeError, isAppError } from "@/shared/ipc/errors";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, GitBranchIcon, Loader2Icon } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,15 +28,9 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
 
   const repoPath = useRepoPath(owner, repo).data ?? undefined;
 
-  const prDetail = useQuery<PullRequestDetail, AppError>({
-    queryKey: ["pull-request", repoPath, prNumber],
-    enabled: Boolean(repoPath && prNumber),
-    queryFn: async () => {
-      const res = await ipc.pullRequests.load(repoPath as string, prNumber as number);
-      if (!res.ok) throw res.error;
-      return res.value;
-    },
-  });
+  // Re-uses the shared hook (same query key as `usePullRequestTitle`), so
+  // we never declare the PR-detail query in two places.
+  const prDetail = usePullRequestDetail(repoPath, prNumber);
   const headSha = prDetail.data?.headSha;
 
   const remote = useRemoteThreads({ repoPath, prNumber, headSha });
@@ -76,7 +70,15 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       }
     },
     onError: (error) => {
-      const description = describeError(error as unknown as AppError).description;
+      // `mutationFn` can throw an AppError (from IPC) or a plain Error
+      // (the "missing repoPath" guard above). Use the same isAppError
+      // discrimination as `showMutationError` so both paths render a
+      // meaningful description.
+      const description = isAppError(error)
+        ? describeError(error).description
+        : error instanceof Error
+          ? error.message
+          : String(error);
       window.alert(`${t("app.finishReview.failedTitle")}\n\n${description}`);
     },
   });

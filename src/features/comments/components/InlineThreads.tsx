@@ -10,8 +10,10 @@ import type {
   CommentUpdate,
   RefreshResult,
   RemoteComment,
+  RemoteThread,
   ReviewComment,
 } from "@/shared/ipc/contract";
+import { describeError, isAppError } from "@/shared/ipc/errors";
 import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { type FilterableState, useThreadsFilter } from "@/shared/stores/useThreadsFilter";
@@ -198,26 +200,42 @@ export function InlineThreads({
           thread = findThreadByCommentId(refreshed, comment.githubId);
           cache = refreshed;
         }
+        const localState = next === "resolved" ? "resolved" : "submitted";
         if (!thread) {
-          showMutationError(new Error(t("sync.errors.threadNotFoundOnResolve")));
+          showMutationError(
+            new Error(
+              `${t("sync.errors.threadNotFoundOnResolve")}\n\n${t("sync.errors.localOnlyHint", { state: localState })}`,
+            ),
+          );
           return;
         }
         const result =
           next === "resolved"
             ? await ipc.sync.resolve(repoPath, thread.threadId)
             : await ipc.sync.reopen(repoPath, thread.threadId);
-        if (!result.ok) throw result.error;
-        // Patch the cached remote thread so the right-pane GitHub-threads
-        // card reflects the new state without a second round-trip.
+        if (!result.ok) {
+          // Surface the local/remote divergence explicitly. `update.mutate`
+          // already flipped the inline card's badge, so a plain "failed"
+          // alert without context would confuse the user.
+          const description = isAppError(result.error)
+            ? describeError(result.error).description
+            : String(result.error);
+          throw new Error(
+            `${description}\n\n${t("sync.errors.localOnlyHint", { state: localState })}`,
+          );
+        }
+        // Patch the cached remote thread (in either bucket) so the right-pane
+        // GitHub-threads card reflects the new state without a second round-trip.
         queryClient.setQueryData<RefreshResult | null>(
           remoteThreadsKey(repoPath, prNumber),
           (prev) => {
             if (!prev) return prev;
+            const replace = (t2: RemoteThread) =>
+              t2.threadId === result.value.threadId ? result.value : t2;
             return {
               ...prev,
-              threads: prev.threads.map((t) =>
-                t.threadId === result.value.threadId ? result.value : t,
-              ),
+              threads: prev.threads.map(replace),
+              unmapped: prev.unmapped.map(replace),
             };
           },
         );

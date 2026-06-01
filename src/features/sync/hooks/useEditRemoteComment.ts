@@ -21,18 +21,18 @@ export function useEditRemoteComment() {
       return result.value;
     },
     onSuccess: (updated, { repoPath, prNumber, threadId, commentId }) => {
+      // Walk both `threads` and `unmapped` so an edit on a thread whose
+      // anchor went unmapped still patches the cache.
+      const patchComments = (t: import("@/shared/ipc/contract").RemoteThread) =>
+        t.threadId === threadId
+          ? { ...t, comments: t.comments.map((c) => (c.commentId === commentId ? updated : c)) }
+          : t;
       qc.setQueryData<RefreshResult | null>(remoteThreadsKey(repoPath, prNumber), (prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          threads: prev.threads.map((t) =>
-            t.threadId === threadId
-              ? {
-                  ...t,
-                  comments: t.comments.map((c) => (c.commentId === commentId ? updated : c)),
-                }
-              : t,
-          ),
+          threads: prev.threads.map(patchComments),
+          unmapped: prev.unmapped.map(patchComments),
         };
       });
     },

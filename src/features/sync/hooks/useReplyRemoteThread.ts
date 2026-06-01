@@ -36,8 +36,13 @@ function patchThread(
   threadId: string,
   patch: (t: RemoteThread) => RemoteThread,
 ): RefreshResult {
+  // Walk both buckets — a reply to a thread whose anchor became unmapped
+  // (file/line moved) still needs the optimistic cache update, otherwise
+  // the new comment won't appear in the Unmapped section until the next
+  // refresh.
   return {
     ...prev,
     threads: prev.threads.map((t) => (t.threadId === threadId ? patch(t) : t)),
+    unmapped: prev.unmapped.map((t) => (t.threadId === threadId ? patch(t) : t)),
   };
 }

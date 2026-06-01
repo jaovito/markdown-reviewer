@@ -3,4 +3,5 @@ pub mod files;
 pub mod pull_requests;
 pub mod recents;
 pub mod repo;
+pub mod sync;
 pub mod tools;

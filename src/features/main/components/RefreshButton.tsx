@@ -12,6 +12,12 @@ interface RefreshButtonProps {
    * Phase 2 surface: PR list/detail, changed files, file content, file diff.
    */
   keys?: string[];
+  /**
+   * Optional async hook the consumer fires alongside the React Query
+   * invalidation — used by ThreadsPane to also call `useRemoteThreads.refresh`
+   * so the user sees the GitHub round-trip when they click Refresh.
+   */
+  onRefresh?: () => Promise<unknown>;
 }
 
 const DEFAULT_KEYS = [
@@ -20,9 +26,10 @@ const DEFAULT_KEYS = [
   "changed-files",
   "file-content",
   "file-diff",
+  "remote-threads",
 ];
 
-export function RefreshButton({ keys = DEFAULT_KEYS }: RefreshButtonProps) {
+export function RefreshButton({ keys = DEFAULT_KEYS, onRefresh }: RefreshButtonProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [spinning, setSpinning] = useState(false);
@@ -44,7 +51,10 @@ export function RefreshButton({ keys = DEFAULT_KEYS }: RefreshButtonProps) {
     }
     setSpinning(true);
     try {
-      await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      await Promise.all([
+        ...keys.map((k) => qc.invalidateQueries({ queryKey: [k] })),
+        onRefresh?.(),
+      ]);
     } finally {
       // Keep the spin visible briefly even if the network is fast — gives
       // the user feedback that the click registered.

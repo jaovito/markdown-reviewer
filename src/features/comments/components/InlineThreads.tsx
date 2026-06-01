@@ -1,11 +1,26 @@
+import {
+  findThreadByCommentId,
+  remoteThreadsKey,
+  showMutationError,
+  useRemoteThreads,
+} from "@/features/sync";
 import { ipc } from "@/shared/ipc/client";
-import type { CommentAnchor, CommentUpdate, ReviewComment } from "@/shared/ipc/contract";
+import type {
+  CommentAnchor,
+  CommentUpdate,
+  RefreshResult,
+  RemoteComment,
+  RemoteThread,
+  ReviewComment,
+} from "@/shared/ipc/contract";
+import { describeError, isAppError } from "@/shared/ipc/errors";
 import { minimizedKey, useMinimizedThreads } from "@/shared/stores/useMinimizedThreads";
 import { useSelectedThread } from "@/shared/stores/useSelectedThread";
 import { type FilterableState, useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import {
   type CommentGroup,
   anchorEndLine,
@@ -20,6 +35,11 @@ import { RangeHeaderChip } from "./RangeHeaderChip";
 import { ResolvedThreadMarker } from "./ResolvedThreadMarker";
 
 interface InlineThreadsProps {
+  /**
+   * Absolute repo path — only required for syncing resolve / reopen with
+   * GitHub on `submitted` comments. When absent, those actions stay local.
+   */
+  repoPath?: string;
   prNumber: number;
   filePath: string;
   headSha: string;
@@ -55,6 +75,7 @@ interface SlotMap {
  * content down — matching the design's "Comment under the line" layout.
  */
 export function InlineThreads({
+  repoPath,
   prNumber,
   filePath,
   headSha,
@@ -63,6 +84,7 @@ export function InlineThreads({
   composerAnchor,
   onComposerClose,
 }: InlineThreadsProps) {
+  const { t } = useTranslation();
   const select = useSelectedThread((s) => s.select);
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   // `useMinimizedThreads` still drives the multi-comment "expand stack" badge
@@ -97,6 +119,148 @@ export function InlineThreads({
       queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber, filePath] });
     },
   });
+
+  // Mounted with the same key as `AppHeader`/`ThreadsPane`, so React Query
+  // dedupes and we read whatever the most recent refresh stored. `refresh()`
+  // is only called as a fallback when a submitted comment has no remote twin
+  // in cache yet (e.g. the user just clicked "Finish review" and the cache
+  // hasn't been warmed since).
+  const remote = useRemoteThreads({ repoPath, prNumber, headSha });
+
+  // When the user resolves or reopens a `submitted` comment from the inline
+  // card, propagate the action to GitHub. The local state is always written
+  // first (the existing `update.mutate` call) so the UI feedback is instant;
+  // any GitHub failure surfaces via `showMutationError` without rolling the
+  // local state back — the next refresh will reconcile.
+  // Reply on a `submitted` inline card posts to the matching GitHub thread.
+  // Same lookup pattern as `syncStateToRemote`: prefer cache, refresh if
+  // the thread isn't loaded yet. The result is appended to the cached
+  // thread so the reply shows up immediately in the right-pane card too.
+  const replyOnRemoteThread = useMutation({
+    mutationFn: async ({ head, body }: { head: ReviewComment; body: string }) => {
+      if (head.githubId === null) {
+        throw new Error(t("sync.errors.replyDraftBlocked"));
+      }
+      if (!repoPath || prNumber === undefined) {
+        throw new Error(t("sync.errors.missingRepoContext"));
+      }
+      let cache = queryClient.getQueryData<RefreshResult | null>(
+        remoteThreadsKey(repoPath, prNumber),
+      );
+      let thread = findThreadByCommentId(cache ?? null, head.githubId);
+      if (!thread) {
+        const refreshed = await remote.refresh();
+        thread = findThreadByCommentId(refreshed, head.githubId);
+        cache = refreshed;
+      }
+      if (!thread) {
+        throw new Error(t("sync.errors.threadNotFoundOnReply"));
+      }
+      const lastTarget = thread.comments.at(-1)?.commentId ?? head.githubId;
+      const result = await ipc.sync.reply(repoPath, prNumber, lastTarget, body);
+      if (!result.ok) throw result.error;
+      return { threadId: thread.threadId, added: result.value };
+    },
+    onSuccess: ({ threadId, added }) => {
+      if (!repoPath || prNumber === undefined) return;
+      queryClient.setQueryData<RefreshResult | null>(
+        remoteThreadsKey(repoPath, prNumber),
+        (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            threads: prev.threads.map((t) =>
+              t.threadId === threadId ? { ...t, comments: [...t.comments, added] } : t,
+            ),
+          };
+        },
+      );
+    },
+    onError: showMutationError,
+  });
+
+  const handleReplySubmit = useCallback(
+    async (head: ReviewComment, body: string) => {
+      await replyOnRemoteThread.mutateAsync({ head, body });
+    },
+    [replyOnRemoteThread],
+  );
+
+  const syncStateToRemote = useCallback(
+    async (comment: ReviewComment, next: "resolved" | "reopen") => {
+      if (comment.githubId === null) return;
+      if (!repoPath || prNumber === undefined) return;
+      try {
+        let cache = queryClient.getQueryData<RefreshResult | null>(
+          remoteThreadsKey(repoPath, prNumber),
+        );
+        let thread = findThreadByCommentId(cache ?? null, comment.githubId);
+        if (!thread) {
+          const refreshed = await remote.refresh();
+          thread = findThreadByCommentId(refreshed, comment.githubId);
+          cache = refreshed;
+        }
+        const localState = next === "resolved" ? "resolved" : "submitted";
+        if (!thread) {
+          showMutationError(
+            new Error(
+              `${t("sync.errors.threadNotFoundOnResolve")}\n\n${t("sync.errors.localOnlyHint", { state: localState })}`,
+            ),
+          );
+          return;
+        }
+        const result =
+          next === "resolved"
+            ? await ipc.sync.resolve(repoPath, thread.threadId)
+            : await ipc.sync.reopen(repoPath, thread.threadId);
+        if (!result.ok) {
+          // Surface the local/remote divergence explicitly. `update.mutate`
+          // already flipped the inline card's badge, so a plain "failed"
+          // alert without context would confuse the user.
+          const description = isAppError(result.error)
+            ? describeError(result.error).description
+            : String(result.error);
+          throw new Error(
+            `${description}\n\n${t("sync.errors.localOnlyHint", { state: localState })}`,
+          );
+        }
+        // Patch the cached remote thread (in either bucket) so the right-pane
+        // GitHub-threads card reflects the new state without a second round-trip.
+        queryClient.setQueryData<RefreshResult | null>(
+          remoteThreadsKey(repoPath, prNumber),
+          (prev) => {
+            if (!prev) return prev;
+            const replace = (t2: RemoteThread) =>
+              t2.threadId === result.value.threadId ? result.value : t2;
+            return {
+              ...prev,
+              threads: prev.threads.map(replace),
+              unmapped: prev.unmapped.map(replace),
+            };
+          },
+        );
+      } catch (err) {
+        showMutationError(err);
+      }
+    },
+    [queryClient, remote, repoPath, prNumber, t],
+  );
+
+  // Lookup table from a comment's `github_id` to the remote thread's comment
+  // list. Lets the inline card show GitHub-originated replies inline (not
+  // just in the right-rail pane), so the user sees their reply land in the
+  // same conversation they opened the composer from.
+  const remoteRepliesByGithubId = useMemo(() => {
+    const out = new Map<number, RemoteComment[]>();
+    if (!remote.data) return out;
+    const allThreads = [...remote.data.threads, ...remote.data.unmapped];
+    for (const t of allThreads) {
+      for (const c of t.comments) {
+        out.set(c.commentId, t.comments);
+      }
+    }
+    return out;
+  }, [remote.data]);
 
   // Memoize groups directly from `comments` — the previous fingerprint missed
   // anchor end-line / kind changes, which left portals pointing at stale
@@ -405,13 +569,21 @@ export function InlineThreads({
                   key={slotKey}
                   comments={group.comments}
                   selected={isSelected}
+                  remoteReplies={
+                    group.comments[0]?.githubId !== null &&
+                    group.comments[0]?.githubId !== undefined
+                      ? remoteRepliesByGithubId.get(group.comments[0].githubId)
+                      : undefined
+                  }
                   onResolve={(c) => {
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: "resolved" } });
+                    void syncStateToRemote(c, "resolved");
                   }}
                   onReopen={(c) => {
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: "submitted" } });
+                    void syncStateToRemote(c, "reopen");
                   }}
                   // `Hide` persists `state = hidden` via IPC so the choice survives
                   // restart and a remote refresh. The session-only `minimize` store
@@ -425,7 +597,8 @@ export function InlineThreads({
                     select(c.id);
                     update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
                   }}
-                  onReply={(c) => select(c.id)}
+                  onReplySubmit={handleReplySubmit}
+                  replyPending={replyOnRemoteThread.isPending}
                   onDelete={(c) => remove.mutate(c.id)}
                   onShowStack={(c) => {
                     const target = pickPaneVisibleComment(group.comments, paneFilter, c);

@@ -27,5 +27,12 @@ pub fn register<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
         commands::comments::update_local_comment,
         commands::comments::delete_local_comment,
         commands::comments::submit_review,
+        commands::sync::refresh_remote_comments,
+        commands::sync::get_cached_remote_threads,
+        commands::sync::reply_remote_thread,
+        commands::sync::edit_remote_comment,
+        commands::sync::delete_remote_comment,
+        commands::sync::resolve_remote_thread,
+        commands::sync::reopen_remote_thread,
     ])
 }

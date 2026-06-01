@@ -467,6 +467,270 @@ impl GhClient for GhCli {
         })?;
         Ok(id)
     }
+
+    async fn list_review_threads(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+    ) -> AppResult<markdown_reviewer_core::ports::FetchedReviewThreads> {
+        let query_arg = format!("query={}", crate::gh::review_threads::REVIEW_THREADS_QUERY);
+        let pr_arg = format!("pr={pr_number}");
+        // gh fills `{owner}` / `{repo}` from the cwd when we use `-F owner={owner}` style,
+        // but graphql variables need explicit values. `gh api graphql` accepts
+        // `-F owner=:owner -F name=:repo` shortcuts that expand against the
+        // current repo — use them to avoid a second round-trip. Flags and
+        // values stay as separate argv entries (`-F` then `pr=N`) — the
+        // `-F=pr=N` single-token form isn't reliably accepted by gh.
+        let args: Vec<&str> = vec![
+            "api",
+            "graphql",
+            "-F",
+            "owner=:owner",
+            "-F",
+            "name=:repo",
+            "-F",
+            &pr_arg,
+            "--raw-field",
+            &query_arg,
+        ];
+        let out = run("gh", &args, Some(repo_path), PR_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, Some(pr_number)));
+        }
+        crate::gh::review_threads::parse_review_threads(out.stdout.trim())
+    }
+
+    async fn reply_review_comment(
+        &self,
+        repo_path: &str,
+        pr_number: u64,
+        in_reply_to_comment_id: i64,
+        body: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments");
+        let in_reply_arg = format!("in_reply_to={in_reply_to_comment_id}");
+        let body_arg = format!("body={body}");
+        let args = vec![
+            "api",
+            "-X",
+            "POST",
+            &endpoint,
+            "-F",
+            &in_reply_arg,
+            "--raw-field",
+            &body_arg,
+        ];
+        let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(classify_rest_error(&out.stderr));
+        }
+        parse_review_comment(out.stdout.trim())
+    }
+
+    async fn edit_review_comment(
+        &self,
+        repo_path: &str,
+        comment_id: i64,
+        body: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/comments/{comment_id}");
+        let body_arg = format!("body={body}");
+        let args = vec!["api", "-X", "PATCH", &endpoint, "--raw-field", &body_arg];
+        let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(classify_rest_error(&out.stderr));
+        }
+        parse_review_comment(out.stdout.trim())
+    }
+
+    async fn delete_review_comment(&self, repo_path: &str, comment_id: i64) -> AppResult<()> {
+        let endpoint = format!("repos/{{owner}}/{{repo}}/pulls/comments/{comment_id}");
+        let args = vec!["api", "-X", "DELETE", &endpoint];
+        let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(classify_rest_error(&out.stderr));
+        }
+        Ok(())
+    }
+
+    async fn resolve_review_thread(
+        &self,
+        repo_path: &str,
+        thread_id: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        run_thread_mutation(
+            repo_path,
+            thread_id,
+            "mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { id } } }",
+        )
+        .await?;
+        refetch_thread(repo_path, thread_id).await
+    }
+
+    async fn unresolve_review_thread(
+        &self,
+        repo_path: &str,
+        thread_id: &str,
+    ) -> AppResult<markdown_reviewer_core::domain::RemoteThread> {
+        run_thread_mutation(
+            repo_path,
+            thread_id,
+            "mutation($id: ID!) { unresolveReviewThread(input: { threadId: $id }) { thread { id } } }",
+        )
+        .await?;
+        refetch_thread(repo_path, thread_id).await
+    }
+}
+
+fn classify_rest_error(stderr: &str) -> AppError {
+    let lower = stderr.to_ascii_lowercase();
+    if lower.contains("status code: 403")
+        || lower.contains("must have write access")
+        || lower.contains("must be the author")
+    {
+        return AppError::validation("read-only on GitHub");
+    }
+    if lower.contains("status code: 404") || lower.contains("not found") {
+        return AppError::validation("upstream thread no longer exists");
+    }
+    if lower.contains("authentication required") || lower.contains("gh auth login") {
+        return AppError::GhNotAuthenticated;
+    }
+    AppError::process(redact(stderr.trim()))
+}
+
+fn parse_review_comment(raw: &str) -> AppResult<markdown_reviewer_core::domain::RemoteComment> {
+    #[derive(serde::Deserialize)]
+    struct UserField {
+        login: String,
+        avatar_url: Option<String>,
+    }
+    #[derive(serde::Deserialize)]
+    struct RawComment {
+        id: i64,
+        user: Option<UserField>,
+        body: String,
+        created_at: String,
+        updated_at: String,
+        html_url: String,
+        #[serde(default)]
+        author_association: Option<String>,
+    }
+    let c: RawComment = serde_json::from_str(raw)
+        .map_err(|e| AppError::process(format!("gh api comments: invalid JSON: {e}")))?;
+    // The REST POST/PATCH/reply responses don't carry `viewerCanUpdate`, so we
+    // infer it from `author_association`. This over-reports for non-author
+    // team members, but in practice this parser only runs against responses
+    // to OUR mutations (reply/edit), where the viewer IS the author and the
+    // permission is always true. The next refresh round-trip pulls the
+    // authoritative `viewerCan*` flags via GraphQL `list_review_threads`.
+    let viewer_can_update = matches!(
+        c.author_association.as_deref(),
+        Some("OWNER" | "MEMBER" | "COLLABORATOR" | "CONTRIBUTOR")
+    );
+    let (author, avatar) = match c.user {
+        Some(u) => (u.login, u.avatar_url),
+        None => ("ghost".into(), None),
+    };
+    Ok(markdown_reviewer_core::domain::RemoteComment {
+        comment_id: c.id,
+        author,
+        author_avatar_url: avatar,
+        body: c.body,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        viewer_can_update,
+        viewer_can_delete: viewer_can_update,
+        html_url: c.html_url,
+    })
+}
+
+async fn run_thread_mutation(repo_path: &str, thread_id: &str, mutation: &str) -> AppResult<()> {
+    let query_arg = format!("query={mutation}");
+    let id_arg = format!("id={thread_id}");
+    let args = vec![
+        "api",
+        "graphql",
+        "--raw-field",
+        &query_arg,
+        "--raw-field",
+        &id_arg,
+    ];
+    let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+    if !out.ok() {
+        return Err(classify_rest_error(&out.stderr));
+    }
+    if out.stdout.contains("\"errors\":") {
+        return Err(AppError::process(format!(
+            "graphql mutation failed: {}",
+            redact(out.stdout.trim())
+        )));
+    }
+    Ok(())
+}
+
+#[derive(serde::Deserialize)]
+struct NodeEnvelope {
+    data: NodeData,
+}
+#[derive(serde::Deserialize)]
+struct NodeData {
+    node: serde_json::Value,
+}
+
+async fn refetch_thread(
+    repo_path: &str,
+    thread_id: &str,
+) -> AppResult<markdown_reviewer_core::domain::RemoteThread> {
+    use markdown_reviewer_core::domain::MappingStatus;
+    let single_query = r"query($id: ID!) { node(id: $id) { ... on PullRequestReviewThread {
+            id path originalLine originalStartLine line startLine
+            isOutdated isResolved viewerCanResolve viewerCanUnresolve
+            comments(first: 100) { nodes {
+                databaseId author { login avatarUrl } body createdAt updatedAt
+                viewerCanUpdate viewerCanDelete url originalCommit { oid }
+            } }
+        } } }";
+    let q_arg = format!("query={single_query}");
+    let id_arg = format!("id={thread_id}");
+    let args = vec![
+        "api",
+        "graphql",
+        "--raw-field",
+        &q_arg,
+        "--raw-field",
+        &id_arg,
+    ];
+    let out = run("gh", &args, Some(repo_path), REVIEW_COMMENT_TIMEOUT_MS).await?;
+    if !out.ok() {
+        return Err(classify_rest_error(&out.stderr));
+    }
+    let env: NodeEnvelope = serde_json::from_str(out.stdout.trim())
+        .map_err(|e| AppError::process(format!("gh graphql node: {e}")))?;
+    // Wrap the single node in the multi-thread envelope so we can reuse
+    // `parse_review_threads` instead of duplicating its serde scaffolding.
+    // If that parser grows assumptions specific to the list query, this
+    // call-site is the one to revisit.
+    let wrapped = serde_json::json!({
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": { "hasNextPage": false, "endCursor": null },
+                        "nodes": [env.data.node]
+                    }
+                }
+            }
+        }
+    });
+    let fetched = crate::gh::review_threads::parse_review_threads(&wrapped.to_string())?;
+    let mut thread = fetched
+        .threads
+        .into_iter()
+        .next()
+        .ok_or_else(|| AppError::process("graphql node returned no thread"))?;
+    thread.mapping_status = MappingStatus::Mapped;
+    Ok(thread)
 }
 
 /// Stable-lifetime owned strings used to assemble each batch-comment entry's

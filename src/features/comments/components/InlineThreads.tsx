@@ -179,11 +179,42 @@ export function InlineThreads({
     onError: showMutationError,
   });
 
+  // Reply on a fully-local thread (head is a draft, no GitHub thread yet)
+  // creates another draft anchored to the same line/range. The user can
+  // submit them all in one "Finish review" later. We re-fetch the
+  // local-comments query so the inline grouping picks the new row up
+  // alongside the existing draft.
+  const createDraftReply = useMutation({
+    mutationFn: async ({ head, body }: { head: ReviewComment; body: string }) => {
+      const result = await ipc.comments.create({
+        prNumber: head.prNumber,
+        filePath: head.filePath,
+        headSha: head.headSha,
+        body,
+        author: head.author,
+        anchor: head.anchor,
+      });
+      if (!result.ok) throw result.error;
+      return result.value;
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber, filePath] });
+      select(created.id);
+    },
+    onError: showMutationError,
+  });
+
   const handleReplySubmit = useCallback(
     async (head: ReviewComment, body: string) => {
+      if (head.githubId === null) {
+        // Draft head — just stack another local draft at the same anchor.
+        await createDraftReply.mutateAsync({ head, body });
+        return;
+      }
       await replyOnRemoteThread.mutateAsync({ head, body });
     },
-    [replyOnRemoteThread],
+    [createDraftReply, replyOnRemoteThread],
   );
 
   const syncStateToRemote = useCallback(
@@ -262,12 +293,53 @@ export function InlineThreads({
     return out;
   }, [remote.data]);
 
+  // Synthesize a fake "local submitted" ReviewComment for each remote thread
+  // on this file that has no local row representing it (e.g. comments posted
+  // by other reviewers, or comments from a session prior to a DB reset). The
+  // `id` is intentionally negative so it never collides with SQLite's
+  // positive AUTOINCREMENT ids, and the handlers below skip `update.mutate`
+  // for negative ids since there's no local row to write to.
+  const remoteOnlyHeads = useMemo<ReviewComment[]>(() => {
+    if (!remote.data) return [];
+    const localCommentIds = new Set<number>();
+    for (const c of comments) {
+      if (c.githubId !== null) localCommentIds.add(c.githubId);
+    }
+    const out: ReviewComment[] = [];
+    for (const thread of remote.data.threads) {
+      if (thread.path !== filePath) continue;
+      if (!thread.anchor) continue;
+      const head = thread.comments[0];
+      if (!head) continue;
+      // If any of the thread's comments already has a local row, that row
+      // is the head — skip this thread to avoid rendering the card twice.
+      if (thread.comments.some((c) => localCommentIds.has(c.commentId))) continue;
+      out.push({
+        id: -head.commentId, // negative ⇒ "synthetic, no local row"
+        prNumber,
+        filePath,
+        headSha,
+        body: head.body,
+        author: head.author,
+        state: thread.state === "resolved" ? "resolved" : "submitted",
+        anchor: thread.anchor,
+        createdAt: Date.parse(head.createdAt) || 0,
+        updatedAt: Date.parse(head.updatedAt) || 0,
+        githubId: head.commentId,
+        submitError: null,
+      });
+    }
+    return out;
+  }, [comments, remote.data, filePath, prNumber, headSha]);
+
+  const allComments = useMemo(() => [...comments, ...remoteOnlyHeads], [comments, remoteOnlyHeads]);
+
   // Memoize groups directly from `comments` — the previous fingerprint missed
   // anchor end-line / kind changes, which left portals pointing at stale
   // slots when an anchor moved. React Query already returns a stable array
   // identity until the underlying data changes, so this re-runs precisely
   // when needed.
-  const groups = useMemo(() => groupCommentsByStartLine(comments), [comments]);
+  const groups = useMemo(() => groupCommentsByStartLine(allComments), [allComments]);
 
   const composerStart = composerAnchor ? anchorStartLine(composerAnchor) : null;
   const composerEnd = composerAnchor
@@ -577,29 +649,56 @@ export function InlineThreads({
                   }
                   onResolve={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "resolved" } });
+                    // Apply the transition to every non-deleted/non-synthetic
+                    // comment in the group — otherwise the second comment on
+                    // the same anchor stays "submitted" and the group never
+                    // reaches the `all resolved` state that collapses it.
+                    for (const target of group.comments) {
+                      if (target.id < 0 || target.state === "deleted") continue;
+                      if (target.state === "resolved") continue;
+                      update.mutate({ id: target.id, patch: { state: "resolved" } });
+                    }
                     void syncStateToRemote(c, "resolved");
                   }}
                   onReopen={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "submitted" } });
+                    for (const target of group.comments) {
+                      if (target.id < 0 || target.state === "deleted") continue;
+                      if (target.state === "submitted") continue;
+                      update.mutate({ id: target.id, patch: { state: "submitted" } });
+                    }
                     void syncStateToRemote(c, "reopen");
                   }}
-                  // `Hide` persists `state = hidden` via IPC so the choice survives
-                  // restart and a remote refresh. The session-only `minimize` store
-                  // still drives the count-badge expand UX (see #21) but it is no
-                  // longer wired to this button.
+                  // Hide / Unhide / Delete are local-only operations. We
+                  // walk the whole group so the inline marker can collapse
+                  // (HiddenThreadMarker shows up only when EVERY comment in
+                  // the group is hidden). Synthetic remote-only rows are
+                  // skipped — they have no local DB record.
                   onHide={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "hidden" } });
+                    for (const target of group.comments) {
+                      if (target.id < 0) continue;
+                      if (target.state === "hidden" || target.state === "deleted") continue;
+                      update.mutate({ id: target.id, patch: { state: "hidden" } });
+                    }
                   }}
                   onUnhide={(c) => {
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+                    for (const target of group.comments) {
+                      if (target.id < 0) continue;
+                      if (target.state !== "hidden") continue;
+                      update.mutate({
+                        id: target.id,
+                        patch: { state: targetUnhideState(target) },
+                      });
+                    }
                   }}
                   onReplySubmit={handleReplySubmit}
-                  replyPending={replyOnRemoteThread.isPending}
-                  onDelete={(c) => remove.mutate(c.id)}
+                  replyPending={replyOnRemoteThread.isPending || createDraftReply.isPending}
+                  onDelete={(c) => {
+                    if (c.id < 0) return;
+                    remove.mutate(c.id);
+                  }}
                   onShowStack={(c) => {
                     const target = pickPaneVisibleComment(group.comments, paneFilter, c);
                     // If every comment in the group is filtered out of the pane,

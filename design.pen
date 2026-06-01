@@ -4356,6 +4356,47 @@
                                     },
                                     {
                                       "type": "frame",
+                                      "id": "1pgIx",
+                                      "name": "Delete",
+                                      "height": 28,
+                                      "fill": "#fef2f2",
+                                      "cornerRadius": 6,
+                                      "stroke": {
+                                        "align": "inside",
+                                        "thickness": 1,
+                                        "fill": "#fecaca"
+                                      },
+                                      "gap": 6,
+                                      "padding": [
+                                        4,
+                                        10
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon_font",
+                                          "id": "QTndI",
+                                          "name": "deleteIcon",
+                                          "width": 12,
+                                          "height": 12,
+                                          "iconFontName": "trash-2",
+                                          "iconFontFamily": "lucide",
+                                          "fill": "#b91c1c"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "1Ln4o",
+                                          "name": "deleteText",
+                                          "fill": "#b91c1c",
+                                          "content": "Delete",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
                                       "id": "mrexCommentAResolve",
                                       "name": "Resolve",
                                       "height": 28,
@@ -16082,6 +16123,47 @@
                                       "name": "Spacer",
                                       "width": "fill_container",
                                       "height": 1
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "EmyCk",
+                                      "name": "Delete",
+                                      "height": 28,
+                                      "fill": "#fef2f2",
+                                      "cornerRadius": 6,
+                                      "stroke": {
+                                        "align": "inside",
+                                        "thickness": 1,
+                                        "fill": "#fecaca"
+                                      },
+                                      "gap": 6,
+                                      "padding": [
+                                        4,
+                                        10
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon_font",
+                                          "id": "BLbqd",
+                                          "name": "deleteIcon",
+                                          "width": 12,
+                                          "height": 12,
+                                          "iconFontName": "trash-2",
+                                          "iconFontFamily": "lucide",
+                                          "fill": "#b91c1c"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "INT3J",
+                                          "name": "deleteLabel",
+                                          "fill": "#b91c1c",
+                                          "content": "Delete",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "frame",

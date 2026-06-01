@@ -142,7 +142,12 @@ export function InlineThreadCard({
   // Reply is meaningful only when there's a real GitHub thread to attach the
   // reply to. Drafts don't qualify yet — they'll get a remote thread on the
   // next "Finish review".
-  const canReply = Boolean(onReplySubmit) && head.githubId !== null && !isHidden;
+  // Reply works in two modes — the parent's `onReplySubmit` decides which:
+  //   - Submitted/synced head (has githubId) → posts to GitHub.
+  //   - Draft head (no githubId)             → stacks another local draft.
+  // The card stays out of that decision; it just enables the composer
+  // whenever the parent provides a handler and the head is reachable.
+  const canReply = Boolean(onReplySubmit) && !isHidden;
   const range = isRange(head.anchor);
   const avatarBgVar = range ? "--comment-avatar-range-bg" : "--comment-avatar-bg";
   const cardBorderClass = range

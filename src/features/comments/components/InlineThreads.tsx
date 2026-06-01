@@ -179,11 +179,42 @@ export function InlineThreads({
     onError: showMutationError,
   });
 
+  // Reply on a fully-local thread (head is a draft, no GitHub thread yet)
+  // creates another draft anchored to the same line/range. The user can
+  // submit them all in one "Finish review" later. We re-fetch the
+  // local-comments query so the inline grouping picks the new row up
+  // alongside the existing draft.
+  const createDraftReply = useMutation({
+    mutationFn: async ({ head, body }: { head: ReviewComment; body: string }) => {
+      const result = await ipc.comments.create({
+        prNumber: head.prNumber,
+        filePath: head.filePath,
+        headSha: head.headSha,
+        body,
+        author: head.author,
+        anchor: head.anchor,
+      });
+      if (!result.ok) throw result.error;
+      return result.value;
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber] });
+      queryClient.invalidateQueries({ queryKey: ["local-comments", prNumber, filePath] });
+      select(created.id);
+    },
+    onError: showMutationError,
+  });
+
   const handleReplySubmit = useCallback(
     async (head: ReviewComment, body: string) => {
+      if (head.githubId === null) {
+        // Draft head — just stack another local draft at the same anchor.
+        await createDraftReply.mutateAsync({ head, body });
+        return;
+      }
       await replyOnRemoteThread.mutateAsync({ head, body });
     },
-    [replyOnRemoteThread],
+    [createDraftReply, replyOnRemoteThread],
   );
 
   const syncStateToRemote = useCallback(
@@ -618,39 +649,52 @@ export function InlineThreads({
                   }
                   onResolve={(c) => {
                     select(c.id);
-                    // Synthetic remote-only rows (id < 0) have no local DB
-                    // record — skip the local update and go straight to
-                    // GitHub. The remote success path patches the cache
-                    // and a future refresh keeps things in sync.
-                    if (c.id >= 0) {
-                      update.mutate({ id: c.id, patch: { state: "resolved" } });
+                    // Apply the transition to every non-deleted/non-synthetic
+                    // comment in the group — otherwise the second comment on
+                    // the same anchor stays "submitted" and the group never
+                    // reaches the `all resolved` state that collapses it.
+                    for (const target of group.comments) {
+                      if (target.id < 0 || target.state === "deleted") continue;
+                      if (target.state === "resolved") continue;
+                      update.mutate({ id: target.id, patch: { state: "resolved" } });
                     }
                     void syncStateToRemote(c, "resolved");
                   }}
                   onReopen={(c) => {
                     select(c.id);
-                    if (c.id >= 0) {
-                      update.mutate({ id: c.id, patch: { state: "submitted" } });
+                    for (const target of group.comments) {
+                      if (target.id < 0 || target.state === "deleted") continue;
+                      if (target.state === "submitted") continue;
+                      update.mutate({ id: target.id, patch: { state: "submitted" } });
                     }
                     void syncStateToRemote(c, "reopen");
                   }}
-                  // `Hide` persists `state = hidden` via IPC so the choice survives
-                  // restart and a remote refresh. The session-only `minimize` store
-                  // still drives the count-badge expand UX (see #21) but it is no
-                  // longer wired to this button. Hide/Unhide/Delete are local-only
-                  // operations, so we no-op them for remote-only synthetic rows.
+                  // Hide / Unhide / Delete are local-only operations. We
+                  // walk the whole group so the inline marker can collapse
+                  // (HiddenThreadMarker shows up only when EVERY comment in
+                  // the group is hidden). Synthetic remote-only rows are
+                  // skipped — they have no local DB record.
                   onHide={(c) => {
-                    if (c.id < 0) return;
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: "hidden" } });
+                    for (const target of group.comments) {
+                      if (target.id < 0) continue;
+                      if (target.state === "hidden" || target.state === "deleted") continue;
+                      update.mutate({ id: target.id, patch: { state: "hidden" } });
+                    }
                   }}
                   onUnhide={(c) => {
-                    if (c.id < 0) return;
                     select(c.id);
-                    update.mutate({ id: c.id, patch: { state: targetUnhideState(c) } });
+                    for (const target of group.comments) {
+                      if (target.id < 0) continue;
+                      if (target.state !== "hidden") continue;
+                      update.mutate({
+                        id: target.id,
+                        patch: { state: targetUnhideState(target) },
+                      });
+                    }
                   }}
                   onReplySubmit={handleReplySubmit}
-                  replyPending={replyOnRemoteThread.isPending}
+                  replyPending={replyOnRemoteThread.isPending || createDraftReply.isPending}
                   onDelete={(c) => {
                     if (c.id < 0) return;
                     remove.mutate(c.id);

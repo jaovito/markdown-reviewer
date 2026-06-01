@@ -146,8 +146,10 @@ export function InlineThreadCard({
   //   - Submitted/synced head (has githubId) → posts to GitHub.
   //   - Draft head (no githubId)             → stacks another local draft.
   // The card stays out of that decision; it just enables the composer
-  // whenever the parent provides a handler and the head is reachable.
-  const canReply = Boolean(onReplySubmit) && !isHidden;
+  // whenever the parent provides a handler. Hidden groups still allow
+  // reply: the new draft surfaces the conversation again because it
+  // isn't itself hidden, so the "all hidden" group collapse drops.
+  const canReply = Boolean(onReplySubmit);
   const range = isRange(head.anchor);
   const avatarBgVar = range ? "--comment-avatar-range-bg" : "--comment-avatar-bg";
   const cardBorderClass = range

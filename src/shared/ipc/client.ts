@@ -73,4 +73,27 @@ export const ipc = {
     submitReview: (repoPath: string, prNumber: number, commentIds: number[]) =>
       call("submit_review", { repoPath, prNumber, commentIds }),
   },
+  sync: {
+    refresh(repoPath: string, prNumber: number, headSha: string) {
+      return call("refresh_remote_comments", { repoPath, prNumber, headSha });
+    },
+    getCached(repoPath: string, prNumber: number) {
+      return call("get_cached_remote_threads", { repoPath, prNumber });
+    },
+    reply(repoPath: string, prNumber: number, inReplyToCommentId: number, body: string) {
+      return call("reply_remote_thread", { repoPath, prNumber, inReplyToCommentId, body });
+    },
+    edit(repoPath: string, commentId: number, body: string) {
+      return call("edit_remote_comment", { repoPath, commentId, body });
+    },
+    delete(repoPath: string, commentId: number) {
+      return call("delete_remote_comment", { repoPath, commentId });
+    },
+    resolve(repoPath: string, threadId: string) {
+      return call("resolve_remote_thread", { repoPath, threadId });
+    },
+    reopen(repoPath: string, threadId: string) {
+      return call("reopen_remote_thread", { repoPath, threadId });
+    },
+  },
 };

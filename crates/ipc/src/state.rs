@@ -2,6 +2,7 @@ use markdown_reviewer_core::application::comments::Comments;
 use markdown_reviewer_core::application::files::Files;
 use markdown_reviewer_core::application::pull_requests::PullRequests;
 use markdown_reviewer_core::application::repo_selection::RepoSelection;
+use markdown_reviewer_core::application::sync::Sync;
 
 /// Tauri managed state. Clone-on-access: every member is `Arc`-wrapped inside
 /// the use-case bundles, so cloning is cheap.
@@ -11,4 +12,5 @@ pub struct AppState {
     pub pull_requests: PullRequests,
     pub files: Files,
     pub comments: Comments,
+    pub sync: Sync,
 }

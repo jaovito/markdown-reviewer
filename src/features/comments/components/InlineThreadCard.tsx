@@ -1,7 +1,14 @@
-import type { CommentAnchor, CommentState, ReviewComment } from "@/shared/ipc/contract";
+import type {
+  CommentAnchor,
+  CommentState,
+  RemoteComment,
+  ReviewComment,
+} from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import { Textarea } from "@/shared/ui/textarea";
 import { CheckIcon, EyeIcon, MessageSquareIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGhUser } from "../hooks/useGhUser";
 
@@ -14,10 +21,26 @@ interface InlineThreadCardProps {
   onHide?: (comment: ReviewComment) => void;
   /** Restores a hidden comment back to `submitted`/`draft` via the parent. */
   onUnhide?: (comment: ReviewComment) => void;
-  onReply?: (head: ReviewComment) => void;
+  /**
+   * Posts a reply to the remote thread that owns `head`. When omitted (or
+   * when `head` has no `githubId`), the Reply button is hidden — drafts
+   * don't have a remote thread yet, and replying without a sync handler
+   * would just create another local-only draft with no anchor to the
+   * conversation.
+   */
+  onReplySubmit?: (head: ReviewComment, body: string) => Promise<void> | void;
+  /** Disables the reply composer while the parent's mutation is in flight. */
+  replyPending?: boolean;
   onDelete?: (comment: ReviewComment) => void;
   /** Click on the count badge — opens the stacked view in the threads panel. */
   onShowStack?: (head: ReviewComment) => void;
+  /**
+   * Remote-only replies that belong to the same GitHub thread as the head
+   * comment (matched via `head.githubId`). Rendered after the local comment
+   * list so the inline conversation mirrors what shows up in the right-rail
+   * GitHub-threads card.
+   */
+  remoteReplies?: RemoteComment[];
 }
 
 function isRange(anchor: CommentAnchor): boolean {
@@ -92,18 +115,41 @@ export function InlineThreadCard({
   onReopen,
   onHide,
   onUnhide,
-  onReply,
+  onReplySubmit,
+  replyPending = false,
   onDelete,
   onShowStack,
+  remoteReplies,
 }: InlineThreadCardProps) {
   const { t } = useTranslation();
   const ghUser = useGhUser();
   const currentUser = ghUser.data ?? null;
   const isOwn = (c: ReviewComment) => Boolean(currentUser && c.author === currentUser);
   const head = comments[0];
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
   if (!head) return null;
   const isResolved = head.state === "resolved";
   const isHidden = head.state === "hidden";
+  // Drop any remote reply that is already represented by a local row — we
+  // mirror Phase 6's pane-side dedupe (githubId ↔ commentId) so a reply the
+  // user just made via this card doesn't render twice.
+  const localGithubIds = new Set<number>();
+  for (const c of comments) {
+    if (c.githubId !== null) localGithubIds.add(c.githubId);
+  }
+  const replies = (remoteReplies ?? []).filter((r) => !localGithubIds.has(r.commentId));
+  // Reply is meaningful only when there's a real GitHub thread to attach the
+  // reply to. Drafts don't qualify yet — they'll get a remote thread on the
+  // next "Finish review".
+  // Reply works in two modes — the parent's `onReplySubmit` decides which:
+  //   - Submitted/synced head (has githubId) → posts to GitHub.
+  //   - Draft head (no githubId)             → stacks another local draft.
+  // The card stays out of that decision; it just enables the composer
+  // whenever the parent provides a handler. Hidden groups still allow
+  // reply: the new draft surfaces the conversation again because it
+  // isn't itself hidden, so the "all hidden" group collapse drops.
+  const canReply = Boolean(onReplySubmit);
   const range = isRange(head.anchor);
   const avatarBgVar = range ? "--comment-avatar-range-bg" : "--comment-avatar-bg";
   const cardBorderClass = range
@@ -213,14 +259,37 @@ export function InlineThreadCard({
         </div>
       ))}
 
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <button
-          type="button"
-          onClick={() => onReply?.(head)}
-          className="text-[12px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+      {replies.map((r) => (
+        <div
+          key={`remote-${r.commentId}`}
+          className="mt-1 border-[hsl(var(--border))] border-t px-1 pt-2 text-[12px] leading-snug text-[hsl(var(--foreground))]/85"
         >
-          {t("comments.thread.reply")}
-        </button>
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-[11px] font-semibold text-[hsl(var(--foreground))]">
+                {r.author}
+              </p>
+              <p className="whitespace-pre-wrap">{r.body}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <div className="flex items-center justify-between gap-2 pt-1">
+        {canReply ? (
+          <button
+            type="button"
+            onClick={() => {
+              setReplyOpen((v) => !v);
+              if (replyOpen) setReplyBody("");
+            }}
+            className="text-[12px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          >
+            {replyOpen ? t("sync.actions.cancel") : t("comments.thread.reply")}
+          </button>
+        ) : (
+          <span />
+        )}
         <div className="flex items-center gap-2">
           {isResolved ? (
             <Button
@@ -278,6 +347,46 @@ export function InlineThreadCard({
           )}
         </div>
       </div>
+
+      {replyOpen && canReply ? (
+        <form
+          className="flex flex-col gap-2 border-t border-[hsl(var(--border))] pt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = replyBody.trim();
+            if (!trimmed) return;
+            const result = onReplySubmit?.(head, trimmed);
+            const close = () => {
+              setReplyBody("");
+              setReplyOpen(false);
+            };
+            if (result && typeof (result as Promise<unknown>).then === "function") {
+              (result as Promise<unknown>).then(close).catch(() => {
+                /* error surfaced upstream; keep composer open so user can retry */
+              });
+            } else {
+              close();
+            }
+          }}
+        >
+          <Textarea
+            value={replyBody}
+            onChange={(e) => setReplyBody(e.target.value)}
+            placeholder={t("sync.thread.replyPlaceholder")}
+            rows={2}
+            disabled={replyPending}
+          />
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={replyPending || replyBody.trim().length === 0}
+            >
+              {t("sync.actions.send")}
+            </Button>
+          </div>
+        </form>
+      ) : null}
     </div>
   );
 }

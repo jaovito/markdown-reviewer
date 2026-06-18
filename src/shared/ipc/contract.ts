@@ -136,6 +136,50 @@ export interface ReviewSubmissionResult {
   allSubmitted: boolean;
 }
 
+export type ThreadState = "open" | "resolved";
+
+export type MappingStatus =
+  | { kind: "mapped" }
+  | { kind: "outdated"; reason: string }
+  | { kind: "fileMissing" }
+  | { kind: "lineMoved" }
+  | { kind: "ambiguous" };
+
+export interface RemoteComment {
+  commentId: number;
+  author: string;
+  authorAvatarUrl: string | null;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  viewerCanUpdate: boolean;
+  viewerCanDelete: boolean;
+  htmlUrl: string;
+}
+
+export interface RemoteThread {
+  threadId: string;
+  path: string;
+  originalCommitId: string;
+  line: number | null;
+  startLine: number | null;
+  originalLine: number;
+  originalStartLine: number | null;
+  state: ThreadState;
+  isOutdated: boolean;
+  viewerCanResolve: boolean;
+  viewerCanUnresolve: boolean;
+  comments: RemoteComment[];
+  anchor: CommentAnchor | null;
+  mappingStatus: MappingStatus;
+}
+
+export interface RefreshResult {
+  threads: RemoteThread[];
+  unmapped: RemoteThread[];
+  refreshedAtMs: number;
+}
+
 export type AppError =
   | { kind: "invalidPath"; data: { path: string } }
   | { kind: "notAGitRepo"; data: { path: string } }
@@ -205,6 +249,34 @@ export interface Commands {
   submit_review: {
     args: { repoPath: string; prNumber: number; commentIds: number[] };
     result: ReviewSubmissionResult;
+  };
+  refresh_remote_comments: {
+    args: { repoPath: string; prNumber: number; headSha: string };
+    result: RefreshResult;
+  };
+  get_cached_remote_threads: {
+    args: { repoPath: string; prNumber: number };
+    result: RefreshResult | null;
+  };
+  reply_remote_thread: {
+    args: { repoPath: string; prNumber: number; inReplyToCommentId: number; body: string };
+    result: RemoteComment;
+  };
+  edit_remote_comment: {
+    args: { repoPath: string; commentId: number; body: string };
+    result: RemoteComment;
+  };
+  delete_remote_comment: {
+    args: { repoPath: string; commentId: number };
+    result: null;
+  };
+  resolve_remote_thread: {
+    args: { repoPath: string; threadId: string };
+    result: RemoteThread;
+  };
+  reopen_remote_thread: {
+    args: { repoPath: string; threadId: string };
+    result: RemoteThread;
   };
 }
 

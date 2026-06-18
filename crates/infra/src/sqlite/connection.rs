@@ -19,6 +19,10 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "0003_local_comments",
         include_str!("migrations/0003_local_comments.sql"),
     ),
+    (
+        "0004_remote_threads_cache",
+        include_str!("migrations/0004_remote_threads_cache.sql"),
+    ),
 ];
 
 pub fn open_and_migrate(path: &Path) -> AppResult<Db> {

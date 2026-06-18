@@ -5,7 +5,7 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { scrollToAnchorLine } from "../../lib/scrollToAnchor";
+import { useNavigateToComment } from "../../lib/navigateToComment";
 import { ThreadAnchorGroup } from "./ThreadAnchorGroup";
 import { ThreadCard, type ThreadGroup } from "./ThreadCard";
 import { ThreadFileGroup } from "./ThreadFileGroup";
@@ -61,6 +61,7 @@ export function ThreadList({
   const selectedId = useSelectedThread((s) => s.selectedCommentId);
   const select = useSelectedThread((s) => s.select);
   const queryClient = useQueryClient();
+  const navigateToComment = useNavigateToComment(prNumber, currentFilePath);
   const anchorGroups = useMemo(() => groupByAnchor(comments), [comments]);
   const fileGroups = useMemo(() => groupByFile(anchorGroups), [anchorGroups]);
 
@@ -358,9 +359,7 @@ export function ThreadList({
             const head = anchor?.comments[0];
             if (head) {
               select(head.id);
-              if (head.filePath === currentFilePath) {
-                scrollToAnchorLine(getAnchorScrollLine(head));
-              }
+              navigateToComment(head.filePath, getAnchorScrollLine(head));
             }
           }
           break;
@@ -383,7 +382,7 @@ export function ThreadList({
       hideFilePath,
       anchorGroups,
       select,
-      currentFilePath,
+      navigateToComment,
     ],
   );
 
@@ -465,9 +464,7 @@ export function ThreadList({
                 onSelect={(comment) => {
                   setActiveId(cId);
                   select(comment.id);
-                  if (comment.filePath === currentFilePath) {
-                    scrollToAnchorLine(getAnchorScrollLine(comment));
-                  }
+                  navigateToComment(comment.filePath, getAnchorScrollLine(comment));
                 }}
                 onReopen={onReopen}
               />

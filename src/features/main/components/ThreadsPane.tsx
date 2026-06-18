@@ -1,4 +1,5 @@
 import { usePullRequestComments } from "@/features/comments/hooks/usePullRequestComments";
+import { RemoteThreadCard, UnmappedThreadsSection, useRemoteThreads } from "@/features/sync";
 import { ipc } from "@/shared/ipc/client";
 import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
@@ -11,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigateToComment } from "../lib/navigateToComment";
 import { type FilterableState, ThreadFilterBar } from "./threads/ThreadFilterBar";
 import { ThreadList } from "./threads/ThreadList";
 
@@ -35,6 +37,10 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
 
   const allComments = query.data ?? [];
 
+  // Remote threads — only enabled when we have both repoPath and prNumber.
+  const remote = useRemoteThreads({ repoPath, prNumber, headSha: sha });
+  const remoteData = remote.data;
+
   // When no file is selected, force the "all files" view so the user still sees
   // every PR-level thread instead of an empty pane.
   const effectiveScope: Scope = filePath ? scope : "allFiles";
@@ -50,6 +56,40 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
     () => partitionByFilter(scopedComments, filter),
     [scopedComments, filter],
   );
+
+  // Remote threads scoped to the current file (or all files).
+  const remoteThreads = useMemo(() => {
+    if (!remoteData) return [];
+    if (effectiveScope === "currentFile" && filePath) {
+      return remoteData.threads.filter((t) => t.path === filePath);
+    }
+    return remoteData.threads;
+  }, [remoteData, effectiveScope, filePath]);
+
+  // Unmapped threads (no line anchor found in current head), scoped similarly.
+  const unmapped = useMemo(() => {
+    if (!remoteData) return [];
+    if (effectiveScope === "currentFile" && filePath) {
+      return remoteData.unmapped.filter((t) => t.path === filePath);
+    }
+    return remoteData.unmapped;
+  }, [remoteData, effectiveScope, filePath]);
+
+  // Drop local comments whose githubId matches a remote thread comment — they
+  // are already represented by the RemoteThreadCard and would be duplicates.
+  // Includes both mapped and unmapped threads: a local "submitted" comment
+  // whose remote twin lives on an unmapped thread would otherwise show twice
+  // (once in the local list, once under the Unmapped section).
+  const dedupedVisible = useMemo(() => {
+    const remoteCommentIds = new Set<number>();
+    const allThreads = remoteData ? [...remoteData.threads, ...remoteData.unmapped] : remoteThreads;
+    for (const t of allThreads) {
+      for (const c of t.comments) {
+        remoteCommentIds.add(c.commentId);
+      }
+    }
+    return visible.filter((v) => v.githubId === null || !remoteCommentIds.has(v.githubId));
+  }, [visible, remoteData, remoteThreads]);
 
   // "Hide all" applies to the threads currently surfaced in the pane (under
   // the active scope + filter). Comments already `hidden`, `resolved`, or
@@ -84,6 +124,7 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
   );
 
   const canHideAll = !hideAll.isPending && hideableIds.length > 0;
+  const navigateToComment = useNavigateToComment(prNumber, filePath);
 
   return (
     <aside className="flex h-full w-[336px] shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
@@ -137,7 +178,7 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
           </Button>
         </div>
       </header>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="px-3 pb-4 pt-1">
           {query.isError && query.error ? (
             <Alert tone="destructive">
@@ -151,16 +192,43 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
               {t("main.threads.empty")}
             </p>
           ) : (
-            <ThreadList
-              comments={visible}
-              isLoading={query.isLoading}
-              hideFilePath={effectiveScope === "currentFile"}
-              hiddenCount={hiddenCount}
-              prNumber={prNumber}
-              currentFilePath={filePath}
-              repoPath={repoPath}
-              sha={sha}
-            />
+            <>
+              {remote.error ? (
+                <Alert tone="destructive" className="mb-2">
+                  <div className="min-w-0 flex-1">
+                    <AlertTitle>{t("sync.errors.refreshFailedTitle")}</AlertTitle>
+                    <AlertDescription>{t("sync.errors.refreshFailedDescription")}</AlertDescription>
+                  </div>
+                </Alert>
+              ) : null}
+              {repoPath && remoteThreads.length > 0 ? (
+                <section className="mb-3 flex flex-col gap-2">
+                  <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+                    {t("sync.section.remoteHeading")}
+                  </h3>
+                  {remoteThreads.map((thread) => (
+                    <RemoteThreadCard
+                      key={thread.threadId}
+                      thread={thread}
+                      repoPath={repoPath}
+                      prNumber={prNumber}
+                      onNavigate={navigateToComment}
+                    />
+                  ))}
+                </section>
+              ) : null}
+              <ThreadList
+                comments={dedupedVisible}
+                isLoading={query.isLoading}
+                hideFilePath={effectiveScope === "currentFile"}
+                hiddenCount={hiddenCount}
+                prNumber={prNumber}
+                currentFilePath={filePath}
+                repoPath={repoPath}
+                sha={sha}
+              />
+              <UnmappedThreadsSection threads={unmapped} />
+            </>
           )}
         </div>
       </ScrollArea>

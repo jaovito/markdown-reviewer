@@ -1,5 +1,6 @@
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
@@ -45,6 +46,7 @@ const schema = {
 
 const processor = unified()
   .use(remarkParse)
+  .use(remarkGfm)
   .use(remarkSourceLine)
   .use(remarkRehype, { allowDangerousHtml: false })
   .use(rehypeSanitize, schema)

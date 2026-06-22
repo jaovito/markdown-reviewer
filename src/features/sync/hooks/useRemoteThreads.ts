@@ -1,6 +1,7 @@
 import { ipc } from "@/shared/ipc/client";
 import type { RefreshResult } from "@/shared/ipc/contract";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 interface Options {
   repoPath?: string;
@@ -8,18 +9,24 @@ interface Options {
   headSha?: string;
 }
 
+/** How often the comments pane polls GitHub for new/updated review threads. */
+export const REMOTE_THREADS_REFRESH_INTERVAL_MS = 10_000;
+
 export function remoteThreadsKey(repoPath: string, prNumber: number) {
   return ["remote-threads", repoPath, prNumber] as const;
 }
 
 /**
- * Loads remote review threads for `(repoPath, prNumber)`. On mount we read
- * the SQLite cache; the user must click Refresh to hit GitHub. Both the
- * initial cache read and the manual refresh return the same `RefreshResult`
- * shape so the consumer doesn't care which path produced it.
+ * Loads remote review threads for `(repoPath, prNumber)`. Comments are pulled
+ * from GitHub automatically: a fresh fetch fires as soon as the document opens
+ * (once `headSha` is known) and then every
+ * `REMOTE_THREADS_REFRESH_INTERVAL_MS` while the window is focused. The SQLite
+ * cache is used only as a fast fallback before `headSha` resolves. Both
+ * consumers (header + threads pane) share one query by key, so React Query
+ * dedupes the round-trips — there is no double polling. `isFetching` reflects
+ * the live GitHub call so the Refresh button can spin during every update.
  */
 export function useRemoteThreads({ repoPath, prNumber, headSha }: Options) {
-  const qc = useQueryClient();
   const enabled = Boolean(repoPath && prNumber !== undefined);
   const query = useQuery<RefreshResult | null>({
     queryKey:
@@ -27,21 +34,35 @@ export function useRemoteThreads({ repoPath, prNumber, headSha }: Options) {
         ? remoteThreadsKey(repoPath, prNumber)
         : ["remote-threads", "disabled"],
     enabled,
-    staleTime: Number.POSITIVE_INFINITY, // never auto-refetch — refresh is explicit
+    staleTime: REMOTE_THREADS_REFRESH_INTERVAL_MS,
+    refetchInterval: REMOTE_THREADS_REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!repoPath || prNumber === undefined) return null;
-      const result = await ipc.sync.getCached(repoPath, prNumber);
-      if (!result.ok) throw result.error;
-      return result.value;
+      // Hit GitHub when we know the head sha; otherwise fall back to the
+      // cache so the pane paints instantly while the PR detail still loads.
+      if (headSha) {
+        const result = await ipc.sync.refresh(repoPath, prNumber, headSha);
+        if (!result.ok) throw result.error;
+        return result.value;
+      }
+      const cached = await ipc.sync.getCached(repoPath, prNumber);
+      if (!cached.ok) throw cached.error;
+      return cached.value;
     },
   });
 
+  // `headSha` isn't part of the query key (it resolves asynchronously, after
+  // the first cache paint), so pull a fresh GitHub copy the moment it lands.
+  // Concurrent refetches across the two consumers dedupe to a single request.
+  const { refetch } = query;
+  useEffect(() => {
+    if (enabled && headSha) void refetch();
+  }, [enabled, headSha, refetch]);
+
   const refresh = async (): Promise<RefreshResult | null> => {
-    if (!repoPath || prNumber === undefined || !headSha) return null;
-    const result = await ipc.sync.refresh(repoPath, prNumber, headSha);
-    if (!result.ok) throw result.error;
-    qc.setQueryData(remoteThreadsKey(repoPath, prNumber), result.value);
-    return result.value;
+    const result = await refetch();
+    return result.data ?? null;
   };
 
   return { ...query, refresh };

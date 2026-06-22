@@ -17,7 +17,7 @@ How the pieces fit together (folder layout, dependency rules, IPC contract, pers
 - The rendered Markdown preview is the main screen, not the raw diff.
 - Comments are visually anchored to the commented snippet.
 - Local-first: comments work without hitting the GitHub API until an explicit submit.
-- Submit and remote refresh are always explicit; no automatic polling.
+- Submitting a review is always explicit. Remote comments auto-refresh when a document opens and poll every 10s while the window is focused, with a manual Refresh always available.
 - Hidden and resolved comments remain traceable via discreet markers.
 - UI must be comfortable for non-technical users.
 
@@ -59,7 +59,7 @@ MVP covers phases 1–6. Phase 7 (repo cloning / search) is out of the initial M
 
 ## Out of MVP
 
-Cloning repos from the app, global org-wide repo search, providers beyond GitHub, offline review without a local repo, real-time collaboration, background auto-sync.
+Cloning repos from the app, global org-wide repo search, providers beyond GitHub, offline review without a local repo, real-time collaboration. (Remote comments do auto-refresh on open and on a 10s poll — see Product principles — but there is no broader background sync of PR/file state.)
 
 ---
 

@@ -260,6 +260,15 @@
       "localOnlyHint": "The comment is marked as {{state}} locally, but the GitHub thread didn't sync. The next refresh will reconcile."
     }
   },
+  "markdownPreview": {
+    "alerts": {
+      "note": "Note",
+      "tip": "Tip",
+      "important": "Important",
+      "warning": "Warning",
+      "caution": "Caution"
+    }
+  },
   "errors": {
     "invalidPath": {
       "title": "Invalid folder",

@@ -71,7 +71,9 @@ export function RemoteCommentBody({ comment, onEdit, onDelete }: Props) {
           </div>
         ) : null}
       </header>
-      <p className="whitespace-pre-wrap text-sm text-[hsl(var(--foreground))]">{comment.body}</p>
+      <p className="whitespace-pre-wrap break-words text-sm text-[hsl(var(--foreground))]">
+        {comment.body}
+      </p>
     </article>
   );
 }

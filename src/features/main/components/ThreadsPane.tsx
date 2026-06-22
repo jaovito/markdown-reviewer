@@ -5,12 +5,17 @@ import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { cn } from "@/shared/lib/cn";
 import { useThreadsFilter } from "@/shared/stores/useThreadsFilter";
+import {
+  THREADS_PANE_MAX_WIDTH,
+  THREADS_PANE_MIN_WIDTH,
+  useThreadsPaneWidth,
+} from "@/shared/stores/useThreadsPaneWidth";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigateToComment } from "../lib/navigateToComment";
 import { type FilterableState, ThreadFilterBar } from "./threads/ThreadFilterBar";
@@ -34,6 +39,39 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
   const toggleFilter = useThreadsFilter((s) => s.toggle);
   const [scope, setScope] = useState<Scope>("currentFile");
   const queryClient = useQueryClient();
+
+  // Resizable pane — mirrors SidebarShell (the left files panel). The handle
+  // sits on the LEFT edge, so dragging left grows the pane: width is measured
+  // from the fixed right edge inward (`right - clientX`).
+  const width = useThreadsPaneWidth((s) => s.width);
+  const setWidth = useThreadsPaneWidth((s) => s.setWidth);
+  const asideRef = useRef<HTMLElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const onResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsResizing(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const onMove = (e: PointerEvent) => {
+      const right = asideRef.current?.getBoundingClientRect().right ?? 0;
+      setWidth(right - e.clientX);
+    };
+    const onUp = () => setIsResizing(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, setWidth]);
 
   const allComments = query.data ?? [];
 
@@ -127,7 +165,27 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
   const navigateToComment = useNavigateToComment(prNumber, filePath);
 
   return (
-    <aside className="flex h-full w-[336px] shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+    <aside
+      ref={asideRef}
+      className="relative flex h-full shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]"
+      style={{ width }}
+    >
+      <div
+        role="separator"
+        tabIndex={0}
+        aria-orientation="vertical"
+        aria-label={t("main.threads.resizeAria")}
+        aria-valuenow={width}
+        aria-valuemin={THREADS_PANE_MIN_WIDTH}
+        aria-valuemax={THREADS_PANE_MAX_WIDTH}
+        onPointerDown={onResizeStart}
+        onKeyDown={(e) => {
+          // The handle is on the left edge, so ArrowLeft grows the pane.
+          if (e.key === "ArrowLeft") setWidth(width + 16);
+          else if (e.key === "ArrowRight") setWidth(width - 16);
+        }}
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-[hsl(var(--accent))] focus-visible:bg-[hsl(var(--accent))] focus-visible:outline-none"
+      />
       <header className="flex flex-col gap-3 px-4 pb-3 pt-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-[hsl(var(--foreground))]">

@@ -95,6 +95,7 @@
     "threads": {
       "title": "Review threads",
       "subtitle": "Comments attached to rendered Markdown ranges.",
+      "resizeAria": "Resize comments panel",
       "currentFile": "Current file",
       "allFiles": "All files in PR",
       "loading": "Loading comments…",

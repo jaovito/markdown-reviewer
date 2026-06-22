@@ -35,7 +35,9 @@ export function useRemoteThreads({ repoPath, prNumber, headSha }: Options) {
         : ["remote-threads", "disabled"],
     enabled,
     staleTime: REMOTE_THREADS_REFRESH_INTERVAL_MS,
-    refetchInterval: REMOTE_THREADS_REFRESH_INTERVAL_MS,
+    // Only poll once we can actually hit GitHub (headSha known); before that
+    // the queryFn would just re-read the local cache, which is pointless.
+    refetchInterval: headSha ? REMOTE_THREADS_REFRESH_INTERVAL_MS : false,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!repoPath || prNumber === undefined) return null;

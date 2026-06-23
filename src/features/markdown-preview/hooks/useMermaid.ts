@@ -2,6 +2,9 @@ import { i18next } from "@/shared/i18n";
 import { type RefObject, useEffect, useState } from "react";
 
 let mermaidIdCounter = 0;
+// Unique per module load so render IDs (and their orphan-cleanup lookups)
+// can't collide with leftovers from a previous Vite HMR cycle in dev.
+const MERMAID_ID_SEED = Math.random().toString(36).slice(2, 8);
 
 /** Tracks the OS color scheme so diagrams re-render when the theme flips. */
 function usePrefersDark(): boolean {
@@ -68,7 +71,7 @@ export function useMermaid(containerRef: RefObject<HTMLElement | null>, html: st
           theme: dark ? "dark" : "default",
           fontFamily: "inherit",
         });
-        render = mermaid.render;
+        render = mermaid.render.bind(mermaid);
       } catch {
         // The library itself failed to load — keep the source visible.
         for (const node of pending) {
@@ -85,7 +88,7 @@ export function useMermaid(containerRef: RefObject<HTMLElement | null>, html: st
           node.dataset.mermaidSource = node.textContent ?? "";
         }
         const source = node.dataset.mermaidSource ?? "";
-        const id = `mermaid-${themeKey}-${mermaidIdCounter++}`;
+        const id = `mermaid-${MERMAID_ID_SEED}-${themeKey}-${mermaidIdCounter++}`;
         try {
           const { svg } = await render(id, source);
           if (cancelled) return;

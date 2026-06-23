@@ -6,14 +6,17 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
+import { rehypeMermaid } from "./rehypeMermaid";
 import { type AlertType, remarkGithubAlerts } from "./remarkGithubAlerts";
 import { remarkSourceLine } from "./remarkSourceLine";
 
 /**
  * Sanitize schema extended to allow `data-source-line` on common block
  * elements (the #12 diff gutter anchors against rendered nodes) plus the
- * alert wrapper classes/attributes emitted by `remarkGithubAlerts`. Phase 5
- * keeps this allowlist tight — no `svg`/`path`; alert icons are pure CSS.
+ * alert wrapper classes/attributes emitted by `remarkGithubAlerts`, plus the
+ * `mermaid` wrapper class (`rehypeMermaid`). Phase 5 keeps this allowlist
+ * tight — no `svg`/`path`; alert icons are pure CSS and Mermaid SVG is
+ * injected client-side (post-sanitize) by the library itself.
  */
 const ANCHOR_TAGS = [
   "p",
@@ -57,7 +60,7 @@ const schema: Schema = {
       ...((defaultSchema.attributes?.div as string[] | undefined) ?? []),
       "data-source-line",
       "data-alert-type",
-      ["className", ...ALERT_CLASSNAMES],
+      ["className", ...ALERT_CLASSNAMES, "mermaid"],
     ],
     p: [...withSourceLine("p"), "data-alert-type", ["className", "markdown-alert-title"]],
   },
@@ -71,6 +74,7 @@ const processor = unified()
   .use(remarkSourceLine)
   .use(remarkGithubAlerts, { label: labelForAlert })
   .use(remarkRehype, { allowDangerousHtml: false })
+  .use(rehypeMermaid)
   .use(rehypeSanitize, schema)
   .use(rehypeStringify);
 

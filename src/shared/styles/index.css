@@ -436,3 +436,38 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* Mermaid diagrams. `rehypeMermaid` emits `<div class="mermaid">SOURCE</div>`
+   and the `useMermaid` hook swaps the source for an SVG client-side. Until it
+   renders (marked by `data-mermaid-theme`), collapse the raw source text so it
+   doesn't flash; the injected SVG carries its own colors and sizing. */
+.prose-styles div.mermaid {
+  display: flex;
+  justify-content: center;
+  margin-block: 1.25em;
+}
+.prose-styles div.mermaid:not([data-mermaid-theme]) {
+  color: transparent;
+  font-size: 0;
+}
+.prose-styles div.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+/* Localized fallback shown when a diagram fails to parse. */
+.prose-styles div.mermaid .mermaid-error {
+  width: 100%;
+  border: 1px solid hsl(var(--alert-caution));
+  border-radius: 6px;
+  background: hsl(var(--alert-caution) / 0.06);
+  padding: 0.6em 1em;
+}
+.prose-styles div.mermaid .mermaid-error-title {
+  margin: 0 0 0.4em;
+  font-weight: 600;
+  font-size: 0.85em;
+  color: hsl(var(--alert-caution));
+}
+.prose-styles div.mermaid .mermaid-error pre {
+  margin: 0;
+}

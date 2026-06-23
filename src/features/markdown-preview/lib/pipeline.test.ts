@@ -74,3 +74,20 @@ test("sanitization drops arbitrary div classes but keeps markdown-alert", () => 
   const html = renderMarkdown("> [!WARNING]\n> careful");
   expect(html).toContain('class="markdown-alert markdown-alert-warning"');
 });
+
+test("converts a mermaid code fence into a bare div.mermaid with the source", () => {
+  const html = renderMarkdown("```mermaid\ngraph TD;\n  A-->B;\n```");
+  // Exact tag — only the className, so no data-source-line and no other attrs.
+  expect(html).toContain('<div class="mermaid">');
+  expect(html).toContain("graph TD;");
+  // No longer a fenced code block.
+  expect(html).not.toContain("language-mermaid");
+  expect(html).not.toContain("<pre");
+});
+
+test("leaves non-mermaid code fences as <pre><code>", () => {
+  const html = renderMarkdown("```js\nconst a = 1;\n```");
+  expect(html).toContain("<pre");
+  expect(html).toContain("<code");
+  expect(html).not.toContain('class="mermaid"');
+});

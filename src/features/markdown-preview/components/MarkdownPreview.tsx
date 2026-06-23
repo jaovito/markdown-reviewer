@@ -4,6 +4,7 @@ import type { CommentAnchor, DiffHunk } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useMermaid } from "../hooks/useMermaid";
 import { renderMarkdown } from "../lib/pipeline";
 import { DiffGutter } from "./DiffGutter";
 
@@ -29,6 +30,8 @@ export function MarkdownPreview({
 }: MarkdownPreviewProps) {
   const html = useMemo(() => renderMarkdown(source), [source]);
   const articleRef = useRef<HTMLElement>(null);
+  // Render any Mermaid diagrams in the freshly-mounted HTML (client-side).
+  useMermaid(articleRef, html);
   const commentsEnabled = Boolean(prNumber && filePath && headSha);
   const fileComments = useFileComments({ prNumber, filePath });
   const comments = fileComments.data ?? [];

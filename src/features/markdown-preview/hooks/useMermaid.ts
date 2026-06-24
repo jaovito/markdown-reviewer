@@ -48,7 +48,11 @@ function renderFallback(node: HTMLElement, source: string): void {
  * original source is cached on `data-mermaid-source` so a theme flip can
  * re-render from it (the node's content is SVG by then).
  */
-export function useMermaid(containerRef: RefObject<HTMLElement | null>, html: string): void {
+export function useMermaid(
+  containerRef: RefObject<HTMLElement | null>,
+  html: string,
+  onOpen?: (svg: string) => void,
+): void {
   const dark = usePrefersDark();
   // biome-ignore lint/correctness/useExhaustiveDependencies: `html` is an intentional re-run trigger — new diagram nodes appear when the rendered HTML changes; its value isn't read in the body.
   useEffect(() => {
@@ -93,6 +97,13 @@ export function useMermaid(containerRef: RefObject<HTMLElement | null>, html: st
           const { svg } = await render(id, source);
           if (cancelled) return;
           node.innerHTML = svg;
+          if (onOpen) {
+            // Click a rendered diagram to open the zoom/pan lightbox. Use the
+            // onclick property (not addEventListener) so a theme re-render
+            // overwrites rather than stacks handlers.
+            node.style.cursor = "zoom-in";
+            node.onclick = () => onOpen(node.innerHTML);
+          }
         } catch {
           if (cancelled) return;
           // On a parse error Mermaid leaves a temporary "bomb" error element
@@ -108,5 +119,5 @@ export function useMermaid(containerRef: RefObject<HTMLElement | null>, html: st
     return () => {
       cancelled = true;
     };
-  }, [containerRef, html, dark]);
+  }, [containerRef, html, dark, onOpen]);
 }

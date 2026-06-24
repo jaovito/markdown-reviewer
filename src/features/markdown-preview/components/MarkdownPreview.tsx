@@ -2,11 +2,12 @@ import { InlineThreads, SelectionCommentOverlay, useFileComments } from "@/featu
 import { scrollToAnchorLine } from "@/features/main/lib/scrollToAnchor";
 import type { CommentAnchor, DiffHunk } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMermaid } from "../hooks/useMermaid";
 import { renderMarkdown } from "../lib/pipeline";
 import { DiffGutter } from "./DiffGutter";
+import { MermaidLightbox } from "./MermaidLightbox";
 
 interface MarkdownPreviewProps {
   source: string;
@@ -30,8 +31,12 @@ export function MarkdownPreview({
 }: MarkdownPreviewProps) {
   const html = useMemo(() => renderMarkdown(source), [source]);
   const articleRef = useRef<HTMLElement>(null);
-  // Render any Mermaid diagrams in the freshly-mounted HTML (client-side).
-  useMermaid(articleRef, html);
+  // Render any Mermaid diagrams in the freshly-mounted HTML (client-side);
+  // clicking one opens the zoom/pan lightbox.
+  const [zoomSvg, setZoomSvg] = useState<string | null>(null);
+  const openZoom = useCallback((svg: string) => setZoomSvg(svg), []);
+  const closeZoom = useCallback(() => setZoomSvg(null), []);
+  useMermaid(articleRef, html, openZoom);
   const commentsEnabled = Boolean(prNumber && filePath && headSha);
   const fileComments = useFileComments({ prNumber, filePath });
   const comments = fileComments.data ?? [];
@@ -81,6 +86,7 @@ export function MarkdownPreview({
           />
         </>
       ) : null}
+      {zoomSvg ? <MermaidLightbox svg={zoomSvg} onClose={closeZoom} /> : null}
     </div>
   );
 }

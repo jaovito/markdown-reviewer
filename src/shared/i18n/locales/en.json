@@ -270,7 +270,12 @@
       "caution": "Caution"
     },
     "mermaid": {
-      "error": "Couldn't render this Mermaid diagram. Showing its source instead."
+      "error": "Couldn't render this Mermaid diagram. Showing its source instead.",
+      "openAria": "Open diagram in fullscreen",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "reset": "Reset zoom",
+      "close": "Close"
     }
   },
   "errors": {

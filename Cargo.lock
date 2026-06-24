@@ -1862,7 +1862,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "markdown-reviewer-core"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "serde",
@@ -1876,7 +1876,7 @@ dependencies = [
 
 [[package]]
 name = "markdown-reviewer-desktop"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "fix-path-env",
  "markdown-reviewer-core",
@@ -1893,7 +1893,7 @@ dependencies = [
 
 [[package]]
 name = "markdown-reviewer-infra"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "markdown-reviewer-core",
@@ -1911,7 +1911,7 @@ dependencies = [
 
 [[package]]
 name = "markdown-reviewer-ipc"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "markdown-reviewer-core",
  "markdown-reviewer-infra",

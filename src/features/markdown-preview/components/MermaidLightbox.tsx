@@ -23,7 +23,9 @@ const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
 /**
  * Fullscreen overlay that shows a single Mermaid diagram with scroll/buttons
  * zoom and drag-to-pan. Opened by clicking a rendered diagram in the preview;
- * closed via the X button, Escape, or clicking the backdrop. The SVG is
+ * closed via the X button or Escape (NOT by clicking the diagram/backdrop —
+ * pointer capture during pan retargets the click, which would close it on any
+ * drag). The SVG is
  * Mermaid's own output (rendered under `securityLevel: "strict"`), so injecting
  * it here carries the same trust level as the inline diagram.
  */
@@ -123,12 +125,8 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
           <XIcon className="size-4" />
         </Button>
       </div>
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: clicking the empty stage (backdrop) closes; keyboard close is the global Escape handler above. */}
       <div
         className="mermaid-lightbox-stage"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

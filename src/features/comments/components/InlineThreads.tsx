@@ -321,6 +321,7 @@ export function InlineThreads({
         headSha,
         body: head.body,
         author: head.author,
+        avatarUrl: head.authorAvatarUrl,
         state: thread.state === "resolved" ? "resolved" : "submitted",
         anchor: thread.anchor,
         createdAt: Date.parse(head.createdAt) || 0,

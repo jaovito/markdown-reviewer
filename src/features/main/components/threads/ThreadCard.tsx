@@ -158,7 +158,7 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
                     </span>
                     <RelativeTime ms={c.createdAt} />
                   </div>
-                  <p className="whitespace-pre-wrap text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
+                  <p className="whitespace-pre-wrap break-words text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
                     {c.body}
                   </p>
                 </li>

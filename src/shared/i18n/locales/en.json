@@ -95,6 +95,7 @@
     "threads": {
       "title": "Review threads",
       "subtitle": "Comments attached to rendered Markdown ranges.",
+      "resizeAria": "Resize comments panel",
       "currentFile": "Current file",
       "allFiles": "All files in PR",
       "loading": "Loading comments…",
@@ -258,6 +259,23 @@
       "threadNotFoundOnReply": "Couldn't find this comment's GitHub thread. Click Refresh and try again.",
       "threadNotFoundOnResolve": "Couldn't find this comment's GitHub thread. Click Refresh and resolve again.",
       "localOnlyHint": "The comment is marked as {{state}} locally, but the GitHub thread didn't sync. The next refresh will reconcile."
+    }
+  },
+  "markdownPreview": {
+    "alerts": {
+      "note": "Note",
+      "tip": "Tip",
+      "important": "Important",
+      "warning": "Warning",
+      "caution": "Caution"
+    },
+    "mermaid": {
+      "error": "Couldn't render this Mermaid diagram. Showing its source instead.",
+      "openAria": "Open diagram in fullscreen",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "reset": "Reset zoom",
+      "close": "Close"
     }
   },
   "errors": {

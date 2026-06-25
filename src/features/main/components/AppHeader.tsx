@@ -4,6 +4,7 @@ import { useRepoPath } from "@/features/pull-requests/hooks/useRepoPath";
 import { useRemoteThreads } from "@/features/sync";
 import { ipc } from "@/shared/ipc/client";
 import { describeError, isAppError } from "@/shared/ipc/errors";
+import { Logo } from "@/shared/ui/Logo";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -89,9 +90,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-5">
       <div className="flex shrink-0 items-center gap-2.5">
-        <div className="flex size-7 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
-          <span className="text-[11px] font-bold">M</span>
-        </div>
+        <Logo className="size-7" />
         <span className="text-sm font-semibold tracking-tight">{t("app.brand")}</span>
       </div>
       <Separator orientation="vertical" className="h-5" />

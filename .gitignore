@@ -44,3 +44,12 @@ src-tauri/gen/schemas
 *.sqlite-shm
 *.sqlite-wal
 
+# Unused icon outputs from `bun run icon` — desktop MVP only (mobile/store
+# formats are regenerated on demand; we commit just the desktop set + source).
+src-tauri/icons/android/
+src-tauri/icons/ios/
+src-tauri/icons/Square*Logo.png
+src-tauri/icons/StoreLogo.png
+src-tauri/icons/64x64.png
+src-tauri/icons/.icon-source-1024.png
+

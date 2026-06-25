@@ -9,6 +9,7 @@
     "dev:web": "vite",
     "build:web": "vite build",
     "preview:web": "vite preview",
+    "icon": "bun scripts/generate-icon.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "lint": "biome lint .",
@@ -56,6 +57,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "sharp": "^0.35.2",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.8"

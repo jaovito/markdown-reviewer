@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Markdown Reviewer</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13243a"/>
+      <stop offset="1" stop-color="#0b1626"/>
+    </linearGradient>
+  </defs>
+  <!-- app tile -->
+  <rect width="512" height="512" rx="116" fill="url(#tile)"/>
+  <!-- review comment bubble -->
+  <path d="M150 132 H362 a52 52 0 0 1 52 52 V300 a52 52 0 0 1 -52 52 H250 l-66 60 v-60 H150 a52 52 0 0 1 -52 -52 V184 a52 52 0 0 1 52 -52 Z" fill="#2563eb"/>
+  <!-- markdown mark: M -->
+  <path d="M156 300 V196 l52 58 52 -58 V300" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- markdown mark: down arrow -->
+  <path d="M330 196 V286" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M300 256 L330 292 360 256" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

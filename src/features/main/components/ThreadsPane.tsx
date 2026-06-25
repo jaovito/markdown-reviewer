@@ -76,7 +76,9 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
   const allComments = query.data ?? [];
 
   // Remote threads — only enabled when we have both repoPath and prNumber.
-  const remote = useRemoteThreads({ repoPath, prNumber, headSha: sha });
+  // This pane owns the 10s background poll; other mounts of the hook (header,
+  // inline threads) read the shared query without starting their own timers.
+  const remote = useRemoteThreads({ repoPath, prNumber, headSha: sha, poll: true });
   const remoteData = remote.data;
 
   // When no file is selected, force the "all files" view so the user still sees
@@ -181,8 +183,14 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
         onPointerDown={onResizeStart}
         onKeyDown={(e) => {
           // The handle is on the left edge, so ArrowLeft grows the pane.
-          if (e.key === "ArrowLeft") setWidth(width + 16);
-          else if (e.key === "ArrowRight") setWidth(width - 16);
+          // preventDefault so the arrows only resize (no scroll/other shortcuts).
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            setWidth(width + 16);
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            setWidth(width - 16);
+          }
         }}
         className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-[hsl(var(--accent))] focus-visible:bg-[hsl(var(--accent))] focus-visible:outline-none"
       />

@@ -46,6 +46,13 @@ export const remarkGithubAlerts: Plugin<[RemarkGithubAlertsOptions?], Root> = (o
       // Strip the marker line from the body's first text node.
       firstInline.value = firstInline.value.slice(match[0].length);
 
+      // If the marker was the entire first paragraph (e.g. `> [!TIP]` with no
+      // body, or the body on a following blank-separated paragraph), that
+      // paragraph is now empty — drop it so the alert has no stray empty <p>.
+      if (firstInline.value === "" && firstChild.children.length === 1) {
+        node.children.shift();
+      }
+
       // Turn the blockquote into the alert wrapper, preserving prior hProperties.
       if (!node.data) node.data = {};
       const data = node.data as HData;

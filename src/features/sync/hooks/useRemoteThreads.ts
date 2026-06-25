@@ -7,6 +7,14 @@ interface Options {
   repoPath?: string;
   prNumber?: number;
   headSha?: string;
+  /**
+   * When true, THIS observer owns the background poll. `refetchInterval` is
+   * per-observer in TanStack Query (only concurrent in-flight fetches dedupe),
+   * and this hook is mounted by several components for the same query key — so
+   * enable `poll` in exactly one consumer to avoid stacking timers. Read-only
+   * subscribers still get the polled data via the shared query.
+   */
+  poll?: boolean;
 }
 
 /** How often the comments pane polls GitHub for new/updated review threads. */
@@ -19,14 +27,14 @@ export function remoteThreadsKey(repoPath: string, prNumber: number) {
 /**
  * Loads remote review threads for `(repoPath, prNumber)`. Comments are pulled
  * from GitHub automatically: a fresh fetch fires as soon as the document opens
- * (once `headSha` is known) and then every
+ * (once `headSha` is known) and then, for the single `poll` owner, every
  * `REMOTE_THREADS_REFRESH_INTERVAL_MS` while the window is focused. The SQLite
- * cache is used only as a fast fallback before `headSha` resolves. Both
- * consumers (header + threads pane) share one query by key, so React Query
- * dedupes the round-trips — there is no double polling. `isFetching` reflects
- * the live GitHub call so the Refresh button can spin during every update.
+ * cache is used only as a fast fallback before `headSha` resolves. All
+ * consumers share one query by key, so the polled data and `isFetching` (which
+ * drives the Refresh button spinner) are shared — only the `poll` owner runs
+ * the interval timer.
  */
-export function useRemoteThreads({ repoPath, prNumber, headSha }: Options) {
+export function useRemoteThreads({ repoPath, prNumber, headSha, poll = false }: Options) {
   const enabled = Boolean(repoPath && prNumber !== undefined);
   const query = useQuery<RefreshResult | null>({
     queryKey:
@@ -35,9 +43,10 @@ export function useRemoteThreads({ repoPath, prNumber, headSha }: Options) {
         : ["remote-threads", "disabled"],
     enabled,
     staleTime: REMOTE_THREADS_REFRESH_INTERVAL_MS,
-    // Only poll once we can actually hit GitHub (headSha known); before that
+    // Only the `poll` owner runs the interval (per-observer in TanStack Query),
+    // and only once we can actually hit GitHub (headSha known) — before that
     // the queryFn would just re-read the local cache, which is pointless.
-    refetchInterval: headSha ? REMOTE_THREADS_REFRESH_INTERVAL_MS : false,
+    refetchInterval: poll && headSha ? REMOTE_THREADS_REFRESH_INTERVAL_MS : false,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!repoPath || prNumber === undefined) return null;

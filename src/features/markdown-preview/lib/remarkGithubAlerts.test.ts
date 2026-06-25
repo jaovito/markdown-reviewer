@@ -54,10 +54,12 @@ test("does not match an unknown marker", () => {
   expect(html).not.toContain("markdown-alert");
 });
 
-test("renders an empty-body alert", () => {
+test("renders an empty-body alert without a stray empty paragraph", () => {
   const html = render("> [!TIP]");
   expect(html).toContain("markdown-alert-tip");
   expect(html).toContain("L:tip");
+  // The marker-only body paragraph is dropped — no empty <p></p>.
+  expect(html).not.toContain("<p></p>");
 });
 
 test("preserves an existing data-source-line on the wrapper", () => {

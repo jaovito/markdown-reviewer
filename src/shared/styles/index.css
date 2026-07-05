@@ -44,6 +44,20 @@ body {
     sans-serif;
 }
 
+/* Radix's ScrollArea.Viewport wraps its children in an internal
+   `display: table; min-width: 100%` div so it can measure the content's
+   natural size for the scrollbar. A table box sizes to its content's
+   preferred width regardless of the viewport's actual width, so any
+   unwrappable text anywhere inside silently widens the whole scroll area
+   instead of letting our flex/truncate children shrink to fit. Both of our
+   `ScrollArea` usages (file tree, threads pane) are vertical lists that
+   should fit their container, so force the wrapper back to a normal block —
+   `!important` is required to beat Radix's inline style. `[data-radix-scroll-area-viewport]`
+   is the attribute Radix itself documents/uses as the styling hook. */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+}
+
 /* Baseline Markdown preview styles. Phase 5 will revisit (GFM tables,
    syntax highlighting, callouts). Kept inline here so it ships without a
    typography plugin dependency. */
@@ -502,7 +516,6 @@ body {
   touch-action: none;
 }
 .mermaid-lightbox-content {
-  transform-origin: center center;
   will-change: transform;
 }
 .mermaid-lightbox-content svg {

@@ -136,10 +136,20 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
       >
         <div
           className="mermaid-lightbox-content"
-          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+        >
+          {/* `zoom` (not `transform: scale`) so the SVG is re-laid-out and
+              re-painted at each level instead of the browser stretching a
+              GPU texture rasterized at the natural size — the latter gets
+              blurrier the further you zoom in, regardless of the content
+              being vector. Panning still uses `transform: translate` above,
+              which doesn't need re-rasterization. */}
+          <div
+            style={{ zoom: scale }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
+        </div>
       </div>
     </div>,
     document.body,

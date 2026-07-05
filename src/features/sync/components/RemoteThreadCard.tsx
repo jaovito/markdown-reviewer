@@ -1,6 +1,7 @@
 import type { RemoteThread } from "@/shared/ipc/contract";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { TruncatedPath } from "@/shared/ui/truncated-path";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDeleteRemoteComment } from "../hooks/useDeleteRemoteComment";
@@ -74,11 +75,11 @@ export function RemoteThreadCard({ thread, repoPath, prNumber, onNavigate }: Pro
   return (
     <div {...wrapperProps}>
       <header className="flex items-center justify-between gap-2">
-        <span className="flex items-baseline gap-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
-          <span className="truncate font-medium">{thread.path}</span>
-          <span className="font-mono">L{anchorLine}</span>
+        <span className="flex min-w-0 items-baseline gap-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
+          <TruncatedPath path={thread.path} className="flex-1 font-medium" />
+          <span className="shrink-0 font-mono">L{anchorLine}</span>
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Badge tone={thread.state === "resolved" ? "success" : "default"}>
             {thread.state === "resolved"
               ? t("sync.thread.resolvedBadge")

@@ -20,7 +20,11 @@ interface TruncatedPathProps {
  */
 export function TruncatedPath({ path, className }: TruncatedPathProps) {
   return (
-    <span dir="rtl" title={path} className={cn("min-w-0 truncate text-left", className)}>
+    <span
+      dir="rtl"
+      title={path}
+      className={cn("inline-block min-w-0 max-w-full truncate text-left", className)}
+    >
       {path}
     </span>
   );

@@ -21,6 +21,18 @@ const MAX_SCALE = 8;
 const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
 
 /**
+ * `zoom` re-lays-out and re-paints its content at each level instead of
+ * stretching a fixed-resolution GPU texture (see the comment below), but
+ * it's non-standard and unsupported in some engines (older WebKitGTK,
+ * Firefox <126). Without a fallback, an unsupported browser would silently
+ * ignore the property — the zoom buttons would visibly do nothing at all,
+ * which is worse than the blur `transform: scale()` produces. Computed once
+ * since support doesn't change at runtime.
+ */
+const SUPPORTS_ZOOM =
+  typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "1");
+
+/**
  * Fullscreen overlay that shows a single Mermaid diagram with scroll/buttons
  * zoom and drag-to-pan. Opened by clicking a rendered diagram in the preview;
  * closed via the X button or Escape (NOT by clicking the diagram/backdrop —
@@ -143,9 +155,11 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
               GPU texture rasterized at the natural size — the latter gets
               blurrier the further you zoom in, regardless of the content
               being vector. Panning still uses `transform: translate` above,
-              which doesn't need re-rasterization. */}
+              which doesn't need re-rasterization. Falls back to
+              `transform: scale` (blurrier, but still functional) when
+              `zoom` isn't supported. */}
           <div
-            style={{ zoom: scale }}
+            style={SUPPORTS_ZOOM ? { zoom: scale } : { transform: `scale(${scale})` }}
             // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
             dangerouslySetInnerHTML={{ __html: svg }}
           />

@@ -15,19 +15,19 @@ export function RemoteCommentBody({ comment, onEdit, onDelete }: Props) {
   return (
     <article className="flex flex-col gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
       <header className="flex items-center justify-between gap-2 text-xs">
-        <span className="flex items-center gap-2 font-medium text-[hsl(var(--foreground))]">
+        <span className="flex min-w-0 items-center gap-2 font-medium text-[hsl(var(--foreground))]">
           {comment.authorAvatarUrl ? (
             <img
               src={comment.authorAvatarUrl}
               alt=""
-              className="size-5 rounded-full"
+              className="size-5 shrink-0 rounded-full"
               loading="lazy"
             />
           ) : null}
-          {t("sync.thread.byAuthor", { author: comment.author })}
+          <span className="truncate">{t("sync.thread.byAuthor", { author: comment.author })}</span>
         </span>
         {comment.viewerCanUpdate || comment.viewerCanDelete ? (
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             {comment.viewerCanUpdate ? (
               <Tooltip>
                 <TooltipTrigger asChild>

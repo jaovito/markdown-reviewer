@@ -128,7 +128,7 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
           </div>
         ) : (
           <div className="flex items-start justify-between gap-2">
-            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[hsl(var(--foreground))]">
+            <span className="min-w-0 flex-1 text-[12px] font-medium text-[hsl(var(--foreground))]">
               <AnchorLabel filePath={group.filePath} anchor={head.anchor} lineOnly={hideFilePath} />
             </span>
             <StateBadge state={head.state} className="shrink-0" />
@@ -153,10 +153,12 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
                   className="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2"
                 >
                   <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    <span className="truncate font-semibold text-[hsl(var(--foreground))]">
+                    <span className="min-w-0 flex-1 truncate font-semibold text-[hsl(var(--foreground))]">
                       {c.author ?? t("comments.thread.anonAuthor")}
                     </span>
-                    <RelativeTime ms={c.createdAt} />
+                    <span className="shrink-0">
+                      <RelativeTime ms={c.createdAt} />
+                    </span>
                   </div>
                   <p className="whitespace-pre-wrap break-words text-[12px] leading-snug text-[hsl(var(--foreground))]/85">
                     {c.body}
@@ -171,8 +173,10 @@ export const ThreadCard = forwardRef<HTMLButtonElement, ThreadCardProps>(functio
               {truncateBody(head.body)}
             </p>
             <div className="flex items-center justify-between gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-              <span className="truncate">{head.author ?? t("comments.thread.anonAuthor")}</span>
-              <span className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                {head.author ?? t("comments.thread.anonAuthor")}
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
                 {replyCount > 0 ? (
                   <span>
                     {t("threads.row.replyCount", {

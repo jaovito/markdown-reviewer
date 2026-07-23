@@ -1,4 +1,5 @@
 import type { CommentAnchor } from "@/shared/ipc/contract";
+import { TruncatedPath } from "@/shared/ui/truncated-path";
 import { useTranslation } from "react-i18next";
 
 interface AnchorLabelProps {
@@ -26,9 +27,11 @@ export function AnchorLabel({ filePath, anchor, lineOnly = false }: AnchorLabelP
     return <span className="font-mono text-[11px]">{lineLabel}</span>;
   }
   return (
-    <span className="inline-flex items-baseline gap-1.5">
-      <span className="truncate font-medium">{filePath}</span>
-      <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))]">{lineLabel}</span>
+    <span className="flex min-w-0 items-baseline gap-1.5">
+      <TruncatedPath path={filePath} className="flex-1 font-medium" />
+      <span className="shrink-0 font-mono text-[11px] text-[hsl(var(--muted-foreground))]">
+        {lineLabel}
+      </span>
     </span>
   );
 }

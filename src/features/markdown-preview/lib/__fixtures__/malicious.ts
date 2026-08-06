@@ -25,9 +25,13 @@ export const MALICIOUS_CASES: MaliciousCase[] = [
     // them. `allowDangerousHtml: false` drops the two tag nodes; the text
     // survives as ordinary inert paragraph prose. That is the correct
     // outcome — the tag is gone and nothing executes — so this case asserts
-    // only the tag's removal. Content removal is covered by the block-form
-    // case below, where the HTML-block grammar swallows tag and content as
-    // one node.
+    // only the tag's removal. Note that removal here is the pipeline
+    // dropping raw HTML before the sanitizer runs, same as the block-form
+    // "malformed nesting" case below — neither exercises the allowlist
+    // itself. Content removal *by the schema* is proven directly in
+    // `sanitize.test.ts`'s direct-sanitize suite (the nested `svg`/`script`
+    // case), which calls `sanitize()` on a tree the Markdown layer never
+    // touches.
     mustNotContain: ["<script"],
   },
   {
@@ -52,7 +56,13 @@ export const MALICIOUS_CASES: MaliciousCase[] = [
   },
   {
     name: "javascript: protocol with interleaved whitespace",
-    markdown: "[click me](java\tscript:alert(1))",
+    // The bare (non-angle-bracket) destination form terminates at the first
+    // whitespace, so an un-escaped tab here would just stop the link
+    // destination early and produce no link at all — a vacuous test, since
+    // "javascript:" then never even attempts to form. The angle-bracket
+    // destination form tolerates the tab and actually produces an `<a>`,
+    // which is what exercises `protocols.href`.
+    markdown: "[click me](<java\tscript:alert(1)>)",
     mustNotContain: ["javascript:"],
   },
   {

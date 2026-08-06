@@ -59,14 +59,13 @@ export const sanitizeSchema: Schema = {
 
   // Prefix `id`/`name` so rendered content can't clobber DOM globals
   // (`<a id="location">` shadowing `window.location`). GitHub does the same.
-  // `scrollToAnchorId` knows about the prefix.
+  // The anchor-scroll handler must account for this prefix.
   clobber: ["name", "id"],
   clobberPrefix: "user-content-",
 
   protocols: {
     href: ["http", "https", "mailto"],
     src: ["mdasset"],
-    cite: ["http", "https"],
   },
 
   tagNames: [
@@ -90,7 +89,8 @@ export const sanitizeSchema: Schema = {
     "hr",
     "i",
     "img",
-    // GFM task lists. Constrained by `required` below to inert checkboxes.
+    // GFM task lists. See `attributes.input` / `required` below for how
+    // these stay inert.
     "input",
     "ins",
     "kbd",
@@ -123,6 +123,12 @@ export const sanitizeSchema: Schema = {
 
   attributes: {
     ...sourceLineOnly,
+    // Overrides the `sourceLineOnly` default above: GFM fenced code blocks
+    // are the only source of `language-*` classes, and Task 5's Shiki step
+    // runs AFTER this sanitizer, so it must read the fence language back out
+    // of already-sanitized HTML. Losing this class silently degrades every
+    // code block to plain text.
+    code: ["data-source-line", ["className", /^language-./]],
     a: [
       "href",
       "title",
@@ -147,13 +153,26 @@ export const sanitizeSchema: Schema = {
     // `id` is allowlisted on headings only, so rehype-slug's anchors survive
     // without opening `id` up document-wide.
     ...Object.fromEntries(HEADINGS.map((tag) => [tag, ["data-source-line", "id"]])),
-    section: [["className", "footnotes"], "data-footnotes"],
+    // `dataFootnotes`, not `data-footnotes`: `mdast-util-to-hast` sets this
+    // property directly as a JS object key (camelCase), unlike
+    // `data-source-line` above, which arrives via `hProperties` and keeps its
+    // literal hyphenated form. `hast-util-sanitize` matches whichever key
+    // actually shows up on the node — check the producer, not the DOM
+    // attribute spelling, when allowlisting a `data-*` property.
+    section: [["className", "footnotes"], "dataFootnotes"],
     span: [["className", "footnote-ref"]],
     "*": [],
   },
 
-  // Anything not explicitly required is disallowed; these force GFM's
-  // checkboxes to stay non-interactive.
+  // `required` only fills a property when it's absent after `attributes`
+  // filtering — it's a default, not a constraint, and does NOT turn
+  // `<input type="text">` into `type="checkbox"` if `type` is already set.
+  // The actual guarantee that task-list checkboxes stay inert comes from two
+  // other layers: `allowDangerousHtml: false` (pipeline.ts) means an
+  // attacker's raw HTML `<input>` never reaches this sanitizer at all, and
+  // GFM's own task-list handler always emits `type="checkbox"`. Every
+  // `<input>` this schema does see is therefore already a GFM checkbox; this
+  // entry just forces `disabled` on it, since GFM doesn't set that itself.
   required: {
     input: { type: "checkbox", disabled: true },
   },

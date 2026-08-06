@@ -106,7 +106,7 @@ Processor order:
 ```
 remarkParse → remarkGfm → remarkSourceLine → remarkGithubAlerts
   → remarkRehype { allowDangerousHtml: false }
-  → rehypeMermaid → rehypeRepoAssets → rehypeLinks
+  → rehypeSlug → rehypeMermaid → rehypeRepoAssets → rehypeLinks
   → rehypeSanitize          ← boundary for untrusted HTML
   → rehypeShiki             ← generator-only, deliberately after
   → rehypeStringify
@@ -127,6 +127,9 @@ src/features/markdown-preview/lib/
   rehypeLinks.ts            (new)      classify anchors: in-app / github / external / inert
   resolveRepoPath.ts        (new)      pure path resolution (./, ../, /) + normalization
   __fixtures__/malicious.ts (new)      table-driven XSS vectors
+
+src/features/main/lib/
+  scrollToAnchor.ts         (edit)     + scrollToAnchorId for slugged headings
 
 src/features/markdown-preview/hooks/
   useMermaid.ts             (edit)     sanitize SVG before innerHTML; htmlLabels: false
@@ -200,6 +203,8 @@ Dual theme uses `defaultColor: false`, so Shiki emits `--shiki-light` / `--shiki
 - No `style` attribute anywhere (see *Decision: Shiki runs after sanitization*).
 - No `svg`, `foreignObject`, `iframe`, `object`, `embed`, `form`, `input`.
 - `data-source-line` on the existing anchor tags; `data-alert-type` and the alert class names as today.
+- `id` on `h1`–`h6` only, so `rehype-slug`'s heading anchors survive without opening `id` globally.
+- `data-link-kind` / `data-href` on `a`, which is how `rehypeLinks` communicates its classification to the delegated click handler.
 
 ### Mermaid SVG
 
@@ -286,9 +291,13 @@ A missing image surfaces as a styled placeholder via a delegated `error` listene
 | Any other local file (`.png`, `.ts`, `.pdf`) | Same — opens on GitHub |
 | `http(s)` external | System browser; `rel="noopener noreferrer"` |
 | Anything else (`file:`, `javascript:`, custom) | Inert: `href` stripped, marked so styling can show it as non-actionable |
-| `#heading` (intra-document) | `preventDefault` + manual scroll |
+| `#heading` (intra-document) | `preventDefault` + scroll to the slugged heading |
 
-The last row is a trap worth naming: the app mounts `HashRouter` (`src/main.tsx:13`), so an unhandled `#heading` click rewrites the *route*, not the scroll position. These are intercepted and scrolled manually, reusing `scrollToAnchorLine` (`src/features/main/lib/scrollToAnchor.ts`).
+The last row carries two traps.
+
+First, the app mounts `HashRouter` (`src/main.tsx:13`), so an unhandled `#heading` click rewrites the *route*, not the scroll position. These clicks are intercepted and scrolled manually.
+
+Second — and this is a gap the design review caught — **headings currently have no `id` at all**. There is no slugger in the pipeline, so `[Setup](#setup)` links point at nothing today. `rehype-slug` is added before sanitization to emit GitHub-compatible heading ids, and `id` is allowlisted on heading tags. Without it the intra-document row is unimplementable, and table-of-contents links — ubiquitous in exactly the documentation this app exists to review — stay broken. The existing `scrollToAnchorLine` helper is *not* reusable here: it queries `data-source-line`, not `id`. A sibling `scrollToAnchorId` is added next to it.
 
 Opening the browser uses `tauri-plugin-opener` with capability `opener:allow-open-url` scoped to `http`/`https`.
 
@@ -322,6 +331,7 @@ New keys under `markdownPreview.*`: broken-image placeholder text and alt fallba
 - **resolveRepoPath** — `./`, `../`, bare, root-relative, redundant segments, and traversal attempts escaping the root.
 - **rehypeRepoAssets** — rewrites relative sources; leaves absolute URLs and protocol-relative URLs alone; no-ops without a context.
 - **rehypeLinks** — one case per row of the classification table.
+- **rehypeSlug integration** — headings get GitHub-compatible ids, duplicate headings get `-1`/`-2` suffixes, and the ids survive sanitization.
 
 ### Rust
 

@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@happy-dom/global-registrator": "^20.11.1",
     "@tailwindcss/vite": "^4.0.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/bun": "latest",

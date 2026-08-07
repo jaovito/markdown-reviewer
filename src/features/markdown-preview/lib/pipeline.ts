@@ -1,5 +1,6 @@
 import { i18next } from "@/shared/i18n";
 import rehypeSanitize from "rehype-sanitize";
+import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -18,6 +19,7 @@ const processor = unified()
   .use(remarkSourceLine)
   .use(remarkGithubAlerts, { label: labelForAlert })
   .use(remarkRehype, { allowDangerousHtml: false })
+  .use(rehypeSlug)
   .use(rehypeMermaid)
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeStringify);

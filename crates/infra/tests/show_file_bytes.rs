@@ -66,3 +66,46 @@ async fn missing_file_is_none_not_error() {
         .expect("call succeeds");
     assert!(got.is_none());
 }
+
+/// Regression test for a reviewer-found Critical: `show_file_bytes` builds
+/// `git show <sha>:<file_path>` and passes `<sha>:<file_path>` as a single
+/// argv element. Before `--end-of-options` was added, a `sha` shaped like
+/// `--output=<path>` was parsed by `git` as its own `--output` flag rather
+/// than as a revision, so a crafted `sha` turned this read into a write of
+/// arbitrary content anywhere on disk. `mdasset://` reaches this function
+/// with a `sha` taken straight from an `<img src>` query string in
+/// already-sanitized (but attacker-authored) PR Markdown — zero clicks.
+#[tokio::test]
+#[ignore = "spawns git; run with --ignored"]
+async fn end_of_options_blocks_argv_injection_via_sha() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let dir = tmp.path();
+    git(dir, &["init", "-q"]);
+    git(dir, &["config", "user.email", "t@example.com"]);
+    git(dir, &["config", "user.name", "T"]);
+    std::fs::write(dir.join("a.txt"), "hi").expect("write");
+    git(dir, &["add", "a.txt"]);
+    git(dir, &["commit", "-qm", "init"]);
+
+    let victim_dir = dir.join("victim");
+    std::fs::create_dir(&victim_dir).expect("mkdir victim");
+    let malicious_sha = format!("--output={}/pwned", victim_dir.display());
+
+    let repo = dir.to_str().expect("utf8 path");
+    let result = GitCli
+        .show_file_bytes(repo, &malicious_sha, "b.plist")
+        .await
+        .expect("call must not error, just fail to resolve");
+    assert!(
+        result.is_none(),
+        "flag-shaped sha must not resolve to content"
+    );
+
+    let created: Vec<_> = std::fs::read_dir(&victim_dir)
+        .expect("read victim dir")
+        .collect();
+    assert!(
+        created.is_empty(),
+        "git show must not write a file when sha looks like a flag, found: {created:?}"
+    );
+}

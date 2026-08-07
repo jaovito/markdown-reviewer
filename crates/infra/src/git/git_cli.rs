@@ -69,7 +69,16 @@ impl GitClient for GitCli {
         file_path: &str,
     ) -> AppResult<Option<String>> {
         let spec = format!("{sha}:{file_path}");
-        let out = run("git", &["-C", repo_path, "show", &spec], None, TIMEOUT_MS).await?;
+        // `--end-of-options` stops `git` from treating a flag-shaped `sha`
+        // (e.g. `--output=<file>`) as an option rather than a revision —
+        // without it, a crafted `sha` can turn this read into a write.
+        let out = run(
+            "git",
+            &["-C", repo_path, "show", "--end-of-options", &spec],
+            None,
+            TIMEOUT_MS,
+        )
+        .await?;
         if !out.ok() {
             // Either the ref is missing locally (`unknown revision`) or the
             // file doesn't exist at that ref. Both are recoverable upstream.
@@ -85,7 +94,16 @@ impl GitClient for GitCli {
         file_path: &str,
     ) -> AppResult<Option<Vec<u8>>> {
         let spec = format!("{sha}:{file_path}");
-        let out = run_bytes("git", &["-C", repo_path, "show", &spec], None, TIMEOUT_MS).await?;
+        // See the `--end-of-options` note in `show_file` above — this path
+        // is the one actually reachable from document content via
+        // `mdasset://`, so the flag is load-bearing here, not decorative.
+        let out = run_bytes(
+            "git",
+            &["-C", repo_path, "show", "--end-of-options", &spec],
+            None,
+            TIMEOUT_MS,
+        )
+        .await?;
         if !out.ok() {
             // Missing ref or missing file at that ref — both recoverable
             // upstream via the GitHub API fallback.

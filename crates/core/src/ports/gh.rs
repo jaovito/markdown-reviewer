@@ -81,6 +81,14 @@ pub trait GhClient: Send + Sync {
         file_path: &str,
     ) -> AppResult<String>;
 
+    /// Byte-preserving sibling of `get_file_content`, for binary blobs.
+    async fn get_file_bytes(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<Vec<u8>>;
+
     /// Posts a review with multiple inline comments via
     /// `POST /repos/{owner}/{repo}/pulls/{number}/reviews` with
     /// `event: COMMENT`. Returns the created GitHub comment ids in the same

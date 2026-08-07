@@ -45,6 +45,14 @@ impl GitClient for FakeGit {
     ) -> markdown_reviewer_core::AppResult<Option<String>> {
         Ok(None)
     }
+    async fn show_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Option<Vec<u8>>> {
+        Ok(None)
+    }
     async fn diff_hunks(
         &self,
         _repo_path: &str,
@@ -110,6 +118,14 @@ impl GhClient for FakeGh {
         _file_path: &str,
     ) -> markdown_reviewer_core::AppResult<String> {
         Ok(String::new())
+    }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Vec<u8>> {
+        Ok(Vec::new())
     }
     async fn submit_review_batch(
         &self,

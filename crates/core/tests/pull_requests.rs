@@ -79,6 +79,14 @@ impl GhClient for FakeGh {
     ) -> AppResult<String> {
         Ok(String::new())
     }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Vec<u8>> {
+        Ok(Vec::new())
+    }
     async fn submit_review_batch(
         &self,
         _repo_path: &str,
@@ -178,6 +186,14 @@ impl GitClient for FakeGit {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<Option<String>> {
+        Ok(None)
+    }
+    async fn show_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Option<Vec<u8>>> {
         Ok(None)
     }
     async fn diff_hunks(

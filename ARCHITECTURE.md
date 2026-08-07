@@ -63,9 +63,9 @@ Pure types, pure rules. No `tokio::fs`, no `rusqlite`, no `std::process`. Uses `
 
 Production implementations of ports, organized by adapter family.
 
-- `process/` — structured `tokio::process::Command` helpers with timeouts and token redaction (`redact.rs`). No other module shells out.
-- `git/` — `GitCli` implements `GitClient` using `process::run`.
-- `gh/` — `GhCli` implements `GhClient`.
+- `process/` — structured `tokio::process::Command` helpers with timeouts and token redaction (`redact.rs`). No other module shells out. `run` decodes stdout with `String::from_utf8_lossy`, which corrupts binary; `run_bytes` is the byte-preserving sibling used for reads that may return non-UTF-8 (image blobs).
+- `git/` — `GitCli` implements `GitClient` using `process::run` (`show_file`) and `process::run_bytes` (`show_file_bytes`, via `git show <sha>:<path>` — reads a git tree object, so there's no filesystem traversal to sandbox).
+- `gh/` — `GhCli` implements `GhClient`. `get_file_bytes` reuses `get_file_content`'s Contents-API endpoint; the base64 payload arrives as text either way, so both go through `process::run`.
 - `sqlite/` — `connection.rs` opens the DB and runs numbered migrations embedded via `include_str!`; stores are one file each (`recents_store.rs`, `ui_state_store.rs`, …).
 - `clock.rs`, `paths.rs`, `logging.rs` — misc adapters.
 

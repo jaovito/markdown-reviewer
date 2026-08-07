@@ -61,9 +61,40 @@ body {
   display: block !important;
 }
 
-/* Baseline Markdown preview styles. Phase 5 will revisit (GFM tables,
-   syntax highlighting, callouts). Kept inline here so it ships without a
+/* Baseline Markdown preview styles. Kept inline here so it ships without a
    typography plugin dependency. */
+
+/* Shiki dual-theme output. `defaultColor: false` emits both colors as custom
+   properties on every token, so switching themes is pure CSS — no re-render,
+   unlike Mermaid. */
+.prose-styles .shiki,
+.prose-styles .shiki span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .prose-styles .shiki,
+  .prose-styles .shiki span {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+}
+
+.prose-styles .shiki {
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.prose-styles .shiki code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
 .prose-styles {
   color: hsl(var(--foreground));
 }

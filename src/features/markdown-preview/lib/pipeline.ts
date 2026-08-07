@@ -7,6 +7,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { rehypeMermaid } from "./rehypeMermaid";
+import { rehypeShiki } from "./rehypeShiki";
 import { type AlertType, remarkGithubAlerts } from "./remarkGithubAlerts";
 import { remarkSourceLine } from "./remarkSourceLine";
 import { sanitizeSchema } from "./sanitizeSchema";
@@ -22,6 +23,7 @@ const processor = unified()
   .use(rehypeSlug)
   .use(rehypeMermaid)
   .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeShiki)
   .use(rehypeStringify);
 
 export function renderMarkdown(source: string): string {

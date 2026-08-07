@@ -70,25 +70,36 @@ test("strips markup smuggled through <style> via decoded character references", 
   expect(reparsed.children[0]).toMatchObject({ type: "element", tagName: "svg" });
 });
 
-test("keeps class, stroke-width, and fill-opacity for diagram theming", () => {
+test("keeps class, stroke-width, fill-opacity, and the stroke/aria compounds that were previously dropped", () => {
   // Regression guard for hast's property-name spellings, which the
   // attribute allowlist must match exactly or the attribute is silently
-  // dropped: `class` arrives as `className` (not `class`), and `fill` /
-  // `stroke` compounds keep the property-name casing hast assigns them.
+  // dropped: `class` arrives as `className` (not `class`); `stroke-linecap`,
+  // `stroke-linejoin`, and `stroke-dasharray` camelCase to `strokeLineCap`,
+  // `strokeLineJoin`, `strokeDashArray` (not `strokeLinecap`/`strokeLinejoin`/
+  // `strokeDasharray`); and `aria-roledescription` is `ariaRoleDescription`,
+  // not `ariaRoledescription`. All four of the latter passed code review
+  // twice with the wrong spelling before being caught, precisely because
+  // this test only covered names that were already correct — extending it
+  // is the fix, not just the schema.
   const out = sanitizeSvg(
-    '<svg><g class="node default"><rect stroke-width="2" fill-opacity="0.5"/></g></svg>',
+    '<svg><g class="node default" aria-roledescription="flowchart">' +
+      '<rect stroke-width="2" fill-opacity="0.5" stroke-linecap="round" ' +
+      'stroke-linejoin="round" stroke-dasharray="4 2"/></g></svg>',
   );
   expect(out).toContain('class="node default"');
+  expect(out).toContain('aria-roledescription="flowchart"');
   expect(out).toContain('stroke-width="2"');
   expect(out).toContain('fill-opacity="0.5"');
+  expect(out).toContain('stroke-linecap="round"');
+  expect(out).toContain('stroke-linejoin="round"');
+  expect(out).toContain('stroke-dasharray="4 2"');
 });
 
 test("keeps data-id, data-look, stroke-dashoffset, pointer-events, paint-order, and xml:space", () => {
   // These are real attributes Mermaid emits across several diagram
   // renderers (kanban, sequence, gitgraph, ER, flowchart) that were missing
   // from the schema. `stroke-dashoffset` in particular camelCases to
-  // `strokeDashOffset` (capital O) rather than the `strokeDasharray`/
-  // `strokeLinecap` lowercase-o pattern the rest of the schema follows.
+  // `strokeDashOffset` (capital O).
   const out = sanitizeSvg(
     '<svg><rect data-id="a" data-look="b" stroke-dashoffset="1" pointer-events="none" ' +
       'paint-order="stroke" xml:space="preserve"/></svg>',
@@ -120,8 +131,8 @@ test("strips javascript: on xlink:href while keeping a fragment xlink:href", () 
 test("keeps internal id references intact instead of clobber-prefixing them", () => {
   // hast-util-sanitize shallow-merges a partial schema with its own
   // defaultSchema, so omitting `clobber` here would silently inherit
-  // `clobber: ["name", "id"]` / `clobberPrefix: "user-content-"` from the
-  // document sanitizer's defaults. That prefixes `id` without rewriting the
+  // `clobber: ['ariaDescribedBy', 'ariaLabelledBy', 'id', 'name']` /
+  // `clobberPrefix: "user-content-"` from its own defaults. That prefixes `id` without rewriting the
   // `#id` references elsewhere in the tree that depend on it — breaking
   // every marker (arrowhead), gradient, clip-path, mask, and <use>/<symbol>
   // reuse Mermaid relies on. This diagram's id exists only to be referenced
@@ -133,4 +144,16 @@ test("keeps internal id references intact instead of clobber-prefixing them", ()
   expect(out).toContain('id="arrow"');
   expect(out).not.toContain("user-content-");
   expect(out).toContain('marker-end="url(#arrow)"');
+});
+
+test("rejects input that isn't a single <svg>-rooted fragment", () => {
+  // The safety of `clobber: []` depends on the output always being
+  // SVG-namespaced (named-access-on-`Window` clobbering only applies to
+  // HTML-namespace elements). `sanitizeSvg`'s exported contract is broader
+  // than its one caller (`useMermaid.ts` only ever passes real
+  // `mermaid.render()` output), so this is enforced rather than assumed.
+  expect(() => sanitizeSvg('<rect id="config"/>')).toThrow();
+  expect(() => sanitizeSvg("<svg><rect/></svg><svg><rect/></svg>")).toThrow();
+  // Insignificant surrounding whitespace is not a rejection reason.
+  expect(() => sanitizeSvg("  <svg><rect/></svg>  ")).not.toThrow();
 });

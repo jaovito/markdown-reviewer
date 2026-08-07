@@ -37,8 +37,9 @@ import { visit } from "unist-util-visit";
  * governed by `img-src`.
  *
  * `clobber: []` overrides `hast-util-sanitize`'s own default
- * (`["name", "id"]` with `clobberPrefix: "user-content-"`), which this
- * schema would otherwise silently inherit — `sanitize()` shallow-merges
+ * (`['ariaDescribedBy', 'ariaLabelledBy', 'id', 'name']` with
+ * `clobberPrefix: "user-content-"`, `hast-util-sanitize/lib/schema.js`),
+ * which this schema would otherwise silently inherit — `sanitize()` shallow-merges
  * whatever schema it's given with its `defaultSchema`
  * (`{...defaultSchema, ...options}`), so any top-level key this schema
  * doesn't set falls back to the document-sanitizer-style default. Leaving
@@ -51,7 +52,17 @@ import { visit } from "unist-util-visit";
  * than protecting anything: unlike document prose (where `id` values are
  * incidental and clobbering is a real risk `sanitizeSchema.ts` is right to
  * guard against), every `id` in this SVG exists solely to be referenced by
- * a `#fragment` within the same subtree.
+ * a `#fragment` within the same subtree. That argument depends on the output
+ * actually being SVG-namespaced — see the root-shape check in `sanitizeSvg`
+ * below — since named-access-on-`Window` (the clobbering mechanism this
+ * disables) is defined over HTML-namespace elements only.
+ *
+ * SMIL (`animate`, `set`, `animateTransform`, …) is absent by omission, not
+ * oversight: `<set attributeName="onclick" to="alert(1)">` would set a live
+ * handler on a target element after this sanitizer has already run, since
+ * the mutation happens in the browser at animation time, not in the static
+ * markup this schema inspects. Do not add these without a different
+ * enforcement mechanism.
  */
 const svgSchema: Schema = {
   strip: ["script", "foreignObject"],
@@ -100,11 +111,24 @@ const svgSchema: Schema = {
     // Every `on*` handler is excluded by omission.
     //
     // Property names here are hast's post-`property-information` camelCase
-    // spellings, not the DOM attribute spelling — verified per-name against
-    // `hast-util-from-html` output rather than assumed. Two are easy to get
-    // wrong: `class` arrives as `className` (an array), and `stroke-dashoffset`
-    // camelCases to `strokeDashOffset` (capital O — it does not follow the
-    // lowercase-o pattern `strokeDasharray`/`strokeLinecap` use).
+    // spellings, not the DOM attribute spelling — and NOT a spelling you can
+    // reliably derive by guessing (three review rounds on this file each
+    // found more entries that looked right and weren't: `class`, `xlinkHref`,
+    // `strokeDashoffset`, `strokeDasharray`, `strokeLinecap`,
+    // `strokeLinejoin`, `ariaRoledescription`). Every entry in this list —
+    // not just a sample — is now cross-checked against
+    // `property-information`'s `svg.property` map (the source
+    // `hast-util-from-html`/`hast-util-to-html` both read) via a script, not
+    // by inspecting individual names, because a schema key that doesn't
+    // match the real property name is silently dropped rather than
+    // rejected — there is no test failure to catch a wrong guess short of
+    // asserting that exact attribute survives. `data-*` names (`dataId`,
+    // `dataLook` below) aren't in that static map at all — they're handled
+    // by a separate generic camelCasing rule — so those two were confirmed
+    // directly against `hast-util-from-html` output instead. When adding an
+    // entry, verify it the same way rather than pattern-matching neighboring
+    // names; the "obvious" camelCase form has been wrong more often than
+    // right in this file.
     "*": [
       "id",
       "className",
@@ -115,9 +139,9 @@ const svgSchema: Schema = {
       "fillRule",
       "stroke",
       "strokeWidth",
-      "strokeLinecap",
-      "strokeLinejoin",
-      "strokeDasharray",
+      "strokeLineCap",
+      "strokeLineJoin",
+      "strokeDashArray",
       "strokeOpacity",
       "opacity",
       "d",
@@ -175,10 +199,9 @@ const svgSchema: Schema = {
       "patternUnits",
       "role",
       "ariaLabel",
-      "ariaRoledescription",
+      "ariaRoleDescription",
       // Emitted across various Mermaid diagram renderers (kanban, sequence,
-      // gitgraph, ER, flowchart) but missing from the list above; each
-      // camelCase spelling verified via `hast-util-from-html`, not assumed.
+      // gitgraph, ER, flowchart) but missing from the list above.
       "dataId",
       "dataLook",
       "strokeDashOffset",
@@ -222,6 +245,28 @@ function neutralizeStyleText(tree: Root): void {
 }
 
 /**
+ * `clobber: []` above is only safe because the output is guaranteed to be a
+ * single `<svg>` element — `svg`-namespaced content is exactly what falls
+ * outside `Window`'s named-property access, which is what DOM clobbering via
+ * `id` exploits. A non-`svg`-rooted result (e.g. this function called with a
+ * bare `<rect>` because the input was malformed or truncated) would be
+ * HTML-namespace markup wearing this schema's permissive `id` handling, with
+ * none of the reasoning above actually applying to it. `useMermaid.ts` only
+ * ever calls this with real `mermaid.render()` output, where the condition
+ * doesn't fire — but `sanitizeSvg` is an exported function whose contract is
+ * broader than its one caller, so this is enforced rather than assumed.
+ */
+function assertSvgRooted(tree: Root): void {
+  const meaningful = tree.children.filter(
+    (child) => child.type !== "text" || child.value.trim() !== "",
+  );
+  const [root, ...rest] = meaningful;
+  if (rest.length > 0 || !root || root.type !== "element" || root.tagName !== "svg") {
+    throw new Error("sanitizeSvg: expected a single <svg>-rooted fragment");
+  }
+}
+
+/**
  * Runs Mermaid's rendered SVG through an SVG-specific allowlist before it is
  * injected into the DOM. Mermaid already runs in `securityLevel: "strict"`;
  * this is the second layer, because the SVG is compiled from untrusted
@@ -231,5 +276,6 @@ export function sanitizeSvg(svg: string): string {
   const tree = fromHtml(svg, { fragment: true });
   const clean = sanitize(tree, svgSchema) as Root;
   neutralizeStyleText(clean);
+  assertSvgRooted(clean);
   return toHtml(clean);
 }

@@ -1047,6 +1047,20 @@ function removeAllSlots(container: HTMLElement) {
  * `data-source-line` attribute can sit on the `<pre>` OR on its inner
  * `<code>`. Idempotent. We skip code blocks the user hasn't commented on
  * to avoid blowing up the DOM in code-heavy documents.
+ *
+ * Two structural shapes reach this function, and they're handled
+ * differently:
+ *  - **Shiki output** (the normal case — `rehypeShiki` succeeded): `<code>`
+ *    already contains one `<span class="line">` per source line, blank
+ *    lines included, carrying Shiki's colored token spans. Those existing
+ *    spans are stamped with `data-code-line`/`data-source-line` in place —
+ *    rebuilding from `textContent` the way the fallback below does would
+ *    discard every one of Shiki's spans and leave the block permanently
+ *    plain-text the instant it got a comment.
+ *  - **Bare `<pre><code>`** (`rehypeShiki`'s catch path left an
+ *    unrecognized/failed fence untouched, or some other unexpected shape):
+ *    no line spans exist yet, so fresh ones are built from `textContent` as
+ *    before.
  */
 function splitCodeBlocks(container: HTMLElement, wantedLines: Set<number>) {
   if (wantedLines.size === 0) return;
@@ -1085,21 +1099,51 @@ function splitCodeBlocks(container: HTMLElement, wantedLines: Set<number>) {
     const trimmed = text.endsWith("\n") ? text.slice(0, -1) : text;
     const lines = trimmed.split("\n");
 
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < lines.length; i++) {
-      const span = document.createElement("span");
-      span.dataset.codeLine = "true";
-      // Fence opener is `fenceLine`; first content line is `fenceLine + 1`.
-      span.dataset.sourceLine = String(fenceLine + 1 + i);
-      span.textContent = `${lines[i] ?? ""}\n`;
-      fragment.appendChild(span);
+    const lineSpans = code
+      ? Array.from(code.children).filter(
+          (el): el is HTMLElement => el.tagName === "SPAN" && el.classList.contains("line"),
+        )
+      : [];
+
+    if (lineSpans.length === lines.length) {
+      // Shiki shape: stamp the existing line spans instead of rebuilding.
+      for (let i = 0; i < lineSpans.length; i++) {
+        const span = lineSpans[i];
+        if (!span) continue;
+        span.dataset.codeLine = "true";
+        // Fence opener is `fenceLine`; first content line is `fenceLine + 1`.
+        span.dataset.sourceLine = String(fenceLine + 1 + i);
+        // Shiki separates line spans with a literal "\n" text-node sibling,
+        // not a newline inside the span. Absorb it into the span it follows:
+        // left as a stray sibling, `[data-code-line]`'s `display: block`
+        // (index.css) turns it into an extra blank line inside this
+        // preformatted (`white-space: pre`) block, double-spacing the whole
+        // thing. Absorbing it also keeps a trailing "\n" on each line's own
+        // text, matching the plain-text fallback below.
+        const separator = span.nextSibling;
+        if (separator?.nodeType === Node.TEXT_NODE) {
+          span.appendChild(separator);
+        }
+      }
+    } else {
+      // Not Shiki's shape — nothing to preserve, rebuild plain spans.
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < lines.length; i++) {
+        const span = document.createElement("span");
+        span.dataset.codeLine = "true";
+        span.dataset.sourceLine = String(fenceLine + 1 + i);
+        span.textContent = `${lines[i] ?? ""}\n`;
+        fragment.appendChild(span);
+      }
+      host.replaceChildren(fragment);
     }
-    host.replaceChildren(fragment);
 
     // Strip `data-source-line` from the pre / code so they can't shadow our
     // per-line spans in `nearestLineNodes` (first-occurrence-wins traversal),
     // and — crucially — so the `[data-source-line][data-has-comment]` CSS
-    // rule never paints the whole block by accident.
+    // rule never paints the whole block by accident. `pre`'s is the one that
+    // actually matters for Shiki blocks (see rehypeShiki.ts); `code`'s only
+    // still applies to the bare-`<pre><code>` fallback shape above.
     delete pre.dataset.sourceLine;
     if (code) delete code.dataset.sourceLine;
   }

@@ -66,16 +66,28 @@ body {
 
 /* Shiki dual-theme output. `defaultColor: false` emits both colors as custom
    properties on every token, so switching themes is pure CSS — no re-render,
-   unlike Mermaid. */
+   unlike Mermaid.
+   `span[style]` (not a bare `span`) is deliberate: the comment UI (thread
+   cards, range headers, minimized badges) mounts *inside* the highlighted
+   `<pre>` — as a sibling/child of Shiki's line spans — via direct DOM
+   injection + portals (see InlineThreads.tsx's `syncSlots`). A bare `.shiki
+   span` selector would reach into that UI and recolor its spans too, since
+   CSS descendant selectors don't care that the UI got there through a portal
+   instead of markdown. Every span Shiki emits carries its own inline
+   `style="--shiki-light:...`; none of the comment UI's spans have an inline
+   `style` unless they set their own explicit color, in which case that
+   inline declaration already outranks this stylesheet rule regardless of
+   selector match — so scoping to `[style]` excludes the UI's unstyled spans
+   without needing to special-case them. */
 .prose-styles .shiki,
-.prose-styles .shiki span {
+.prose-styles .shiki span[style] {
   color: var(--shiki-light);
   background-color: var(--shiki-light-bg);
 }
 
 @media (prefers-color-scheme: dark) {
   .prose-styles .shiki,
-  .prose-styles .shiki span {
+  .prose-styles .shiki span[style] {
     color: var(--shiki-dark);
     background-color: var(--shiki-dark-bg);
   }

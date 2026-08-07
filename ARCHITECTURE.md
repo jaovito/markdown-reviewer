@@ -230,6 +230,14 @@ Frontend logging goes through `shared/lib/logger.ts` (thin wrapper around `conso
 - **`crates/infra/tests/`** — integration tests that shell out to real `git` in `tempfile::TempDir`. Mark `#[ignore]`; run with `cargo test -- --ignored`.
 - **`crates/ipc/tests/`** — contract tests calling the invoke handler with raw JSON. Pins DTO shape against `contract.ts`.
 - **Frontend** — `bun test` for pure hooks/utilities. Component tests (Testing Library) deferred to Phase 2+.
+  `bun test` preloads `test-setup.ts` (`bunfig.toml`'s `[test].preload`), which
+  registers a global DOM via `@happy-dom/global-registrator` so tests touching
+  `document`/`window` work without per-file setup. It's global rather than
+  per-file because Bun has no per-file test environment switch (no
+  `@jest-environment`-style pragma); hand-rolling guarded registration in each
+  DOM-touching file would be more code for the same result. `test-setup.ts`
+  also clears `document.body` in a global `afterEach` so DOM state from one
+  test file can't leak into the next — Bun runs all test files in one process.
 
 ---
 

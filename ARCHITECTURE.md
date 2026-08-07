@@ -220,7 +220,7 @@ Frontend logging goes through `shared/lib/logger.ts` (thin wrapper around `conso
 
 - Tauri capabilities live in `src-tauri/capabilities/`. One file per concern. Phase 1 grants `dialog:allow-open` and the six custom commands. Nothing else.
 - **Never grant `shell:allow-execute` or wildcard fs scopes.** All shell execution lives inside `infra::process`, behind typed ports, with argv-only invocations (no shell interpretation).
-- HTML from Markdown (Phase 5+) will be sanitized with a safe allowlist before rendering. Mermaid renders in a try/catch with a fallback block.
+- HTML from Markdown is sanitized with an explicit allowlist (`markdown-preview/lib/sanitizeSchema.ts`) before rendering; `svg` is stripped there entirely. Mermaid renders client-side, after that sanitizer has already run, so its SVG output goes through a second, SVG-specific allowlist (`markdown-preview/lib/sanitizeSvg.ts`) immediately before injection — sanitization is the boundary for untrusted HTML, and anything appended after it must be sanitized on its own. Mermaid also runs with `htmlLabels: false` so it never emits `foreignObject` (which would embed arbitrary HTML inside SVG), and diagram parse failures fall back to a localized error block plus source, inside a try/catch.
 
 ---
 

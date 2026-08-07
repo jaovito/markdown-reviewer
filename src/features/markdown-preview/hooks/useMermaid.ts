@@ -1,5 +1,6 @@
 import { i18next } from "@/shared/i18n";
 import { type RefObject, useEffect, useState } from "react";
+import { sanitizeSvg } from "../lib/sanitizeSvg";
 
 let mermaidIdCounter = 0;
 // Unique per module load so render IDs (and their orphan-cleanup lookups)
@@ -74,6 +75,8 @@ export function useMermaid(
           securityLevel: "strict",
           theme: dark ? "dark" : "default",
           fontFamily: "inherit",
+          htmlLabels: false,
+          flowchart: { htmlLabels: false },
         });
         render = mermaid.render.bind(mermaid);
       } catch {
@@ -96,7 +99,7 @@ export function useMermaid(
         try {
           const { svg } = await render(id, source);
           if (cancelled) return;
-          node.innerHTML = svg;
+          node.innerHTML = sanitizeSvg(svg);
           if (onOpen) {
             // Click a rendered diagram to open the zoom/pan lightbox. Use the
             // onclick property (not addEventListener) so a theme re-render

@@ -162,6 +162,7 @@ export function MarkdownPreview({
     <div className="relative mx-auto w-full max-w-3xl">
       <DocumentSearchBar
         isOpen={search.isOpen}
+        focusTrigger={search.focusTrigger}
         query={search.query}
         onQueryChange={search.setQuery}
         isCaseSensitive={search.isCaseSensitive}

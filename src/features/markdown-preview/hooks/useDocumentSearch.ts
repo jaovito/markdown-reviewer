@@ -51,6 +51,7 @@ function scrollMatchIntoView(activeEl: HTMLElement) {
 
 export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearchOptions) {
   const [isOpen, setIsOpen] = useState(false);
+  const [focusTrigger, setFocusTrigger] = useState(0);
   const [query, setQuery] = useState("");
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -243,6 +244,8 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         setIsOpen(true);
+        // Bump trigger so the focus effect re-fires even if bar was already open
+        setFocusTrigger((n) => n + 1);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -251,6 +254,7 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
 
   return {
     isOpen,
+    focusTrigger,
     query,
     setQuery,
     isCaseSensitive,

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 interface DocumentSearchBarProps {
   isOpen: boolean;
+  focusTrigger?: number;
   query: string;
   onQueryChange: (q: string) => void;
   isCaseSensitive: boolean;
@@ -19,6 +20,7 @@ interface DocumentSearchBarProps {
 
 export function DocumentSearchBar({
   isOpen,
+  focusTrigger,
   query,
   onQueryChange,
   isCaseSensitive,
@@ -32,6 +34,8 @@ export function DocumentSearchBar({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Re-focus and select all text whenever the bar opens or Cmd+F is pressed again (focusTrigger increments)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focusTrigger is an intentional imperative trigger, not a reactive value
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
@@ -39,7 +43,7 @@ export function DocumentSearchBar({
         inputRef.current?.select();
       }, 50);
     }
-  }, [isOpen]);
+  }, [isOpen, focusTrigger]);
 
   if (!isOpen) return null;
 

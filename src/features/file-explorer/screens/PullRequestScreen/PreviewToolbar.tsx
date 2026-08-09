@@ -47,9 +47,14 @@ export function PreviewToolbar({
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
+  // Only build the URL when all parts are available, including the actual headSha.
+  // Falling back to "main" risks linking to the wrong commit or a non-existent path.
   const fileUrl =
-    owner && repo && selectedPath
-      ? `https://github.com/${owner}/${repo}/blob/${headSha ?? "main"}/${selectedPath}`
+    owner && repo && selectedPath && headSha
+      ? `https://github.com/${owner}/${repo}/blob/${headSha}/${selectedPath
+          .split("/")
+          .map((seg) => encodeURIComponent(seg))
+          .join("/")}`
       : undefined;
 
   const handleCopyLink = useCallback(async () => {

@@ -156,7 +156,10 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
   // Re-run highlighting when dependencies change
   useEffect(() => {
     applyHighlights();
-  }, [applyHighlights]);
+    return () => {
+      clearHighlights();
+    };
+  }, [applyHighlights, clearHighlights]);
 
   const nextMatch = useCallback(() => {
     setMatchCount((count) => {

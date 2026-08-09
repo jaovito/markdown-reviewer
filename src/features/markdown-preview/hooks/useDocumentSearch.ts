@@ -34,6 +34,28 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
     matchElementsRef.current = [];
   }, [containerRef]);
 
+  const highlightAndScrollTo = useCallback((targetIndex: number) => {
+    const matches = matchElementsRef.current;
+    if (matches.length === 0) return;
+
+    const clampedIndex = Math.max(0, Math.min(targetIndex, matches.length - 1));
+
+    matches.forEach((el, i) => {
+      if (i === clampedIndex) {
+        el.className = ACTIVE_MATCH_CLASS;
+      } else {
+        el.className = INACTIVE_MATCH_CLASS;
+      }
+    });
+
+    const activeEl = matches[clampedIndex];
+    if (activeEl) {
+      requestAnimationFrame(() => {
+        activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, []);
+
   const applyHighlights = useCallback(() => {
     clearHighlights();
 
@@ -117,49 +139,48 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
     matchElementsRef.current = newMatchElements;
     setMatchCount(newMatchElements.length);
     setCurrentIndex(0);
-  }, [containerRef, clearHighlights, isOpen, query, isCaseSensitive, sourceHtml]);
+
+    if (newMatchElements.length > 0) {
+      highlightAndScrollTo(0);
+    }
+  }, [
+    containerRef,
+    clearHighlights,
+    isOpen,
+    query,
+    isCaseSensitive,
+    sourceHtml,
+    highlightAndScrollTo,
+  ]);
 
   // Re-run highlighting when dependencies change
   useEffect(() => {
     applyHighlights();
   }, [applyHighlights]);
 
-  // Highlight active match and scroll to view
-  useEffect(() => {
-    const matches = matchElementsRef.current;
-    if (matches.length === 0) return;
-
-    const clampedIndex = Math.max(0, Math.min(currentIndex, matches.length - 1));
-
-    matches.forEach((el, i) => {
-      if (i === clampedIndex) {
-        el.className = ACTIVE_MATCH_CLASS;
-      } else {
-        el.className = INACTIVE_MATCH_CLASS;
-      }
-    });
-
-    const activeEl = matches[clampedIndex];
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [currentIndex]);
-
   const nextMatch = useCallback(() => {
     setMatchCount((count) => {
       if (count === 0) return 0;
-      setCurrentIndex((prev) => (prev + 1) % count);
+      setCurrentIndex((prev) => {
+        const next = (prev + 1) % count;
+        highlightAndScrollTo(next);
+        return next;
+      });
       return count;
     });
-  }, []);
+  }, [highlightAndScrollTo]);
 
   const prevMatch = useCallback(() => {
     setMatchCount((count) => {
       if (count === 0) return 0;
-      setCurrentIndex((prev) => (prev - 1 + count) % count);
+      setCurrentIndex((prev) => {
+        const next = (prev - 1 + count) % count;
+        highlightAndScrollTo(next);
+        return next;
+      });
       return count;
     });
-  }, []);
+  }, [highlightAndScrollTo]);
 
   const openSearch = useCallback(() => {
     setIsOpen(true);

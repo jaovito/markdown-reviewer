@@ -7,6 +7,9 @@
     "core:default",
     "core:window:default",
     "dialog:allow-open",
+    "updater:default",
+    "process:allow-restart",
+
     {
       "identifier": "core:window:allow-set-title"
     },

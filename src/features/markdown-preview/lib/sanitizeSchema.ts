@@ -65,7 +65,7 @@ export const sanitizeSchema: Schema = {
 
   protocols: {
     href: ["http", "https", "mailto"],
-    src: ["mdasset"],
+    src: ["mdasset", "http", "https"],
   },
 
   tagNames: [

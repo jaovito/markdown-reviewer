@@ -25,12 +25,10 @@ test("rewrites a repo-root-relative image", () => {
   expect(html).toContain(`path=${encodeURIComponent("assets/logo.png")}`);
 });
 
-test("leaves an absolute https image untouched", () => {
-  const html = renderMarkdown("![x](https://example.com/a.png)", ctx);
+test("leaves an absolute https image untouched so GitHub-hosted images render", () => {
+  const html = renderMarkdown("![x](https://user-images.githubusercontent.com/123/456.png)", ctx);
   expect(html).not.toContain("mdasset");
-  // The sanitizer allows only mdasset in src, so an https source is dropped
-  // rather than silently fetched over the network.
-  expect(html).not.toContain("https://example.com/a.png");
+  expect(html).toContain('src="https://user-images.githubusercontent.com/123/456.png"');
 });
 
 test("leaves a protocol-relative image untouched", () => {

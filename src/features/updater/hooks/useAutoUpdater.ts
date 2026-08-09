@@ -18,6 +18,9 @@ export interface UpdateInfo {
   date?: string;
 }
 
+const isTauriEnv =
+  typeof window !== "undefined" && ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+
 export function useAutoUpdater(autoCheck = false) {
   const [status, setStatus] = useState<UpdateStatus>("idle");
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -26,8 +29,14 @@ export function useAutoUpdater(autoCheck = false) {
   const [updateHandle, setUpdateHandle] = useState<Update | null>(null);
 
   const checkForUpdates = useCallback(async () => {
+    if (!isTauriEnv) {
+      setStatus("idle");
+      return false;
+    }
+
     try {
       setStatus("checking");
+
       setErrorMessage(null);
 
       const update = await check();

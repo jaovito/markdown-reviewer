@@ -1,14 +1,21 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capabilities required for Phase 1: repository selection.",
+  "description": "Capabilities required for repository selection, dialogs, and opening external links.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "core:window:default",
     "dialog:allow-open",
+    "updater:default",
+    "process:allow-restart",
+
     {
       "identifier": "core:window:allow-set-title"
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://*" }, { "url": "http://*" }]
     }
   ]
 }

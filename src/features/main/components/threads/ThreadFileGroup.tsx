@@ -1,4 +1,5 @@
 import { cn } from "@/shared/lib/cn";
+import { TruncatedPath } from "@/shared/ui/truncated-path";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { type ReactNode, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -50,9 +51,10 @@ export const ThreadFileGroup = forwardRef<HTMLButtonElement, ThreadFileGroupProp
           )}
         >
           <Chevron className="size-3 shrink-0 text-[hsl(var(--muted-foreground))]" />
-          <span className="min-w-0 flex-1 truncate font-medium text-[hsl(var(--foreground))]">
-            {filePath}
-          </span>
+          <TruncatedPath
+            path={filePath}
+            className="flex-1 font-medium text-[hsl(var(--foreground))]"
+          />
           <span className="shrink-0 text-[11px] text-[hsl(var(--muted-foreground))]">
             {t("main.threads.tree.fileCount", { count: threadCount })}
           </span>

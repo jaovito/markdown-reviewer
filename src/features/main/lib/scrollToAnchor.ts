@@ -10,3 +10,21 @@ export function scrollToAnchorLine(line: number): HTMLElement | null {
   el.scrollIntoView({ behavior: "smooth", block: "center" });
   return el;
 }
+
+/**
+ * Scrolls to a slugged heading by its fragment id. The sanitizer rewrites
+ * `id` with a `user-content-` prefix to block DOM clobbering, so a link
+ * written as `#setup` has to resolve against `#user-content-setup`. We try
+ * the raw id first so hand-authored ids keep working.
+ */
+export function scrollToAnchorId(id: string): HTMLElement | null {
+  if (!id) return null;
+  const root = document.querySelector("article");
+  if (!root) return null;
+  const el =
+    root.querySelector<HTMLElement>(`[id="${CSS.escape(id)}"]`) ??
+    root.querySelector<HTMLElement>(`[id="${CSS.escape(`user-content-${id}`)}"]`);
+  if (!el) return null;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  return el;
+}

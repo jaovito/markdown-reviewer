@@ -47,7 +47,7 @@ export function ThreadSnippet({ repoPath, sha, filePath, startLine, endLine }: T
       className="my-1.5 rounded border-[hsl(var(--comment-marker-fg))] border-l-[1.5px] bg-[hsl(var(--muted))]/30 py-1 pl-2 font-mono text-[11px] leading-snug"
       data-thread-snippet="true"
     >
-      <pre className="overflow-hidden text-ellipsis whitespace-pre text-[hsl(var(--foreground))]/85">
+      <pre className="overflow-x-hidden whitespace-pre-wrap break-words text-[hsl(var(--foreground))]/85">
         {slice.visible.join("\n")}
       </pre>
       {slice.more > 0 ? (

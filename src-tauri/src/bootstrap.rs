@@ -22,7 +22,15 @@ pub(crate) fn run() {
     // than to abort startup.
     let _ = fix_path_env::fix();
 
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .register_asynchronous_uri_scheme_protocol(
+            crate::asset_protocol::SCHEME,
+            crate::asset_protocol::handle,
+        );
 
     let builder = markdown_reviewer_ipc::register(builder);
 

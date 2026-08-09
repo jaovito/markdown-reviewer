@@ -44,9 +44,69 @@ body {
     sans-serif;
 }
 
-/* Baseline Markdown preview styles. Phase 5 will revisit (GFM tables,
-   syntax highlighting, callouts). Kept inline here so it ships without a
+/* Radix's ScrollArea.Viewport wraps its children in an internal
+   `display: table; min-width: 100%` div so it can measure the content's
+   natural size for the scrollbar. A table box sizes to its content's
+   preferred width regardless of the viewport's actual width, so any
+   unwrappable text anywhere inside silently widens the whole scroll area
+   instead of letting our flex/truncate children shrink to fit. Both of our
+   `ScrollArea` usages (file tree, threads pane) are vertical lists that
+   should fit their container, so force the wrapper back to a normal block —
+   `!important` is required to beat Radix's inline style. Scoped to our own
+   `ScrollArea` wrapper's `data-slot="scroll-area-viewport"` (set in
+   shared/ui/scroll-area.tsx) rather than Radix's generic
+   `[data-radix-scroll-area-viewport]`, so this doesn't reach into any
+   other/future Radix ScrollArea usage. */
+[data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}
+
+/* Baseline Markdown preview styles. Kept inline here so it ships without a
    typography plugin dependency. */
+
+/* Shiki dual-theme output. `defaultColor: false` emits both colors as custom
+   properties on every token, so switching themes is pure CSS — no re-render,
+   unlike Mermaid.
+   `span[style]` (not a bare `span`) is deliberate: the comment UI (thread
+   cards, range headers, minimized badges) mounts *inside* the highlighted
+   `<pre>` — as a sibling/child of Shiki's line spans — via direct DOM
+   injection + portals (see InlineThreads.tsx's `syncSlots`). A bare `.shiki
+   span` selector would reach into that UI and recolor its spans too, since
+   CSS descendant selectors don't care that the UI got there through a portal
+   instead of markdown. Every span Shiki emits carries its own inline
+   `style="--shiki-light:...`; none of the comment UI's spans have an inline
+   `style` unless they set their own explicit color, in which case that
+   inline declaration already outranks this stylesheet rule regardless of
+   selector match — so scoping to `[style]` excludes the UI's unstyled spans
+   without needing to special-case them. */
+.prose-styles .shiki,
+.prose-styles .shiki span[style] {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .prose-styles .shiki,
+  .prose-styles .shiki span[style] {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+}
+
+.prose-styles .shiki {
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.prose-styles .shiki code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
 .prose-styles {
   color: hsl(var(--foreground));
 }
@@ -150,6 +210,98 @@ body {
 .prose-styles img {
   max-width: 100%;
   border-radius: 4px;
+}
+
+/* GFM task lists — drop the disc marker and align the checkbox with the
+   first text line. remark-gfm emits `ul.contains-task-list` > `li.task-list-item`
+   with a leading disabled checkbox. */
+.prose-styles ul.contains-task-list {
+  list-style: none;
+  padding-left: 1.2em;
+}
+.prose-styles li.task-list-item {
+  position: relative;
+}
+.prose-styles li.task-list-item > input[type="checkbox"] {
+  margin: 0 0.4em 0 -1.4em;
+  vertical-align: middle;
+  accent-color: hsl(var(--primary));
+}
+
+/* GFM table polish — zebra striping + scroll on overflow. Base borders/header
+   come from the existing table rules above. */
+.prose-styles table {
+  display: block;
+  overflow-x: auto;
+}
+.prose-styles tbody tr:nth-child(even) {
+  background: hsl(var(--muted) / 0.4);
+}
+
+/* GitHub-style alerts. The wrapper is a `div.markdown-alert.markdown-alert-<type>`
+   emitted by remarkGithubAlerts; the title is `p.markdown-alert-title`. The
+   type icon is a CSS mask (no inline SVG, keeps the sanitize allowlist tight)
+   tinted with the per-type token via currentColor. */
+.prose-styles .markdown-alert {
+  --alert-color: var(--alert-note);
+  border-left: 3px solid hsl(var(--alert-color));
+  border-radius: 6px;
+  padding: 0.6em 1em;
+  margin-block: 1em;
+  background: hsl(var(--alert-color) / 0.06);
+}
+.prose-styles .markdown-alert-note {
+  --alert-color: var(--alert-note);
+}
+.prose-styles .markdown-alert-tip {
+  --alert-color: var(--alert-tip);
+}
+.prose-styles .markdown-alert-important {
+  --alert-color: var(--alert-important);
+}
+.prose-styles .markdown-alert-warning {
+  --alert-color: var(--alert-warning);
+}
+.prose-styles .markdown-alert-caution {
+  --alert-color: var(--alert-caution);
+}
+.prose-styles .markdown-alert > :first-child {
+  margin-top: 0;
+}
+.prose-styles .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+.prose-styles .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+  color: hsl(var(--alert-color));
+  margin-bottom: 0.4em;
+}
+.prose-styles .markdown-alert-title::before {
+  content: "";
+  width: 1em;
+  height: 1em;
+  flex: none;
+  background-color: currentColor;
+  -webkit-mask: var(--alert-icon) center / contain no-repeat;
+  mask: var(--alert-icon) center / contain no-repeat;
+}
+.prose-styles .markdown-alert-note .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm9-3.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 7h1.5a.25.25 0 0 1 .25.25v3.25h.75a.75.75 0 0 1 0 1.5h-3a.75.75 0 0 1 0-1.5h.75V8.5h-.5a.75.75 0 0 1 0-1.5Z'/%3E%3C/svg%3E");
+}
+.prose-styles .markdown-alert-tip .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5A4.5 4.5 0 0 0 3.5 6c0 1.6.9 2.7 1.7 3.6.3.4.6.7.8 1h4c.2-.3.5-.6.8-1 .8-.9 1.7-2 1.7-3.6A4.5 4.5 0 0 0 8 1.5ZM6 12.5h4a.75.75 0 0 1 0 1.5H6a.75.75 0 0 1 0-1.5Zm.5 1.75A.75.75 0 0 1 7.25 13.5h1.5a.75.75 0 0 1 .75.75v.25H6.5Z'/%3E%3C/svg%3E");
+}
+.prose-styles .markdown-alert-important .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.75 1.5A1.75 1.75 0 0 0 1 3.25v7.5c0 .97.78 1.75 1.75 1.75H4v2.19c0 .67.8 1 1.28.53L8.5 12h4.75A1.75 1.75 0 0 0 15 10.75v-7.5A1.75 1.75 0 0 0 13.25 1.5ZM8 4a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-1.5 0v-2.5A.75.75 0 0 1 8 4Zm0 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E");
+}
+.prose-styles .markdown-alert-warning .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.457 1.047a1.75 1.75 0 0 1 3.086 0l5.073 9.46A1.75 1.75 0 0 1 13.073 13H2.927a1.75 1.75 0 0 1-1.543-2.492ZM8 5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8 5Zm0 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z'/%3E%3C/svg%3E");
+}
+.prose-styles .markdown-alert-caution .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.47 1.22a.75.75 0 0 1 .53-.22h6a.75.75 0 0 1 .53.22l4.25 4.25c.14.14.22.33.22.53v6a.75.75 0 0 1-.22.53l-4.25 4.25a.75.75 0 0 1-.53.22H5a.75.75 0 0 1-.53-.22L.22 12.28A.75.75 0 0 1 0 11.75v-6c0-.2.08-.39.22-.53ZM8 4a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8 4Zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z'/%3E%3C/svg%3E");
 }
 
 /* Soft brand-tinted text selection inside the rendered Markdown — matches the
@@ -343,4 +495,99 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* Mermaid diagrams. `rehypeMermaid` emits `<div class="mermaid">SOURCE</div>`
+   and the `useMermaid` hook swaps the source for an SVG client-side. Until it
+   renders (marked by `data-mermaid-theme`), collapse the raw source text so it
+   doesn't flash; the injected SVG carries its own colors and sizing. */
+.prose-styles div.mermaid {
+  display: flex;
+  justify-content: center;
+  margin-block: 1.25em;
+}
+.prose-styles div.mermaid:not([data-mermaid-theme]) {
+  color: transparent;
+  font-size: 0;
+}
+.prose-styles div.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+/* Localized fallback shown when a diagram fails to parse. */
+.prose-styles div.mermaid .mermaid-error {
+  width: 100%;
+  border: 1px solid hsl(var(--alert-caution));
+  border-radius: 6px;
+  background: hsl(var(--alert-caution) / 0.06);
+  padding: 0.6em 1em;
+}
+.prose-styles div.mermaid .mermaid-error-title {
+  margin: 0 0 0.4em;
+  font-weight: 600;
+  font-size: 0.85em;
+  color: hsl(var(--alert-caution));
+}
+.prose-styles div.mermaid .mermaid-error pre {
+  margin: 0;
+}
+
+/* Fullscreen zoom/pan lightbox for Mermaid diagrams (MermaidLightbox).
+   Portaled to <body>, so these are top-level (not under .prose-styles). */
+.mermaid-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background) / 0.9);
+  backdrop-filter: blur(2px);
+}
+.mermaid-lightbox-toolbar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+.mermaid-lightbox-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.mermaid-lightbox-content {
+  will-change: transform;
+}
+.mermaid-lightbox-content svg {
+  max-width: none;
+  height: auto;
+}
+
+/* An image the mdasset:// handler couldn't resolve — the blob isn't in the
+   local object database and the API didn't have it either. */
+.prose-styles img[data-broken="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12rem;
+  min-height: 4rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8125rem;
+}
+
+/* Links pointing somewhere we deliberately refuse to follow. */
+.prose-styles a[data-link-kind="inert"] {
+  color: hsl(var(--muted-foreground));
+  text-decoration: line-through;
+  cursor: not-allowed;
 }

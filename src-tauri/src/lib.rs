@@ -1,3 +1,4 @@
+mod asset_protocol;
 mod bootstrap;
 
 /// Entry point invoked by `main.rs` (desktop) and the mobile targets.

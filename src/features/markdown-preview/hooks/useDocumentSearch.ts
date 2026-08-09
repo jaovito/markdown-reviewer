@@ -5,6 +5,12 @@ interface UseDocumentSearchOptions {
   sourceHtml: string;
 }
 
+const INACTIVE_MATCH_CLASS =
+  "bg-amber-300/80 text-slate-950 dark:bg-amber-900/80 dark:text-amber-100 dark:ring-1 dark:ring-amber-500/50 px-0.5 rounded-xs transition-colors font-medium";
+
+const ACTIVE_MATCH_CLASS =
+  "bg-amber-400 text-slate-950 dark:bg-amber-400 dark:text-slate-950 px-0.5 rounded-xs ring-2 ring-amber-500 font-bold shadow-sm transition-all";
+
 export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearchOptions) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,8 +98,7 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
 
         const mark = document.createElement("mark");
         mark.setAttribute("data-search-match", "true");
-        mark.className =
-          "bg-amber-200 dark:bg-amber-500/40 text-foreground px-0.5 rounded-xs transition-colors";
+        mark.className = INACTIVE_MATCH_CLASS;
         mark.textContent = match[0];
         fragment.appendChild(mark);
         newMatchElements.push(mark);
@@ -128,11 +133,9 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
 
     matches.forEach((el, i) => {
       if (i === clampedIndex) {
-        el.className =
-          "bg-amber-400 dark:bg-amber-400 text-black px-0.5 rounded-xs ring-2 ring-amber-600 font-semibold shadow-xs transition-all";
+        el.className = ACTIVE_MATCH_CLASS;
       } else {
-        el.className =
-          "bg-amber-200 dark:bg-amber-500/40 text-foreground px-0.5 rounded-xs transition-colors";
+        el.className = INACTIVE_MATCH_CLASS;
       }
     });
 

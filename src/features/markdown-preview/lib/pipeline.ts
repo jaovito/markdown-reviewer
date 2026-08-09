@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { type Processor, unified } from "unified";
+import { rehypeLinks } from "./rehypeLinks";
 import { rehypeMermaid } from "./rehypeMermaid";
 import { rehypeRepoAssets } from "./rehypeRepoAssets";
 import { rehypeShiki } from "./rehypeShiki";
@@ -47,7 +48,10 @@ function build(ctx?: RenderContext): Processor {
     .use(rehypeSlug)
     .use(rehypeMermaid);
 
-  if (ctx) processor.use(rehypeRepoAssets, ctx);
+  if (ctx) {
+    processor.use(rehypeRepoAssets, ctx);
+    processor.use(rehypeLinks, ctx);
+  }
 
   return (
     processor
@@ -55,7 +59,7 @@ function build(ctx?: RenderContext): Processor {
       .use(rehypeSanitize, sanitizeSchema)
       // Everything below generates markup from already-escaped text.
       .use(rehypeShiki)
-      .use(rehypeStringify) as Processor
+      .use(rehypeStringify) as unknown as Processor
   );
 }
 

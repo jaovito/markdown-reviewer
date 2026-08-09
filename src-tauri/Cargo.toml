@@ -24,6 +24,7 @@ markdown-reviewer-infra = { workspace = true }
 markdown-reviewer-ipc = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
+tauri-plugin-opener = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tokio = { workspace = true }

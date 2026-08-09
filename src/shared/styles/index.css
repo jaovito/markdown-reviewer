@@ -568,3 +568,26 @@ body {
   max-width: none;
   height: auto;
 }
+
+/* An image the mdasset:// handler couldn't resolve — the blob isn't in the
+   local object database and the API didn't have it either. */
+.prose-styles img[data-broken="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12rem;
+  min-height: 4rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8125rem;
+}
+
+/* Links pointing somewhere we deliberately refuse to follow. */
+.prose-styles a[data-link-kind="inert"] {
+  color: hsl(var(--muted-foreground));
+  text-decoration: line-through;
+  cursor: not-allowed;
+}

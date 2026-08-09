@@ -1,4 +1,10 @@
-import { InlineThreads, SelectionCommentOverlay, useFileComments } from "@/features/comments";
+import {
+  InlineThreads,
+  SelectionCommentOverlay,
+  anchorEndLine,
+  anchorStartLine,
+  useFileComments,
+} from "@/features/comments";
 import { scrollToAnchorId, scrollToAnchorLine } from "@/features/main/lib/scrollToAnchor";
 import { i18next } from "@/shared/i18n";
 import type { CommentAnchor, DiffHunk } from "@/shared/ipc/contract";
@@ -45,7 +51,33 @@ export function MarkdownPreview({
   const commentsEnabled = Boolean(prNumber && filePath && headSha);
   const fileComments = useFileComments({ prNumber, filePath });
   const comments = fileComments.data ?? [];
-  const [composerAnchor, setComposerAnchor] = useState<CommentAnchor | null>(null);
+  const [composerAnchors, setComposerAnchors] = useState<CommentAnchor[]>([]);
+
+  const handleStartComposer = useCallback((anchor: CommentAnchor) => {
+    setComposerAnchors((prev) => {
+      const start = anchorStartLine(anchor);
+      const end = Math.max(start, anchorEndLine(anchor));
+      const exists = prev.some((a) => {
+        const s = anchorStartLine(a);
+        const e = Math.max(s, anchorEndLine(a));
+        return s === start && e === end;
+      });
+      if (exists) return prev;
+      return [...prev, anchor];
+    });
+  }, []);
+
+  const handleCloseComposer = useCallback((anchor: CommentAnchor) => {
+    setComposerAnchors((prev) => {
+      const start = anchorStartLine(anchor);
+      const end = Math.max(start, anchorEndLine(anchor));
+      return prev.filter((a) => {
+        const s = anchorStartLine(a);
+        const e = Math.max(s, anchorEndLine(a));
+        return !(s === start && e === end);
+      });
+    });
+  }, []);
 
   // When the user lands on the preview via a thread-pane click, the URL hash
   // carries the target line (e.g. `#L42`). Scroll once the markdown finishes
@@ -125,13 +157,12 @@ export function MarkdownPreview({
             headSha={headSha as string}
             comments={comments}
             containerRef={articleRef}
-            composerAnchor={composerAnchor}
-            onComposerClose={() => setComposerAnchor(null)}
+            composerAnchors={composerAnchors}
+            onComposerClose={handleCloseComposer}
           />
           <SelectionCommentOverlay
             containerRef={articleRef}
-            disabled={composerAnchor !== null}
-            onStartComposer={(a) => setComposerAnchor(a)}
+            onStartComposer={handleStartComposer}
           />
         </>
       ) : null}

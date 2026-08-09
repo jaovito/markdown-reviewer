@@ -26,8 +26,8 @@ function scrollMatchIntoView(activeEl: HTMLElement) {
     const elRect = activeEl.getBoundingClientRect();
 
     const relativeTop = elRect.top - parentRect.top;
-    const targetScrollTop =
-      scrollParent.scrollTop + relativeTop - parentRect.height / 2 + elRect.height / 2;
+    // Align ~70px below the top of the viewport so the target match sits at the top of the screen
+    const targetScrollTop = scrollParent.scrollTop + relativeTop - 70;
 
     scrollParent.scrollTo({
       top: Math.max(0, targetScrollTop),

@@ -25,6 +25,9 @@ tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+
 
 markdown-reviewer-core = { path = "crates/core" }
 markdown-reviewer-infra = { path = "crates/infra" }

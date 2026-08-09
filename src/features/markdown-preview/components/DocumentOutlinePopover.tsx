@@ -95,7 +95,7 @@ export function DocumentOutlinePopover({ headings, onSelectHeading }: DocumentOu
       </TooltipProvider>
 
       {isOpen ? (
-        <div className="absolute right-0 top-full z-50 mt-1.5 flex max-h-[420px] w-80 flex-col rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))] shadow-xl animate-in fade-in-50 zoom-in-95">
+        <div className="absolute right-0 top-full z-50 mt-1.5 flex max-h-[420px] w-80 flex-col rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] shadow-2xl animate-in fade-in-50 zoom-in-95">
           <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] p-2">
             <ListFilterIcon className="size-3.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
             <Input

@@ -58,7 +58,7 @@ export function DocumentSearchBar({
   };
 
   return (
-    <div className="absolute right-6 top-3 z-40 flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--popover))] p-1.5 shadow-lg animate-in fade-in-50 slide-in-from-top-2">
+    <div className="absolute right-6 top-3 z-40 flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] p-1.5 shadow-2xl animate-in fade-in-50 slide-in-from-top-2">
       <Input
         ref={inputRef}
         type="text"

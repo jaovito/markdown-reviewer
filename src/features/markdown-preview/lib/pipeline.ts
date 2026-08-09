@@ -1,83 +1,78 @@
 import { i18next } from "@/shared/i18n";
-import type { Schema } from "hast-util-sanitize";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeSanitize from "rehype-sanitize";
+import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import { unified } from "unified";
+import { type Processor, unified } from "unified";
+import { rehypeLinks } from "./rehypeLinks";
 import { rehypeMermaid } from "./rehypeMermaid";
+import { rehypeRepoAssets } from "./rehypeRepoAssets";
+import { rehypeShiki } from "./rehypeShiki";
 import { type AlertType, remarkGithubAlerts } from "./remarkGithubAlerts";
 import { remarkSourceLine } from "./remarkSourceLine";
+import { sanitizeSchema } from "./sanitizeSchema";
 
 /**
- * Sanitize schema extended to allow `data-source-line` on common block
- * elements (the #12 diff gutter anchors against rendered nodes) plus the
- * alert wrapper classes/attributes emitted by `remarkGithubAlerts`, plus the
- * `mermaid` wrapper class (`rehypeMermaid`). Phase 5 keeps this allowlist
- * tight — no `svg`/`path`; alert icons are pure CSS and Mermaid SVG is
- * injected client-side (post-sanitize) by the library itself.
+ * Everything the preview needs to resolve a document's relative references.
+ * Rendering without one is supported and yields the context-free output:
+ * relative images and local links are left as-is (and then dropped by the
+ * sanitizer), which is what the unit tests and any context-free caller want.
  */
-const ANCHOR_TAGS = [
-  "p",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "ul",
-  "ol",
-  "li",
-  "blockquote",
-  "pre",
-  "code",
-  "table",
-  "tr",
-  "td",
-  "th",
-] as const;
-
-const ALERT_CLASSNAMES = [
-  "markdown-alert",
-  "markdown-alert-note",
-  "markdown-alert-tip",
-  "markdown-alert-important",
-  "markdown-alert-warning",
-  "markdown-alert-caution",
-] as const;
-
-function withSourceLine(tag: string): string[] {
-  return [...((defaultSchema.attributes?.[tag] as string[] | undefined) ?? []), "data-source-line"];
+export interface RenderContext {
+  /** Absolute path of the local clone. */
+  repoPath: string;
+  /** PR head SHA — every relative reference resolves at this ref. */
+  sha: string;
+  /** Repo-relative path of the document being rendered. */
+  filePath: string;
+  /** Owner and repo, for building github.com/<owner>/<repo>/blob/… URLs. */
+  owner: string;
+  repo: string;
+  /** The PR's changed files — decides in-app navigation vs. opening GitHub. */
+  prFiles: readonly string[];
+  /** Route prefix for in-app navigation, e.g. `/repo/o/r/pulls/12`. */
+  basePath: string;
 }
-
-const schema: Schema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    ...Object.fromEntries(ANCHOR_TAGS.map((tag) => [tag, withSourceLine(tag)])),
-    div: [
-      ...((defaultSchema.attributes?.div as string[] | undefined) ?? []),
-      "data-source-line",
-      "data-alert-type",
-      ["className", ...ALERT_CLASSNAMES, "mermaid"],
-    ],
-    p: [...withSourceLine("p"), "data-alert-type", ["className", "markdown-alert-title"]],
-  },
-};
 
 const labelForAlert = (type: AlertType): string => i18next.t(`markdownPreview.alerts.${type}`);
 
-const processor = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkSourceLine)
-  .use(remarkGithubAlerts, { label: labelForAlert })
-  .use(remarkRehype, { allowDangerousHtml: false })
-  .use(rehypeMermaid)
-  .use(rehypeSanitize, schema)
-  .use(rehypeStringify);
+function build(ctx?: RenderContext): Processor {
+  const processor = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkSourceLine)
+    .use(remarkGithubAlerts, { label: labelForAlert })
+    .use(remarkRehype, { allowDangerousHtml: false })
+    .use(rehypeSlug)
+    .use(rehypeMermaid);
 
-export function renderMarkdown(source: string): string {
+  if (ctx) {
+    processor.use(rehypeRepoAssets, ctx);
+    processor.use(rehypeLinks, ctx);
+  }
+
+  return (
+    processor
+      // Everything above this line handles untrusted author content.
+      .use(rehypeSanitize, sanitizeSchema)
+      // Everything below generates markup from already-escaped text.
+      .use(rehypeShiki)
+      .use(rehypeStringify) as unknown as Processor
+  );
+}
+
+const contextFree = build();
+/** One processor per context identity — a re-render must not rebuild the chain. */
+const cache = new WeakMap<RenderContext, Processor>();
+
+export function renderMarkdown(source: string, ctx?: RenderContext): string {
+  if (!ctx) return contextFree.processSync(source).toString();
+  let processor = cache.get(ctx);
+  if (!processor) {
+    processor = build(ctx);
+    cache.set(ctx, processor);
+  }
   return processor.processSync(source).toString();
 }

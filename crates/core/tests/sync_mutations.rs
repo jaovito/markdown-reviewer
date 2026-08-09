@@ -110,6 +110,9 @@ impl GhClient for GhSpy {
     async fn get_file_content(&self, _: &str, _: &str, _: &str) -> AppResult<String> {
         unimplemented!()
     }
+    async fn get_file_bytes(&self, _: &str, _: &str, _: &str) -> AppResult<Vec<u8>> {
+        unimplemented!()
+    }
     async fn submit_review_batch(
         &self,
         _: &str,

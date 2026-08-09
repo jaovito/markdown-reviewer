@@ -91,3 +91,20 @@ test("leaves non-mermaid code fences as <pre><code>", () => {
   expect(html).toContain("<code");
   expect(html).not.toContain('class="mermaid"');
 });
+
+test("headings get GitHub-compatible slugged ids", () => {
+  const html = renderMarkdown("## Getting Started\n\ntext");
+  expect(html).toMatch(/<h2[^>]*id="user-content-getting-started"/);
+});
+
+test("duplicate headings get suffixed ids", () => {
+  const html = renderMarkdown("## Setup\n\na\n\n## Setup\n\nb");
+  expect(html).toContain('id="user-content-setup"');
+  expect(html).toContain('id="user-content-setup-1"');
+});
+
+test("heading ids survive sanitization but id stays off other elements", () => {
+  const html = renderMarkdown('# Title\n\n<p id="evil">x</p>');
+  expect(html).toMatch(/<h1[^>]*id="user-content-title"/);
+  expect(html).not.toContain('id="evil"');
+});

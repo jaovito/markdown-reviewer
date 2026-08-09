@@ -1,27 +1,33 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use markdown_reviewer_core::application::files::{read_markdown_file::read_markdown_file, Files};
+use markdown_reviewer_core::application::files::{read_repo_asset, Files, MAX_ASSET_BYTES};
 use markdown_reviewer_core::ports::{GhAuthReport, GhClient, GitClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
 
 struct FakeGit {
-    show: Option<String>,
+    bytes: Option<Vec<u8>>,
+}
+
+impl FakeGit {
+    fn with_bytes(bytes: Option<Vec<u8>>) -> Self {
+        Self { bytes }
+    }
 }
 
 #[async_trait]
 impl GitClient for FakeGit {
     async fn version(&self) -> AppResult<String> {
-        Ok("git 2.43".into())
+        unimplemented!("not used in this test")
     }
     async fn is_git_repo(&self, _path: &str) -> AppResult<bool> {
-        Ok(true)
+        unimplemented!("not used in this test")
     }
     async fn remote_origin_url(&self, _path: &str) -> AppResult<Option<String>> {
-        Ok(None)
+        unimplemented!("not used in this test")
     }
     async fn current_branch(&self, _path: &str) -> AppResult<Option<String>> {
-        Ok(None)
+        unimplemented!("not used in this test")
     }
     async fn show_file(
         &self,
@@ -29,7 +35,7 @@ impl GitClient for FakeGit {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<Option<String>> {
-        Ok(self.show.clone())
+        unimplemented!("not used in this test")
     }
     async fn show_file_bytes(
         &self,
@@ -37,7 +43,7 @@ impl GitClient for FakeGit {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<Option<Vec<u8>>> {
-        unimplemented!("not used in this test")
+        Ok(self.bytes.clone())
     }
     async fn diff_hunks(
         &self,
@@ -46,45 +52,56 @@ impl GitClient for FakeGit {
         _head: &str,
         _file_path: &str,
     ) -> AppResult<Option<Vec<markdown_reviewer_core::domain::DiffHunk>>> {
-        Ok(Some(Vec::new()))
+        unimplemented!("not used in this test")
     }
 }
 
 struct FakeGh {
-    fallback: AppResult<String>,
+    bytes: AppResult<Vec<u8>>,
+}
+
+impl FakeGh {
+    fn with_bytes(bytes: Vec<u8>) -> Self {
+        Self { bytes: Ok(bytes) }
+    }
+
+    fn failing() -> Self {
+        Self {
+            bytes: Err(AppError::FileNotFound {
+                sha: "abc".into(),
+                path: "nope.png".into(),
+            }),
+        }
+    }
 }
 
 #[async_trait]
 impl GhClient for FakeGh {
     async fn version(&self) -> AppResult<String> {
-        Ok("gh 2.50".into())
+        unimplemented!("not used in this test")
     }
     async fn auth_status(&self) -> AppResult<GhAuthReport> {
-        Ok(GhAuthReport {
-            authenticated: true,
-            username: Some("octocat".into()),
-            detail: String::new(),
-        })
+        unimplemented!("not used in this test")
     }
     async fn list_pull_requests(
         &self,
         _repo_path: &str,
     ) -> AppResult<Vec<markdown_reviewer_core::domain::PullRequestSummary>> {
-        Ok(Vec::new())
+        unimplemented!("not used in this test")
     }
     async fn load_pull_request(
         &self,
         _repo_path: &str,
-        number: u64,
+        _number: u64,
     ) -> AppResult<markdown_reviewer_core::domain::PullRequestDetail> {
-        Err(AppError::PrNotFound { number })
+        unimplemented!("not used in this test")
     }
     async fn list_changed_files(
         &self,
         _repo_path: &str,
         _number: u64,
     ) -> AppResult<Vec<markdown_reviewer_core::domain::ChangedFile>> {
-        Ok(Vec::new())
+        unimplemented!("not used in this test")
     }
     async fn get_file_content(
         &self,
@@ -92,7 +109,7 @@ impl GhClient for FakeGh {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<String> {
-        self.fallback.clone()
+        unimplemented!("not used in this test")
     }
     async fn get_file_bytes(
         &self,
@@ -100,7 +117,7 @@ impl GhClient for FakeGh {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<Vec<u8>> {
-        unimplemented!("not used in this test")
+        self.bytes.clone()
     }
     async fn submit_review_batch(
         &self,
@@ -109,7 +126,7 @@ impl GhClient for FakeGh {
         _head_sha: &str,
         _comments: &[ReviewCommentInput],
     ) -> AppResult<Vec<i64>> {
-        Err(AppError::process("not implemented in test fake"))
+        unimplemented!("not used in this test")
     }
     async fn submit_review_comment(
         &self,
@@ -118,7 +135,7 @@ impl GhClient for FakeGh {
         _head_sha: &str,
         _comment: &ReviewCommentInput,
     ) -> AppResult<i64> {
-        Err(AppError::process("not implemented in test fake"))
+        unimplemented!("not used in this test")
     }
     async fn list_review_threads(
         &self,
@@ -163,44 +180,49 @@ impl GhClient for FakeGh {
     }
 }
 
-fn svc(git_show: Option<String>, gh_fallback: AppResult<String>) -> Files {
+fn svc(git: FakeGit, gh: FakeGh) -> Files {
     Files {
-        git: Arc::new(FakeGit { show: git_show }),
-        gh: Arc::new(FakeGh {
-            fallback: gh_fallback,
-        }),
+        git: Arc::new(git),
+        gh: Arc::new(gh),
     }
 }
 
 #[tokio::test]
-async fn returns_git_show_content_when_present() {
-    let svc = svc(Some("# from git".into()), Err(AppError::unexpected("nope")));
-    let got = read_markdown_file(&svc, "/r", "abc", "README.md")
-        .await
-        .unwrap();
-    assert_eq!(got, "# from git");
-}
-
-#[tokio::test]
-async fn falls_back_to_gh_when_ref_missing_locally() {
-    let svc = svc(None, Ok("# from gh".into()));
-    let got = read_markdown_file(&svc, "/r", "abc", "README.md")
-        .await
-        .unwrap();
-    assert_eq!(got, "# from gh");
-}
-
-#[tokio::test]
-async fn surfaces_file_not_found_from_gh() {
-    let svc = svc(
-        None,
-        Err(AppError::FileNotFound {
-            sha: "abc".into(),
-            path: "missing.md".into(),
-        }),
+async fn returns_local_bytes_when_git_has_them() {
+    let s = svc(
+        FakeGit::with_bytes(Some(vec![1, 2, 3])),
+        FakeGh::with_bytes(vec![9, 9, 9]),
     );
-    let err = read_markdown_file(&svc, "/r", "abc", "missing.md")
+    let got = read_repo_asset(&s, "/repo", "abc", "docs/a.png")
+        .await
+        .unwrap();
+    assert_eq!(got, vec![1, 2, 3]);
+}
+
+#[tokio::test]
+async fn falls_back_to_github_when_git_misses() {
+    let s = svc(FakeGit::with_bytes(None), FakeGh::with_bytes(vec![7, 7]));
+    let got = read_repo_asset(&s, "/repo", "abc", "docs/a.png")
+        .await
+        .unwrap();
+    assert_eq!(got, vec![7, 7]);
+}
+
+#[tokio::test]
+async fn propagates_the_github_error_when_both_miss() {
+    let s = svc(FakeGit::with_bytes(None), FakeGh::failing());
+    let err = read_repo_asset(&s, "/repo", "abc", "nope.png")
         .await
         .unwrap_err();
     assert!(matches!(err, AppError::FileNotFound { .. }));
+}
+
+#[tokio::test]
+async fn rejects_an_asset_over_the_size_cap() {
+    let huge = vec![0u8; MAX_ASSET_BYTES + 1];
+    let s = svc(FakeGit::with_bytes(Some(huge)), FakeGh::with_bytes(vec![]));
+    let err = read_repo_asset(&s, "/repo", "abc", "big.png")
+        .await
+        .unwrap_err();
+    assert!(matches!(err, AppError::Validation { .. }));
 }

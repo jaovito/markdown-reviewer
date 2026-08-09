@@ -29,6 +29,15 @@ pub trait GitClient: Send + Sync {
         file_path: &str,
     ) -> AppResult<Option<String>>;
 
+    /// Byte-preserving sibling of `show_file`, for binary blobs (images).
+    /// Returns `None` on the same conditions: missing ref or missing file.
+    async fn show_file_bytes(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<Option<Vec<u8>>>;
+
     /// Returns the head-side hunks for `<file_path>` between `<base>` and
     /// `<head>` (inclusive line ranges, 1-based). Returns `None` when one of
     /// the refs is missing locally.

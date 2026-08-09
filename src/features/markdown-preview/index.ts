@@ -4,3 +4,4 @@ export { useFileContent } from "./hooks/useFileContent";
 export { useFileDiff } from "./hooks/useFileDiff";
 export { usePullRequestDetail } from "./hooks/usePullRequestDetail";
 export { renderMarkdown } from "./lib/pipeline";
+export type { RenderContext } from "./lib/pipeline";

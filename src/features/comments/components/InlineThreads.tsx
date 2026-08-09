@@ -45,9 +45,11 @@ interface InlineThreadsProps {
   headSha: string;
   comments: ReviewComment[];
   containerRef: React.RefObject<HTMLElement | null>;
-  /** When set, renders an inline draft composer at this anchor's start line. */
-  composerAnchor: CommentAnchor | null;
-  onComposerClose: () => void;
+  /** When set, renders inline draft composers at these anchors. */
+  composerAnchors?: CommentAnchor[];
+  /** Backwards compatibility single anchor */
+  composerAnchor?: CommentAnchor | null;
+  onComposerClose: (anchor: CommentAnchor) => void;
 }
 
 /** Composite key `${startLine}:${endLine}` so two threads sharing a startLine
@@ -65,11 +67,12 @@ interface SlotMap {
   badges: Map<SlotKey, HTMLSpanElement>;
   /** key → portal target div for the sticky range header (multi-line ranges only) */
   headers: Map<SlotKey, HTMLDivElement>;
-  composerSlot: HTMLDivElement | null;
+  /** key → portal target div for draft composers */
+  composerSlots: Map<SlotKey, HTMLDivElement>;
 }
 
 /**
- * Mounts thread cards (and the optional draft composer) inline in the document
+ * Mounts thread cards (and optional draft composers) inline in the document
  * flow as siblings of the corresponding `[data-source-line]` element. Uses
  * direct DOM injection + React portals so commented lines visibly push later
  * content down — matching the design's "Comment under the line" layout.
@@ -81,6 +84,7 @@ export function InlineThreads({
   headSha,
   comments,
   containerRef,
+  composerAnchors,
   composerAnchor,
   onComposerClose,
 }: InlineThreadsProps) {
@@ -342,10 +346,11 @@ export function InlineThreads({
   // when needed.
   const groups = useMemo(() => groupCommentsByStartLine(allComments), [allComments]);
 
-  const composerStart = composerAnchor ? anchorStartLine(composerAnchor) : null;
-  const composerEnd = composerAnchor
-    ? Math.max(composerStart ?? 0, anchorEndLine(composerAnchor))
-    : null;
+  const activeComposerAnchors = useMemo(() => {
+    if (composerAnchors && composerAnchors.length > 0) return composerAnchors;
+    if (composerAnchor) return [composerAnchor];
+    return [];
+  }, [composerAnchors, composerAnchor]);
 
   // The minimized store is global and keyed by (prNumber, filePath, start,
   // end). The slot Maps inside this component are per-instance and keyed by
@@ -408,11 +413,13 @@ export function InlineThreads({
 
   // Slot map lives in a ref; we only bump `revision` when the slot identities
   // actually change so the React tree re-renders the portals minimally.
+  // Slot map lives in a ref; we only bump `revision` when the slot identities
+  // actually change so the React tree re-renders the portals minimally.
   const slotsRef = useRef<SlotMap>({
     threads: new Map(),
     badges: new Map(),
     headers: new Map(),
-    composerSlot: null,
+    composerSlots: new Map(),
   });
   const [, setRevision] = useState(0);
   // Tracks whether the current DOM mutation batch was caused by our own slot
@@ -457,22 +464,12 @@ export function InlineThreads({
       slotsRef.current,
       groups,
       collapsedSet,
-      composerStart,
-      composerEnd,
+      activeComposerAnchors,
       flashRange,
       mutatingRef,
     );
     if (changed) setRevision((r) => r + 1);
-    // NOTE: do NOT tear down all slots here on dep change. `syncSlots` is
-    // already incremental — when a single anchor flips from card to badge
-    // (or vice versa) it only mutates that one anchor's slots, leaving
-    // every other slot (including the draft `CommentComposer` slot) in
-    // place. A destructive cleanup on every render would unmount the
-    // composer's portal target whenever the user clicks a resolved thread
-    // marker (or any selection change that toggles `collapsedSet`),
-    // wiping the unsaved body text in `CommentComposer`'s local state.
-    // Final teardown lives in the unmount-only effect below.
-  }, [containerRef, groups, collapsedSet, composerStart, composerEnd, flashRange]);
+  }, [containerRef, groups, collapsedSet, activeComposerAnchors, flashRange]);
 
   // One-shot cleanup, tied only to the `containerRef`. React invokes this
   // cleanup when the article element is swapped (different file rendered)
@@ -490,7 +487,7 @@ export function InlineThreads({
           threads: new Map(),
           badges: new Map(),
           headers: new Map(),
-          composerSlot: null,
+          composerSlots: new Map(),
         };
       } finally {
         queueMicrotask(() => {
@@ -515,8 +512,7 @@ export function InlineThreads({
         slotsRef.current,
         groups,
         collapsedSet,
-        composerStart,
-        composerEnd,
+        activeComposerAnchors,
         flashRange,
         mutatingRef,
       );
@@ -524,7 +520,7 @@ export function InlineThreads({
     });
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [containerRef, groups, collapsedSet, composerStart, composerEnd, flashRange]);
+  }, [containerRef, groups, collapsedSet, activeComposerAnchors, flashRange]);
 
   const slots = slotsRef.current;
 
@@ -717,21 +713,26 @@ export function InlineThreads({
         }
         return [headerNode, body];
       })}
-      {composerAnchor && slots.composerSlot
-        ? createPortal(
-            <div className="my-3">
-              <CommentComposer
-                prNumber={prNumber}
-                filePath={filePath}
-                headSha={headSha}
-                anchor={composerAnchor}
-                onClose={onComposerClose}
-              />
-            </div>,
-            slots.composerSlot,
-            "draft-composer",
-          )
-        : null}
+      {activeComposerAnchors.map((anchor) => {
+        const start = anchorStartLine(anchor);
+        const end = Math.max(start, anchorEndLine(anchor));
+        const slotKey = slotKeyFor(start, end);
+        const slot = slots.composerSlots.get(slotKey);
+        if (!slot) return null;
+        return createPortal(
+          <div className="my-3">
+            <CommentComposer
+              prNumber={prNumber}
+              filePath={filePath}
+              headSha={headSha}
+              anchor={anchor}
+              onClose={() => onComposerClose(anchor)}
+            />
+          </div>,
+          slot,
+          `draft-composer-${slotKey}`,
+        );
+      })}
     </>
   );
 }
@@ -804,8 +805,7 @@ function syncSlots(
   current: SlotMap,
   groups: CommentGroup[],
   collapsed: Set<SlotKey>,
-  composerStart: number | null,
-  composerEnd: number | null,
+  composerAnchors: CommentAnchor[],
   flashRange: { start: number; end: number } | null,
   mutatingRef: { current: boolean },
 ): boolean {
@@ -822,8 +822,15 @@ function syncSlots(
       for (let l = g.startLine; l <= g.endLine; l++) wantedLines.add(l);
       wantedLines.add(g.attachLine);
     }
-    if (composerStart !== null && composerEnd !== null) {
-      for (let l = composerStart; l <= composerEnd; l++) wantedLines.add(l);
+    const composerItems: { key: SlotKey; start: number; end: number; anchor: CommentAnchor }[] = [];
+    const wantsComposerKeys = new Set<SlotKey>();
+    for (const a of composerAnchors) {
+      const start = anchorStartLine(a);
+      const end = Math.max(start, anchorEndLine(a));
+      const key = slotKeyFor(start, end);
+      wantsComposerKeys.add(key);
+      composerItems.push({ key, start, end, anchor: a });
+      for (let l = start; l <= end; l++) wantedLines.add(l);
     }
     splitCodeBlocks(container, wantedLines);
 
@@ -876,16 +883,13 @@ function syncSlots(
       }
     }
 
-    // 2. Remove obsolete composer slot.
-    if (
-      current.composerSlot &&
-      (composerEnd === null ||
-        !current.composerSlot.isConnected ||
-        Number(current.composerSlot.dataset.threadSlotLine ?? "0") !== composerEnd)
-    ) {
-      current.composerSlot.remove();
-      current.composerSlot = null;
-      changed = true;
+    // 2. Remove obsolete composer slots.
+    for (const [key, node] of current.composerSlots) {
+      if (!wantsComposerKeys.has(key) || !node.isConnected) {
+        node.remove();
+        current.composerSlots.delete(key);
+        changed = true;
+      }
     }
 
     // 3. Clear and reapply the data-has-comment attribute on commented lines.
@@ -960,17 +964,17 @@ function syncSlots(
       }
     }
 
-    // 5. Insert the composer slot if needed.
-    if (composerStart !== null && composerEnd !== null) {
-      markRange(lineNodes, composerStart, composerEnd, false, false);
-      if (!current.composerSlot) {
-        const anchor = lineNodes.get(composerEnd);
-        if (anchor?.parentNode) {
+    // 5. Insert missing composer slots if needed.
+    for (const item of composerItems) {
+      markRange(lineNodes, item.start, item.end, false, false);
+      if (!current.composerSlots.has(item.key)) {
+        const anchorNode = lineNodes.get(item.end);
+        if (anchorNode?.parentNode) {
           const slot = document.createElement("div");
           slot.dataset.threadSlot = "composer";
-          slot.dataset.threadSlotLine = String(composerEnd);
-          anchor.parentNode.insertBefore(slot, anchor.nextSibling);
-          current.composerSlot = slot;
+          slot.dataset.threadSlotLine = String(item.end);
+          anchorNode.parentNode.insertBefore(slot, anchorNode.nextSibling);
+          current.composerSlots.set(item.key, slot);
           changed = true;
         }
       }
@@ -1047,6 +1051,20 @@ function removeAllSlots(container: HTMLElement) {
  * `data-source-line` attribute can sit on the `<pre>` OR on its inner
  * `<code>`. Idempotent. We skip code blocks the user hasn't commented on
  * to avoid blowing up the DOM in code-heavy documents.
+ *
+ * Two structural shapes reach this function, and they're handled
+ * differently:
+ *  - **Shiki output** (the normal case — `rehypeShiki` succeeded): `<code>`
+ *    already contains one `<span class="line">` per source line, blank
+ *    lines included, carrying Shiki's colored token spans. Those existing
+ *    spans are stamped with `data-code-line`/`data-source-line` in place —
+ *    rebuilding from `textContent` the way the fallback below does would
+ *    discard every one of Shiki's spans and leave the block permanently
+ *    plain-text the instant it got a comment.
+ *  - **Bare `<pre><code>`** (`rehypeShiki`'s catch path left an
+ *    unrecognized/failed fence untouched, or some other unexpected shape):
+ *    no line spans exist yet, so fresh ones are built from `textContent` as
+ *    before.
  */
 function splitCodeBlocks(container: HTMLElement, wantedLines: Set<number>) {
   if (wantedLines.size === 0) return;
@@ -1085,21 +1103,51 @@ function splitCodeBlocks(container: HTMLElement, wantedLines: Set<number>) {
     const trimmed = text.endsWith("\n") ? text.slice(0, -1) : text;
     const lines = trimmed.split("\n");
 
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < lines.length; i++) {
-      const span = document.createElement("span");
-      span.dataset.codeLine = "true";
-      // Fence opener is `fenceLine`; first content line is `fenceLine + 1`.
-      span.dataset.sourceLine = String(fenceLine + 1 + i);
-      span.textContent = `${lines[i] ?? ""}\n`;
-      fragment.appendChild(span);
+    const lineSpans = code
+      ? Array.from(code.children).filter(
+          (el): el is HTMLElement => el.tagName === "SPAN" && el.classList.contains("line"),
+        )
+      : [];
+
+    if (lineSpans.length === lines.length) {
+      // Shiki shape: stamp the existing line spans instead of rebuilding.
+      for (let i = 0; i < lineSpans.length; i++) {
+        const span = lineSpans[i];
+        if (!span) continue;
+        span.dataset.codeLine = "true";
+        // Fence opener is `fenceLine`; first content line is `fenceLine + 1`.
+        span.dataset.sourceLine = String(fenceLine + 1 + i);
+        // Shiki separates line spans with a literal "\n" text-node sibling,
+        // not a newline inside the span. Absorb it into the span it follows:
+        // left as a stray sibling, `[data-code-line]`'s `display: block`
+        // (index.css) turns it into an extra blank line inside this
+        // preformatted (`white-space: pre`) block, double-spacing the whole
+        // thing. Absorbing it also keeps a trailing "\n" on each line's own
+        // text, matching the plain-text fallback below.
+        const separator = span.nextSibling;
+        if (separator?.nodeType === Node.TEXT_NODE) {
+          span.appendChild(separator);
+        }
+      }
+    } else {
+      // Not Shiki's shape — nothing to preserve, rebuild plain spans.
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < lines.length; i++) {
+        const span = document.createElement("span");
+        span.dataset.codeLine = "true";
+        span.dataset.sourceLine = String(fenceLine + 1 + i);
+        span.textContent = `${lines[i] ?? ""}\n`;
+        fragment.appendChild(span);
+      }
+      host.replaceChildren(fragment);
     }
-    host.replaceChildren(fragment);
 
     // Strip `data-source-line` from the pre / code so they can't shadow our
     // per-line spans in `nearestLineNodes` (first-occurrence-wins traversal),
     // and — crucially — so the `[data-source-line][data-has-comment]` CSS
-    // rule never paints the whole block by accident.
+    // rule never paints the whole block by accident. `pre`'s is the one that
+    // actually matters for Shiki blocks (see rehypeShiki.ts); `code`'s only
+    // still applies to the bare-`<pre><code>` fallback shape above.
     delete pre.dataset.sourceLine;
     if (code) delete code.dataset.sourceLine;
   }

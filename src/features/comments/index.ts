@@ -7,7 +7,7 @@ export { useCreateComment } from "./hooks/useCreateComment";
 export { useFileComments } from "./hooks/useFileComments";
 export { useGhUser } from "./hooks/useGhUser";
 export { usePullRequestComments } from "./hooks/usePullRequestComments";
-export { anchorStartLine, groupCommentsByStartLine } from "./lib/groupAnchors";
+export { anchorEndLine, anchorStartLine, groupCommentsByStartLine } from "./lib/groupAnchors";
 export { resolveAnchor } from "./lib/selectionToAnchor";
 export type { AnchorResult } from "./lib/selectionToAnchor";
 export type { CommentGroup } from "./lib/groupAnchors";

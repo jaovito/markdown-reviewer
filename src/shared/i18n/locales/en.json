@@ -276,6 +276,13 @@
       "zoomOut": "Zoom out",
       "reset": "Reset zoom",
       "close": "Close"
+    },
+    "image": {
+      "unavailable": "Image not available at this commit",
+      "altFallback": "Image"
+    },
+    "links": {
+      "inertTitle": "This link points somewhere Markdown Reviewer can't open"
     }
   },
   "errors": {

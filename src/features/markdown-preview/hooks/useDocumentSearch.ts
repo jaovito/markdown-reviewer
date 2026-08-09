@@ -12,8 +12,8 @@ const ACTIVE_MATCH_CLASS =
   "bg-amber-400 text-slate-950 dark:bg-amber-400 dark:text-slate-950 px-0.5 rounded-xs ring-2 ring-amber-500 font-bold shadow-sm transition-all";
 
 /**
- * Scrolls the main document viewport to center the target element vertically,
- * handling elements nested inside horizontal scroll containers (like <pre> or <table>).
+ * Scrolls the main document viewport so the target search match appears
+ * near the top of the viewport (with ~70px offset for the toolbar).
  */
 function scrollMatchIntoView(activeEl: HTMLElement) {
   // Find the primary document scroll container (e.g. div.overflow-auto)
@@ -35,11 +35,17 @@ function scrollMatchIntoView(activeEl: HTMLElement) {
     });
   }
 
-  // Ensure horizontal alignment if inside a long code block line or table
-  try {
-    activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-  } catch {
-    // Ignore browser scroll errors on detached nodes
+  // Handle horizontal alignment if inside a long code block line or table
+  const horizParent = activeEl.closest("pre, table") as HTMLElement | null;
+  if (horizParent && horizParent.scrollWidth > horizParent.clientWidth) {
+    const hRect = horizParent.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+    const relativeLeft = elRect.left - hRect.left;
+    const targetScrollLeft = horizParent.scrollLeft + relativeLeft - 20;
+    horizParent.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: "smooth",
+    });
   }
 }
 

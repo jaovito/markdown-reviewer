@@ -59,6 +59,9 @@ export const rehypeLinks: Plugin<[RenderContext], Root> = (ctx) => {
         return;
       }
 
+      const hashIndex = href.indexOf("#");
+      const fragment = hashIndex !== -1 ? href.slice(hashIndex) : "";
+
       const resolved = resolveRepoPath(ctx.filePath, href);
       if (!resolved) {
         set("inert", { href: undefined });
@@ -67,11 +70,11 @@ export const rehypeLinks: Plugin<[RenderContext], Root> = (ctx) => {
 
       if (MARKDOWN_EXT.test(resolved) && ctx.prFiles.includes(resolved)) {
         // HashRouter resolves this natively — no JS needed.
-        set("internal", { href: `#${ctx.basePath}/files/${resolved}` });
+        set("internal", { href: `#${ctx.basePath}/files/${resolved}${fragment}` });
         return;
       }
 
-      set("github", { href: undefined, "data-href": githubBlobUrl(ctx, resolved) });
+      set("github", { href: undefined, "data-href": `${githubBlobUrl(ctx, resolved)}${fragment}` });
     });
   };
 };

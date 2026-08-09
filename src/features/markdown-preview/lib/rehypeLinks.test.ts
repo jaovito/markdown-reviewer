@@ -11,16 +11,16 @@ const ctx: RenderContext = {
   basePath: "/repo/acme/widgets/pulls/7",
 };
 
-test("a markdown file in the PR becomes an in-app route", () => {
-  const html = renderMarkdown("[other](./other.md)", ctx);
+test("a markdown file in the PR becomes an in-app route and preserves fragments", () => {
+  const html = renderMarkdown("[other](./other.md#installation)", ctx);
   expect(html).toContain('data-link-kind="internal"');
-  expect(html).toContain('href="#/repo/acme/widgets/pulls/7/files/docs/other.md"');
+  expect(html).toContain('href="#/repo/acme/widgets/pulls/7/files/docs/other.md#installation"');
 });
 
-test("a markdown file outside the PR points at GitHub", () => {
-  const html = renderMarkdown("[readme](../README.md)", ctx);
+test("a markdown file outside the PR points at GitHub and preserves fragments", () => {
+  const html = renderMarkdown("[readme](../README.md#setup)", ctx);
   expect(html).toContain('data-link-kind="github"');
-  expect(html).toContain("https://github.com/acme/widgets/blob/abc123/README.md");
+  expect(html).toContain("https://github.com/acme/widgets/blob/abc123/README.md#setup");
 });
 
 test("a non-markdown local file points at GitHub", () => {

@@ -40,3 +40,11 @@ test("strips a query string and fragment", () => {
 test("rejects an empty target", () => {
   expect(resolveRepoPath("docs/guide.md", "")).toBeNull();
 });
+
+test("decodes percent-encoded path segments", () => {
+  expect(resolveRepoPath("docs/guide.md", "image%20v2.png")).toBe("docs/image v2.png");
+});
+
+test("rejects malformed percent-encoding", () => {
+  expect(resolveRepoPath("docs/guide.md", "image%E0%A0.png")).toBeNull();
+});

@@ -17,9 +17,17 @@ export function resolveRepoPath(currentFile: string, target: string): string | n
   const clean = target.split("#")[0]?.split("?")[0] ?? "";
   if (!clean) return null;
 
-  const rootRelative = clean.startsWith("/");
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(clean);
+  } catch {
+    return null; // Reject malformed percent-encoding
+  }
+  if (!decoded) return null;
+
+  const rootRelative = decoded.startsWith("/");
   const base = rootRelative ? [] : currentFile.split("/").slice(0, -1);
-  const segments = [...base, ...clean.split("/")];
+  const segments = [...base, ...decoded.split("/")];
 
   const out: string[] = [];
   for (const segment of segments) {

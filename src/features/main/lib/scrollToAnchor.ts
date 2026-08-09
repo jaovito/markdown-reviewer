@@ -1,14 +1,37 @@
+export interface ScrollToAnchorOptions {
+  block?: ScrollLogicalPosition;
+  flash?: boolean;
+}
+
 /**
  * Scrolls the rendered Markdown preview to the block tagged with the given
  * source line. Returns the matched element (or null) so callers can flash a
  * highlight if they want.
  */
-export function scrollToAnchorLine(line: number): HTMLElement | null {
+export function scrollToAnchorLine(
+  line: number,
+  options?: ScrollToAnchorOptions,
+): HTMLElement | null {
   if (!Number.isFinite(line) || line <= 0) return null;
   const el = document.querySelector<HTMLElement>(`article [data-source-line="${line}"]`);
   if (!el) return null;
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  const block = options?.block ?? "center";
+  el.scrollIntoView({ behavior: "smooth", block });
+  if (options?.flash) {
+    flashHeading(el);
+  }
   return el;
+}
+
+/**
+ * Temporarily flashes a highlight on a target element to give visual feedback
+ * (e.g. when navigating from Table of Contents).
+ */
+export function flashHeading(el: HTMLElement): void {
+  el.setAttribute("data-heading-flash", "true");
+  setTimeout(() => {
+    el.removeAttribute("data-heading-flash");
+  }, 1300);
 }
 
 /**

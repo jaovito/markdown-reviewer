@@ -52,6 +52,10 @@ export function PullRequestScreen() {
     searchTriggerRef.current?.();
   }, []);
 
+  const handleSelectHeading = useCallback((line: number) => {
+    scrollToAnchorLine(line, { block: "start", flash: true });
+  }, []);
+
   const repoPath = useRepoPath(owner, repo);
   const files = useChangedFiles(repoPath.data ?? undefined, prNumber);
   const detail = usePullRequestDetail(repoPath.data ?? undefined, prNumber);
@@ -122,7 +126,7 @@ export function PullRequestScreen() {
             selectedPath={selectedPath}
             prNumber={prNumber}
             headings={headings}
-            onSelectHeading={scrollToAnchorLine}
+            onSelectHeading={handleSelectHeading}
             onOpenSearch={handleOpenSearch}
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={toggleLeft}

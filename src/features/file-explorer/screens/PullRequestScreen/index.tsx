@@ -123,8 +123,11 @@ export function PullRequestScreen() {
       <PreviewSlot
         toolbar={
           <PreviewToolbar
+            owner={owner}
+            repo={repo}
             selectedPath={selectedPath}
             prNumber={prNumber}
+            headSha={detail.data?.headSha}
             headings={headings}
             onSelectHeading={handleSelectHeading}
             onOpenSearch={handleOpenSearch}

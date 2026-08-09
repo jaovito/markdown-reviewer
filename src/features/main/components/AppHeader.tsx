@@ -8,7 +8,8 @@ import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon, GitBranchIcon, Loader2Icon } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { CheckIcon, ExternalLinkIcon, GitBranchIcon, Loader2Icon } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
@@ -101,7 +102,17 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       {prNumber ? (
         <>
           <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">/</span>
-          <span className="shrink-0 text-xs font-medium">PR #{prNumber}</span>
+          <button
+            type="button"
+            onClick={() =>
+              openUrl(`https://github.com/${owner}/${repo}/pull/${prNumber}`).catch(() => undefined)
+            }
+            className="group flex shrink-0 items-center gap-1 text-xs font-medium text-[hsl(var(--foreground))] transition-colors hover:text-[hsl(var(--primary))] hover:underline cursor-pointer"
+            title={t("fileExplorer.preview.openPrOnGithub")}
+          >
+            <span>PR #{prNumber}</span>
+            <ExternalLinkIcon className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
+          </button>
           <PullRequestTitle data={title.data} isLoading={title.isLoading} />
         </>
       ) : null}

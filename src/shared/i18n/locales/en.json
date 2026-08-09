@@ -89,7 +89,11 @@
       "nextMatch": "Next match (Enter)",
       "previousMatch": "Previous match (Shift+Enter)",
       "closeSearch": "Close search (Esc)",
-      "searchAria": "Search in document"
+      "searchAria": "Search in document",
+      "openPrOnGithub": "Open PR on GitHub",
+      "openFileOnGithub": "Open file on GitHub",
+      "copyFileLink": "Copy link to file",
+      "copied": "Copied!"
     },
     "status": {
       "aria": "Change status: {{status}}",

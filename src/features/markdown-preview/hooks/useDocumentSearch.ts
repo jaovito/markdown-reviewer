@@ -11,6 +11,38 @@ const INACTIVE_MATCH_CLASS =
 const ACTIVE_MATCH_CLASS =
   "bg-amber-400 text-slate-950 dark:bg-amber-400 dark:text-slate-950 px-0.5 rounded-xs ring-2 ring-amber-500 font-bold shadow-sm transition-all";
 
+/**
+ * Scrolls the main document viewport to center the target element vertically,
+ * handling elements nested inside horizontal scroll containers (like <pre> or <table>).
+ */
+function scrollMatchIntoView(activeEl: HTMLElement) {
+  // Find the primary document scroll container (e.g. div.overflow-auto)
+  const scrollParent =
+    (activeEl.closest(".overflow-auto") as HTMLElement | null) ??
+    (activeEl.closest("section") as HTMLElement | null);
+
+  if (scrollParent) {
+    const parentRect = scrollParent.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+
+    const relativeTop = elRect.top - parentRect.top;
+    const targetScrollTop =
+      scrollParent.scrollTop + relativeTop - parentRect.height / 2 + elRect.height / 2;
+
+    scrollParent.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: "smooth",
+    });
+  }
+
+  // Ensure horizontal alignment if inside a long code block line or table
+  try {
+    activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  } catch {
+    // Ignore browser scroll errors on detached nodes
+  }
+}
+
 export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearchOptions) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -51,7 +83,7 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
     const activeEl = matches[clampedIndex];
     if (activeEl) {
       requestAnimationFrame(() => {
-        activeEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        scrollMatchIntoView(activeEl);
       });
     }
   }, []);

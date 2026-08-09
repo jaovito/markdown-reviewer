@@ -4,8 +4,11 @@ import type { CommentAnchor, DiffHunk } from "@/shared/ipc/contract";
 import { cn } from "@/shared/lib/cn";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useDocumentSearch } from "../hooks/useDocumentSearch";
+import { type HeadingItem, extractHeadings } from "../lib/extractHeadings";
 import { renderMarkdown } from "../lib/pipeline";
 import { DiffGutter } from "./DiffGutter";
+import { DocumentSearchBar } from "./DocumentSearchBar";
 
 interface MarkdownPreviewProps {
   source: string;
@@ -16,6 +19,8 @@ interface MarkdownPreviewProps {
   prNumber?: number;
   filePath?: string;
   headSha?: string;
+  onHeadingsExtracted?: (headings: HeadingItem[]) => void;
+  onRegisterSearchTrigger?: (trigger: () => void) => void;
 }
 
 export function MarkdownPreview({
@@ -26,22 +31,38 @@ export function MarkdownPreview({
   prNumber,
   filePath,
   headSha,
+  onHeadingsExtracted,
+  onRegisterSearchTrigger,
 }: MarkdownPreviewProps) {
   const html = useMemo(() => renderMarkdown(source), [source]);
+  const headings = useMemo(() => extractHeadings(source), [source]);
+
+  // Notify parent component of extracted headings whenever source changes
+  useEffect(() => {
+    onHeadingsExtracted?.(headings);
+  }, [headings, onHeadingsExtracted]);
+
   const articleRef = useRef<HTMLElement>(null);
   const commentsEnabled = Boolean(prNumber && filePath && headSha);
   const fileComments = useFileComments({ prNumber, filePath });
   const comments = fileComments.data ?? [];
   const [composerAnchor, setComposerAnchor] = useState<CommentAnchor | null>(null);
 
+  // In-document text search engine hook
+  const search = useDocumentSearch({
+    containerRef: articleRef,
+    sourceHtml: html,
+  });
+
+  // Register search trigger callback to parent toolbar
+  useEffect(() => {
+    onRegisterSearchTrigger?.(search.openSearch);
+  }, [search.openSearch, onRegisterSearchTrigger]);
+
   // When the user lands on the preview via a thread-pane click, the URL hash
-  // carries the target line (e.g. `#L42`). Scroll once the markdown finishes
-  // rendering — `requestAnimationFrame` waits for the next paint so the
-  // `[data-source-line]` nodes are mounted before we query them. We depend on
-  // `html` + `location.key` (not read) so navigating to the same URL or
-  // landing on a freshly-rendered file both trigger a re-scroll.
+  // carries the target line (e.g. `#L42`). Scroll once the markdown finishes rendering.
   const location = useLocation();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: html and location.key are intentional re-run triggers; their values aren't read in the body.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: html and location.key are intentional re-run triggers
   useEffect(() => {
     const match = /^#L(\d+)$/.exec(location.hash);
     if (!match) return;
@@ -52,6 +73,18 @@ export function MarkdownPreview({
 
   return (
     <div className="relative mx-auto w-full max-w-3xl">
+      <DocumentSearchBar
+        isOpen={search.isOpen}
+        query={search.query}
+        onQueryChange={search.setQuery}
+        isCaseSensitive={search.isCaseSensitive}
+        onToggleCaseSensitive={search.toggleCaseSensitive}
+        currentIndex={search.currentIndex}
+        matchCount={search.matchCount}
+        onNextMatch={search.nextMatch}
+        onPrevMatch={search.prevMatch}
+        onClose={search.closeSearch}
+      />
       {hunks && hunks.length > 0 ? <DiffGutter hunks={hunks} containerRef={articleRef} /> : null}
       <article
         ref={articleRef}

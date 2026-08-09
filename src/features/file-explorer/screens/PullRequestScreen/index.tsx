@@ -1,9 +1,12 @@
 import { PreviewSlot, SidebarShell, ThreadsPane, useRepoContext } from "@/features/main";
+import { scrollToAnchorLine } from "@/features/main/lib/scrollToAnchor";
 import { usePullRequestDetail } from "@/features/markdown-preview";
+import type { HeadingItem } from "@/features/markdown-preview/lib/extractHeadings";
 import { useRepoPath } from "@/features/pull-requests";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useLastPullRequest } from "@/shared/stores/useLastPullRequest";
-import { useEffect, useMemo, useState } from "react";
+import { useSidebarCollapse } from "@/shared/stores/useSidebarCollapse";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { FileTreeSearch } from "../../components/FileTreeSearch";
@@ -12,6 +15,7 @@ import { isMarkdownPath } from "../../lib/buildTree";
 import { filterChangedFiles } from "../../lib/filterFiles";
 import { InvalidPullRequestAlert } from "./InvalidPullRequestAlert";
 import { PreviewArea } from "./PreviewArea";
+import { PreviewToolbar } from "./PreviewToolbar";
 import { PullRequestSidebar } from "./PullRequestSidebar";
 
 export function PullRequestScreen() {
@@ -29,8 +33,24 @@ export function PullRequestScreen() {
     if (prNumber !== undefined) rememberLastPr(owner, repo, prNumber);
   }, [owner, repo, prNumber, rememberLastPr]);
 
+  const isLeftCollapsed = useSidebarCollapse((s) => s.isLeftCollapsed);
+  const toggleLeft = useSidebarCollapse((s) => s.toggleLeft);
+  const isRightCollapsed = useSidebarCollapse((s) => s.isRightCollapsed);
+  const toggleRight = useSidebarCollapse((s) => s.toggleRight);
+
   const [filterQuery, setFilterQuery] = useState("");
   const debouncedFilter = useDebouncedValue(filterQuery);
+
+  const [headings, setHeadings] = useState<HeadingItem[]>([]);
+  const searchTriggerRef = useRef<(() => void) | null>(null);
+
+  const handleRegisterSearchTrigger = useCallback((trigger: () => void) => {
+    searchTriggerRef.current = trigger;
+  }, []);
+
+  const handleOpenSearch = useCallback(() => {
+    searchTriggerRef.current?.();
+  }, []);
 
   const repoPath = useRepoPath(owner, repo);
   const files = useChangedFiles(repoPath.data ?? undefined, prNumber);
@@ -97,9 +117,17 @@ export function PullRequestScreen() {
       </SidebarShell>
       <PreviewSlot
         toolbar={
-          <span className="text-xs text-[hsl(var(--muted-foreground))]">
-            {selectedPath ?? t("fileExplorer.preview.fallbackToolbarLabel", { number: prNumber })}
-          </span>
+          <PreviewToolbar
+            selectedPath={selectedPath}
+            prNumber={prNumber}
+            headings={headings}
+            onSelectHeading={scrollToAnchorLine}
+            onOpenSearch={handleOpenSearch}
+            isLeftCollapsed={isLeftCollapsed}
+            onToggleLeft={toggleLeft}
+            isRightCollapsed={isRightCollapsed}
+            onToggleRight={toggleRight}
+          />
         }
         emptyHint={t("fileExplorer.preview.noFileSelected")}
       >
@@ -110,6 +138,8 @@ export function PullRequestScreen() {
             filePath={selectedPath}
             isDetailLoading={repoPath.isLoading || detail.isLoading}
             prNumber={prNumber}
+            onHeadingsExtracted={setHeadings}
+            onRegisterSearchTrigger={handleRegisterSearchTrigger}
           />
         ) : null}
       </PreviewSlot>

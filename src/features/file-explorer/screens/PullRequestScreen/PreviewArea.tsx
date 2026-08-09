@@ -4,6 +4,7 @@ import {
   useFileContent,
   useFileDiff,
 } from "@/features/markdown-preview";
+import type { HeadingItem } from "@/features/markdown-preview/lib/extractHeadings";
 import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
@@ -17,6 +18,8 @@ interface PreviewAreaProps {
   filePath: string;
   isDetailLoading: boolean;
   prNumber: number;
+  onHeadingsExtracted?: (headings: HeadingItem[]) => void;
+  onRegisterSearchTrigger?: (trigger: () => void) => void;
 }
 
 export function PreviewArea({
@@ -25,6 +28,8 @@ export function PreviewArea({
   filePath,
   isDetailLoading,
   prNumber,
+  onHeadingsExtracted,
+  onRegisterSearchTrigger,
 }: PreviewAreaProps) {
   const { t } = useTranslation();
   const supported = isMarkdownPath(filePath);
@@ -67,6 +72,8 @@ export function PreviewArea({
       prNumber={prNumber}
       filePath={filePath}
       headSha={sha}
+      onHeadingsExtracted={onHeadingsExtracted}
+      onRegisterSearchTrigger={onRegisterSearchTrigger}
     />
   );
 }

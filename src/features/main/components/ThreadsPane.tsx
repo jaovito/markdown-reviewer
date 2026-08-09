@@ -4,6 +4,7 @@ import { ipc } from "@/shared/ipc/client";
 import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { cn } from "@/shared/lib/cn";
+import { useSidebarCollapse } from "@/shared/stores/useSidebarCollapse";
 import { useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
@@ -29,7 +30,12 @@ type Scope = "currentFile" | "allFiles";
 
 export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPaneProps) {
   const { t } = useTranslation();
+  const isRightCollapsed = useSidebarCollapse((s) => s.isRightCollapsed);
   const query = usePullRequestComments(prNumber);
+
+  if (isRightCollapsed) {
+    return null;
+  }
   const filter = useThreadsFilter((s) => s.filter);
   const toggleFilter = useThreadsFilter((s) => s.toggle);
   const [scope, setScope] = useState<Scope>("currentFile");

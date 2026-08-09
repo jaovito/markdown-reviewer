@@ -1,3 +1,4 @@
+import { useSidebarCollapse } from "@/shared/stores/useSidebarCollapse";
 import {
   SIDEBAR_MAX_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -17,10 +18,15 @@ interface SidebarShellProps {
 
 export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: SidebarShellProps) {
   const { t } = useTranslation();
+  const isLeftCollapsed = useSidebarCollapse((s) => s.isLeftCollapsed);
   const width = useSidebarWidth((s) => s.width);
   const setWidth = useSidebarWidth((s) => s.setWidth);
   const asideRef = useRef<HTMLElement>(null);
   const [isResizing, setIsResizing] = useState(false);
+
+  if (isLeftCollapsed) {
+    return null;
+  }
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();

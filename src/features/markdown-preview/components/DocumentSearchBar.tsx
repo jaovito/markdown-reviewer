@@ -70,7 +70,19 @@ export function DocumentSearchBar({
       />
 
       <TooltipProvider>
-        {/* Case sensitivity (aA) button */}
+        {/* Match counter (only rendered when a search query is typed) */}
+        {query.trim() ? (
+          <div className="px-1.5 text-center text-[11px] text-[hsl(var(--muted-foreground))] select-none whitespace-nowrap">
+            {matchCount > 0
+              ? t("fileExplorer.preview.matchCount", {
+                  current: currentIndex + 1,
+                  total: matchCount,
+                })
+              : t("fileExplorer.preview.noResults")}
+          </div>
+        ) : null}
+
+        {/* Case sensitivity (aA) button - positioned right next to the chevrons */}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -91,18 +103,6 @@ export function DocumentSearchBar({
             <span>{t("fileExplorer.preview.matchCase")}</span>
           </TooltipContent>
         </Tooltip>
-
-        {/* Counter label */}
-        <div className="min-w-16 px-1 text-center text-[11px] text-[hsl(var(--muted-foreground))] select-none">
-          {query.trim()
-            ? matchCount > 0
-              ? t("fileExplorer.preview.matchCount", {
-                  current: currentIndex + 1,
-                  total: matchCount,
-                })
-              : t("fileExplorer.preview.noResults")
-            : null}
-        </div>
 
         {/* Previous match */}
         <Tooltip>

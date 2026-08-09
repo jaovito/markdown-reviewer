@@ -21,7 +21,7 @@ jobs:
       tag: ${{ steps.read.outputs.tag }}
       should_release: ${{ steps.check.outputs.should_release }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - id: read
         name: Read version from package.json
@@ -83,7 +83,7 @@ jobs:
             rust-targets: ""
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Linux dependencies for Tauri
         if: matrix.platform == 'ubuntu-22.04'
@@ -116,7 +116,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Tauri bundles and upload to release draft
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # action-v0.6.2
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -140,7 +140,7 @@ jobs:
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Promote draft to published release
         env:

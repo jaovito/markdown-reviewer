@@ -210,6 +210,14 @@ impl GhClient for ScriptedGh {
     ) -> AppResult<String> {
         Ok(String::new())
     }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Vec<u8>> {
+        unimplemented!("not used in this test")
+    }
     async fn submit_review_batch(
         &self,
         _repo_path: &str,

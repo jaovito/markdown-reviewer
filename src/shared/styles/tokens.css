@@ -38,6 +38,13 @@
   --comment-open-fg: 142 72% 29%; /* #166534 */
   --comment-draft-bg: 48 100% 96%; /* warm draft yellow */
   --comment-draft-fg: 28 80% 35%;
+
+  /* GitHub alert hues — border + icon color per type (light). */
+  --alert-note: 212 92% 45%;
+  --alert-tip: 137 66% 30%;
+  --alert-important: 261 69% 59%;
+  --alert-warning: 40 100% 30%;
+  --alert-caution: 356 72% 47%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,5 +86,11 @@
     --comment-open-fg: 141 79% 85%;
     --comment-draft-bg: 28 60% 18%;
     --comment-draft-fg: 48 100% 88%;
+
+    --alert-note: 216 84% 52%;
+    --alert-tip: 128 49% 49%;
+    --alert-important: 262 89% 71%;
+    --alert-warning: 41 72% 48%;
+    --alert-caution: 3 93% 63%;
   }
 }

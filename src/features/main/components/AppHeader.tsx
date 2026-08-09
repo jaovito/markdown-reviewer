@@ -107,7 +107,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       ) : null}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {rightAction}
-        <RefreshButton onRefresh={remote.refresh} />
+        <RefreshButton onRefresh={remote.refresh} busy={remote.isFetching} />
         {branch ? (
           <span className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-2.5 text-xs">
             <GitBranchIcon className="size-3.5 text-[hsl(var(--muted-foreground))]" />

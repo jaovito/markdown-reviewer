@@ -58,6 +58,48 @@ function authorInitials(author: string | null): string {
   return `${first}${second}`.toUpperCase();
 }
 
+/**
+ * Renders the author's GitHub avatar when we have a URL, falling back to a
+ * colored initials chip otherwise. Keeps inline comments visually consistent
+ * with the right-rail thread cards, which already show the GitHub avatar.
+ */
+function AuthorAvatar({
+  name,
+  avatarUrl,
+  sizeClass,
+  fallbackBgVar = "--comment-avatar-bg",
+}: {
+  name: string | null;
+  avatarUrl: string | null | undefined;
+  sizeClass: string;
+  fallbackBgVar?: string;
+}) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        loading="lazy"
+        className={cn(sizeClass, "shrink-0 rounded-full object-cover")}
+      />
+    );
+  }
+  return (
+    <span
+      className={cn(
+        sizeClass,
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold",
+      )}
+      style={{
+        backgroundColor: `hsl(var(${fallbackBgVar}))`,
+        color: "hsl(var(--comment-avatar-fg))",
+      }}
+    >
+      {authorInitials(name)}
+    </span>
+  );
+}
+
 function metaLabel(t: ReturnType<typeof useTranslation>["t"], head: ReviewComment): string {
   const author = head.author ?? t("comments.thread.anonAuthor");
   const a = head.anchor;
@@ -169,15 +211,12 @@ export function InlineThreadCard({
       data-thread-state={head.state}
     >
       <div className="flex items-center gap-2">
-        <span
-          className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
-          style={{
-            backgroundColor: `hsl(var(${avatarBgVar}))`,
-            color: "hsl(var(--comment-avatar-fg))",
-          }}
-        >
-          {authorInitials(head.author)}
-        </span>
+        <AuthorAvatar
+          name={head.author}
+          avatarUrl={head.avatarUrl}
+          sizeClass="h-[22px] w-[22px] text-[9px]"
+          fallbackBgVar={avatarBgVar}
+        />
         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[hsl(var(--foreground))]">
           {metaLabel(t, head)}
         </span>
@@ -238,7 +277,7 @@ export function InlineThreadCard({
                   {c.author}
                 </p>
               ) : null}
-              <p className="whitespace-pre-wrap">{c.body}</p>
+              <p className="whitespace-pre-wrap break-words">{c.body}</p>
             </div>
             {onDelete && isOwn(c) ? (
               <button
@@ -265,11 +304,16 @@ export function InlineThreadCard({
           className="mt-1 border-[hsl(var(--border))] border-t px-1 pt-2 text-[12px] leading-snug text-[hsl(var(--foreground))]/85"
         >
           <div className="flex items-start gap-2">
+            <AuthorAvatar
+              name={r.author}
+              avatarUrl={r.authorAvatarUrl}
+              sizeClass="h-[18px] w-[18px] text-[8px]"
+            />
             <div className="min-w-0 flex-1">
               <p className="mb-1 text-[11px] font-semibold text-[hsl(var(--foreground))]">
                 {r.author}
               </p>
-              <p className="whitespace-pre-wrap">{r.body}</p>
+              <p className="whitespace-pre-wrap break-words">{r.body}</p>
             </div>
           </div>
         </div>
@@ -375,6 +419,7 @@ export function InlineThreadCard({
             placeholder={t("sync.thread.replyPlaceholder")}
             rows={2}
             disabled={replyPending}
+            className="bg-[hsl(var(--muted))]"
           />
           <div className="flex justify-end">
             <Button

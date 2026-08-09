@@ -24,10 +24,6 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
   const asideRef = useRef<HTMLElement>(null);
   const [isResizing, setIsResizing] = useState(false);
 
-  if (isLeftCollapsed) {
-    return null;
-  }
-
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsResizing(true);
@@ -52,6 +48,11 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
       document.body.style.userSelect = "";
     };
   }, [isResizing, setWidth]);
+
+  // All hooks must be called before early return to respect React Rules of Hooks
+  if (isLeftCollapsed) {
+    return null;
+  }
 
   return (
     <aside

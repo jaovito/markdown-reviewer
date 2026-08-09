@@ -31,6 +31,7 @@ export function RemoteReplyComposer({ pending, onSubmit }: Props) {
         placeholder={t("sync.thread.replyPlaceholder")}
         rows={2}
         disabled={pending}
+        className="border-[hsl(var(--border))] bg-[hsl(var(--background))]"
       />
       <div className="flex justify-end">
         <Button type="submit" size="sm" disabled={pending || body.trim().length === 0}>

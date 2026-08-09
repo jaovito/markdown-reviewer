@@ -56,6 +56,7 @@ export function PullRequestScreen() {
   const files = useChangedFiles(repoPath.data ?? undefined, prNumber);
   const detail = usePullRequestDetail(repoPath.data ?? undefined, prNumber);
 
+  const prFilePaths = useMemo(() => (files.data ?? []).map((f) => f.path), [files.data]);
   const markdownFiles = useMemo(
     () => (files.data ?? []).filter((f) => isMarkdownPath(f.path)),
     [files.data],
@@ -138,6 +139,9 @@ export function PullRequestScreen() {
             filePath={selectedPath}
             isDetailLoading={repoPath.isLoading || detail.isLoading}
             prNumber={prNumber}
+            owner={owner}
+            repo={repo}
+            prFiles={prFilePaths}
             onHeadingsExtracted={setHeadings}
             onRegisterSearchTrigger={handleRegisterSearchTrigger}
           />

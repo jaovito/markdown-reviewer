@@ -4,6 +4,7 @@ import { ipc } from "@/shared/ipc/client";
 import type { CommentState, ReviewComment } from "@/shared/ipc/contract";
 import { describeError } from "@/shared/ipc/errors";
 import { cn } from "@/shared/lib/cn";
+import { useSidebarCollapse } from "@/shared/stores/useSidebarCollapse";
 import { useThreadsFilter } from "@/shared/stores/useThreadsFilter";
 import {
   THREADS_PANE_MAX_WIDTH,
@@ -34,6 +35,7 @@ type Scope = "currentFile" | "allFiles";
 
 export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPaneProps) {
   const { t } = useTranslation();
+  const isRightCollapsed = useSidebarCollapse((s) => s.isRightCollapsed);
   const query = usePullRequestComments(prNumber);
   const filter = useThreadsFilter((s) => s.filter);
   const toggleFilter = useThreadsFilter((s) => s.toggle);
@@ -165,6 +167,10 @@ export function ThreadsPane({ prNumber, filePath, repoPath, sha }: ThreadsPanePr
 
   const canHideAll = !hideAll.isPending && hideableIds.length > 0;
   const navigateToComment = useNavigateToComment(prNumber, filePath);
+
+  if (isRightCollapsed) {
+    return null;
+  }
 
   return (
     <aside

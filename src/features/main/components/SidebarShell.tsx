@@ -1,3 +1,4 @@
+import { useSidebarCollapse } from "@/shared/stores/useSidebarCollapse";
 import {
   SIDEBAR_MAX_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -17,6 +18,7 @@ interface SidebarShellProps {
 
 export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: SidebarShellProps) {
   const { t } = useTranslation();
+  const isLeftCollapsed = useSidebarCollapse((s) => s.isLeftCollapsed);
   const width = useSidebarWidth((s) => s.width);
   const setWidth = useSidebarWidth((s) => s.setWidth);
   const asideRef = useRef<HTMLElement>(null);
@@ -46,6 +48,11 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
       document.body.style.userSelect = "";
     };
   }, [isResizing, setWidth]);
+
+  // All hooks must be called before early return to respect React Rules of Hooks
+  if (isLeftCollapsed) {
+    return null;
+  }
 
   return (
     <aside

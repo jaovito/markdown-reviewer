@@ -461,6 +461,39 @@ body {
   }
 }
 
+/* Quick temporary highlight wash when navigating to a heading from the Table of Contents. */
+@keyframes mr-heading-flash {
+  0% {
+    background: hsl(var(--primary) / 0.22);
+    border-left: 4px solid hsl(var(--primary));
+    border-radius: 4px;
+    padding-left: 0.5em;
+    margin-left: -0.5em;
+  }
+  50% {
+    background: hsl(var(--primary) / 0.15);
+    border-left: 4px solid hsl(var(--primary));
+    border-radius: 4px;
+    padding-left: 0.5em;
+    margin-left: -0.5em;
+  }
+  100% {
+    background: transparent;
+    border-left: 4px solid transparent;
+    border-radius: 0px;
+    padding-left: 0em;
+    margin-left: 0em;
+  }
+}
+.prose-styles [data-heading-flash="true"] {
+  animation: mr-heading-flash 1.3s ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prose-styles [data-heading-flash="true"] {
+    animation: none;
+  }
+}
+
 /* Inline thread / composer slots inserted by InlineThreads — make them sit
    flush in the document flow under the anchor line. */
 .prose-styles [data-thread-slot] {

@@ -12,9 +12,12 @@ import { cn } from "@/shared/lib/cn";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useDocumentSearch } from "../hooks/useDocumentSearch";
 import { useMermaid } from "../hooks/useMermaid";
+import { type HeadingItem, extractHeadings } from "../lib/extractHeadings";
 import { type RenderContext, renderMarkdown } from "../lib/pipeline";
 import { DiffGutter } from "./DiffGutter";
+import { DocumentSearchBar } from "./DocumentSearchBar";
 import { MermaidLightbox } from "./MermaidLightbox";
 
 interface MarkdownPreviewProps {
@@ -28,6 +31,8 @@ interface MarkdownPreviewProps {
   headSha?: string;
   /** When present, relative images and local links resolve against the PR. */
   renderContext?: RenderContext;
+  onHeadingsExtracted?: (headings: HeadingItem[]) => void;
+  onRegisterSearchTrigger?: (trigger: () => void) => void;
 }
 
 export function MarkdownPreview({
@@ -39,8 +44,17 @@ export function MarkdownPreview({
   filePath,
   headSha,
   renderContext,
+  onHeadingsExtracted,
+  onRegisterSearchTrigger,
 }: MarkdownPreviewProps) {
   const html = useMemo(() => renderMarkdown(source, renderContext), [source, renderContext]);
+  const headings = useMemo(() => extractHeadings(source), [source]);
+
+  // Notify parent component of extracted headings whenever source changes
+  useEffect(() => {
+    onHeadingsExtracted?.(headings);
+  }, [headings, onHeadingsExtracted]);
+
   const articleRef = useRef<HTMLElement>(null);
   // Render any Mermaid diagrams in the freshly-mounted HTML (client-side);
   // clicking one opens the zoom/pan lightbox.
@@ -79,14 +93,21 @@ export function MarkdownPreview({
     });
   }, []);
 
+  // In-document text search engine hook
+  const search = useDocumentSearch({
+    containerRef: articleRef,
+    sourceHtml: html,
+  });
+
+  // Register search trigger callback to parent toolbar
+  useEffect(() => {
+    onRegisterSearchTrigger?.(search.openSearch);
+  }, [search.openSearch, onRegisterSearchTrigger]);
+
   // When the user lands on the preview via a thread-pane click, the URL hash
-  // carries the target line (e.g. `#L42`). Scroll once the markdown finishes
-  // rendering — `requestAnimationFrame` waits for the next paint so the
-  // `[data-source-line]` nodes are mounted before we query them. We depend on
-  // `html` + `location.key` (not read) so navigating to the same URL or
-  // landing on a freshly-rendered file both trigger a re-scroll.
+  // carries the target line (e.g. `#L42`). Scroll once the markdown finishes rendering.
   const location = useLocation();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: html and location.key are intentional re-run triggers; their values aren't read in the body.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: html and location.key are intentional re-run triggers
   useEffect(() => {
     const match = /^#L(\d+)$/.exec(location.hash);
     if (!match) return;
@@ -139,6 +160,19 @@ export function MarkdownPreview({
 
   return (
     <div className="relative mx-auto w-full max-w-3xl">
+      <DocumentSearchBar
+        isOpen={search.isOpen}
+        focusTrigger={search.focusTrigger}
+        query={search.query}
+        onQueryChange={search.setQuery}
+        isCaseSensitive={search.isCaseSensitive}
+        onToggleCaseSensitive={search.toggleCaseSensitive}
+        currentIndex={search.currentIndex}
+        matchCount={search.matchCount}
+        onNextMatch={search.nextMatch}
+        onPrevMatch={search.prevMatch}
+        onClose={search.closeSearch}
+      />
       {hunks && hunks.length > 0 ? <DiffGutter hunks={hunks} containerRef={articleRef} /> : null}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegated click listener over rendered content. */}
       <article

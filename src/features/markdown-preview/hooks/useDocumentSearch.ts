@@ -57,7 +57,9 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchCount, setMatchCount] = useState(0);
 
-  const matchElementsRef = useRef<HTMLElement[]>([]);
+  // A visible match can span several text nodes, such as `hello **world**`.
+  // Keep its mark fragments together so it remains one navigable result.
+  const matchElementsRef = useRef<HTMLElement[][]>([]);
 
   const clearHighlights = useCallback(() => {
     const container = containerRef.current;
@@ -74,20 +76,18 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
   }, [containerRef]);
 
   const highlightAndScrollTo = useCallback((targetIndex: number) => {
-    const matches = matchElementsRef.current;
-    if (matches.length === 0) return;
+    const matchGroups = matchElementsRef.current;
+    if (matchGroups.length === 0) return;
 
-    const clampedIndex = Math.max(0, Math.min(targetIndex, matches.length - 1));
+    const clampedIndex = Math.max(0, Math.min(targetIndex, matchGroups.length - 1));
 
-    matches.forEach((el, i) => {
-      if (i === clampedIndex) {
-        el.className = ACTIVE_MATCH_CLASS;
-      } else {
-        el.className = INACTIVE_MATCH_CLASS;
+    matchGroups.forEach((fragments, i) => {
+      for (const fragment of fragments) {
+        fragment.className = i === clampedIndex ? ACTIVE_MATCH_CLASS : INACTIVE_MATCH_CLASS;
       }
     });
 
-    const activeEl = matches[clampedIndex];
+    const activeEl = matchGroups[clampedIndex]?.[0];
     if (activeEl) {
       requestAnimationFrame(() => {
         scrollMatchIntoView(activeEl);
@@ -129,43 +129,53 @@ export function useDocumentSearch({ containerRef, sourceHtml }: UseDocumentSearc
       },
     });
 
-    const textNodes: Text[] = [];
+    const textNodes: Array<{ node: Text; start: number; end: number }> = [];
+    let fullText = "";
     let currentNode = walker.nextNode();
     while (currentNode) {
-      textNodes.push(currentNode as Text);
+      const node = currentNode as Text;
+      const text = node.nodeValue ?? "";
+      textNodes.push({ node, start: fullText.length, end: fullText.length + text.length });
+      fullText += text;
       currentNode = walker.nextNode();
     }
 
-    const newMatchElements: HTMLElement[] = [];
+    const matches: Array<{ start: number; end: number }> = [];
+    let match = regex.exec(fullText);
+    while (match !== null) {
+      matches.push({ start: match.index, end: match.index + match[0].length });
+      match = regex.exec(fullText);
+    }
 
-    for (const node of textNodes) {
-      const nodeText = node.nodeValue;
-      if (!nodeText) continue;
+    const newMatchElements = matches.map(() => [] as HTMLElement[]);
 
-      regex.lastIndex = 0;
-      let match = regex.exec(nodeText);
-      if (!match) continue;
+    for (const { node, start, end } of textNodes) {
+      const nodeText = node.nodeValue ?? "";
+      const nodeMatches = matches
+        .map((match, index) => ({
+          index,
+          start: Math.max(start, match.start) - start,
+          end: Math.min(end, match.end) - start,
+        }))
+        .filter((match) => match.start < match.end);
+      if (nodeMatches.length === 0) continue;
 
       const fragment = document.createDocumentFragment();
       let lastIdx = 0;
 
-      while (match !== null) {
-        const matchStart = match.index;
-        const matchEnd = matchStart + match[0].length;
-
-        if (matchStart > lastIdx) {
-          fragment.appendChild(document.createTextNode(nodeText.slice(lastIdx, matchStart)));
+      for (const match of nodeMatches) {
+        if (match.start > lastIdx) {
+          fragment.appendChild(document.createTextNode(nodeText.slice(lastIdx, match.start)));
         }
 
         const mark = document.createElement("mark");
         mark.setAttribute("data-search-match", "true");
         mark.className = INACTIVE_MATCH_CLASS;
-        mark.textContent = match[0];
+        mark.textContent = nodeText.slice(match.start, match.end);
         fragment.appendChild(mark);
-        newMatchElements.push(mark);
+        newMatchElements[match.index]?.push(mark);
 
-        lastIdx = matchEnd;
-        match = regex.exec(nodeText);
+        lastIdx = match.end;
       }
 
       if (lastIdx < nodeText.length) {

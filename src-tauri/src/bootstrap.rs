@@ -32,7 +32,6 @@ pub(crate) fn run() {
             crate::asset_protocol::handle,
         );
 
-
     let builder = markdown_reviewer_ipc::register(builder);
 
     builder

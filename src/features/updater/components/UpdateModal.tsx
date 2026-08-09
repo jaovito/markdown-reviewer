@@ -18,7 +18,7 @@ interface UpdateModalProps {
 }
 
 export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
-  if (!isOpen && updater.status === "idle") return null;
+  if (!isOpen) return null;
 
   const {
     status,

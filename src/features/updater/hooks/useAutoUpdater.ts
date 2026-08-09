@@ -93,7 +93,12 @@ export function useAutoUpdater(autoCheck = false) {
       await relaunch();
     } catch (err) {
       console.error("Error relaunching app:", err);
-      setErrorMessage("Não foi possível reiniciar o aplicativo automaticamente.");
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível reiniciar o aplicativo automaticamente.",
+      );
+      setStatus("error");
     }
   }, []);
 

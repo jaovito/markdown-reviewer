@@ -143,7 +143,7 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
             onClick={() => setIsUpdateModalOpen(true)}
           >
             <ArrowUpCircleIcon className="size-3.5" />
-            <span>Atualização v{updater.updateInfo?.version}</span>
+            <span>{t("updater.header.available", { version: updater.updateInfo?.version })}</span>
           </Button>
         ) : (
           <Button
@@ -160,12 +160,12 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
                 void updater.checkForUpdates();
               }
             }}
-            title="Verificar atualizações do software"
+            title={t("updater.header.checkAria")}
           >
             <RefreshCwIcon
               className={`size-3.5 ${updater.status === "checking" ? "animate-spin" : ""}`}
             />
-            <span className="hidden sm:inline">Atualizações</span>
+            <span className="hidden sm:inline">{t("updater.header.label")}</span>
           </Button>
         )}
         {rightAction}

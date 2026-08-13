@@ -9,6 +9,7 @@ import {
   SparklesIcon,
   XIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { useAutoUpdater } from "../hooks/useAutoUpdater";
 
 interface UpdateModalProps {
@@ -18,6 +19,7 @@ interface UpdateModalProps {
 }
 
 export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const {
@@ -44,7 +46,7 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
           onClick={handleClose}
           disabled={status === "downloading"}
           className="absolute right-4 top-4 rounded-md p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] disabled:opacity-50 transition-colors"
-          aria-label="Fechar"
+          aria-label={t("updater.actions.close")}
         >
           <XIcon className="size-4" />
         </button>
@@ -53,9 +55,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
         {status === "checking" && (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <RefreshCwIcon className="size-10 animate-spin text-[hsl(var(--primary))] mb-4" />
-            <h3 className="text-lg font-semibold tracking-tight">Buscando Atualizações</h3>
+            <h3 className="text-lg font-semibold tracking-tight">{t("updater.checking.title")}</h3>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-              Verificando se há novas versões disponíveis...
+              {t("updater.checking.description")}
             </p>
           </div>
         )}
@@ -68,7 +70,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <ArrowUpCircleIcon className="size-6" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">Nova Versão Disponível</h3>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {t("updater.available.title")}
+                </h3>
                 <div className="flex items-center gap-2 mt-0.5">
                   <Badge tone="muted" className="text-xs font-mono">
                     v{updateInfo.currentVersion}
@@ -82,15 +86,14 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
             </div>
 
             <p className="text-sm text-[hsl(var(--foreground))]">
-              Uma nova versão do software está disponível. Deseja baixar e instalar a atualização
-              agora?
+              {t("updater.available.description")}
             </p>
 
             {updateInfo.body && (
               <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 p-3 max-h-48 overflow-y-auto">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--foreground))] mb-1.5">
                   <SparklesIcon className="size-3.5 text-[hsl(var(--primary))]" />
-                  <span>Notas da Versão</span>
+                  <span>{t("updater.available.releaseNotes")}</span>
                 </div>
                 <p className="text-xs text-[hsl(var(--muted-foreground))] whitespace-pre-wrap leading-relaxed">
                   {updateInfo.body}
@@ -100,11 +103,11 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
 
             <div className="flex items-center justify-end gap-2.5 mt-2">
               <Button variant="outline" size="sm" onClick={handleClose}>
-                Lembrar Mais Tarde
+                {t("updater.actions.remindLater")}
               </Button>
               <Button size="sm" onClick={downloadAndInstallUpdate} className="gap-1.5">
                 <DownloadIcon className="size-4" />
-                Baixar e Atualizar
+                {t("updater.actions.downloadAndUpdate")}
               </Button>
             </div>
           </div>
@@ -118,16 +121,18 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <DownloadIcon className="size-6 animate-bounce" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">Baixando Atualização</h3>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {t("updater.downloading.title")}
+                </h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  Aguarde enquanto os arquivos são transferidos...
+                  {t("updater.downloading.description")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2 mt-2">
               <div className="flex justify-between text-xs font-medium">
-                <span>Progresso</span>
+                <span>{t("updater.downloading.progress")}</span>
                 <span>{progressPercent}%</span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-[hsl(var(--muted))]">
@@ -148,9 +153,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <CheckCircle2Icon className="size-6" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">Atualização Pronta!</h3>
+                <h3 className="text-lg font-semibold tracking-tight">{t("updater.ready.title")}</h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  O download foi concluído. Reinicie o aplicativo para aplicar a nova versão.
+                  {t("updater.ready.description")}
                 </p>
               </div>
             </div>
@@ -158,7 +163,7 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
             <div className="flex items-center justify-end gap-2.5 mt-2">
               <Button size="sm" onClick={relaunchApp} className="gap-1.5 w-full sm:w-auto">
                 <RefreshCwIcon className="size-4" />
-                Reiniciar para Atualizar
+                {t("updater.actions.restartAndUpdate")}
               </Button>
             </div>
           </div>
@@ -170,12 +175,12 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
             <div className="flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-3">
               <CheckCircle2Icon className="size-7" />
             </div>
-            <h3 className="text-lg font-semibold tracking-tight">Você está Atualizado!</h3>
+            <h3 className="text-lg font-semibold tracking-tight">{t("updater.upToDate.title")}</h3>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 mb-4">
-              Seu aplicativo já está rodando a versão mais recente disponível.
+              {t("updater.upToDate.description")}
             </p>
             <Button variant="outline" size="sm" onClick={handleClose}>
-              Entendido
+              {t("updater.actions.gotIt")}
             </Button>
           </div>
         )}
@@ -188,9 +193,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <AlertTriangleIcon className="size-6" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">Falha na Atualização</h3>
+                <h3 className="text-lg font-semibold tracking-tight">{t("updater.error.title")}</h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  Ocorreu um erro ao tentar verificar ou instalar atualizações.
+                  {t("updater.error.description")}
                 </p>
               </div>
             </div>
@@ -203,11 +208,11 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
 
             <div className="flex items-center justify-end gap-2.5 mt-2">
               <Button variant="outline" size="sm" onClick={handleClose}>
-                Fechar
+                {t("updater.actions.close")}
               </Button>
               <Button size="sm" onClick={checkForUpdates} className="gap-1.5">
                 <RefreshCwIcon className="size-4" />
-                Tentar Novamente
+                {t("updater.actions.tryAgain")}
               </Button>
             </div>
           </div>

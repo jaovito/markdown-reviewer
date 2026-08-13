@@ -1,3 +1,4 @@
+import { i18next } from "@/shared/i18n";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { type Update, check } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useState } from "react";
@@ -103,9 +104,7 @@ export function useAutoUpdater(autoCheck = false) {
     } catch (err) {
       console.error("Error relaunching app:", err);
       setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível reiniciar o aplicativo automaticamente.",
+        err instanceof Error ? err.message : i18next.t("updater.error.restartFailed"),
       );
       setStatus("error");
     }

@@ -4,6 +4,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -21,18 +22,6 @@ const MAX_SCALE = 8;
 const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
 
 /**
- * `zoom` re-lays-out and re-paints its content at each level instead of
- * stretching a fixed-resolution GPU texture (see the comment below), but
- * it's non-standard and unsupported in some engines (older WebKitGTK,
- * Firefox <126). Without a fallback, an unsupported browser would silently
- * ignore the property — the zoom buttons would visibly do nothing at all,
- * which is worse than the blur `transform: scale()` produces. Computed once
- * since support doesn't change at runtime.
- */
-const SUPPORTS_ZOOM =
-  typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "1");
-
-/**
  * Fullscreen overlay that shows a single Mermaid diagram with scroll/buttons
  * zoom and drag-to-pan. Opened by clicking a rendered diagram in the preview;
  * closed via the X button or Escape (NOT by clicking the diagram/backdrop —
@@ -46,6 +35,7 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const diagramRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
 
@@ -61,6 +51,37 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Resizing the SVG itself makes WebKit render the vector scene at the new
+  // resolution. Transforming its parent instead can promote it to a raster
+  // layer, which makes text blurry at high zoom levels. Mermaid always emits
+  // a viewBox, so its coordinate dimensions are a stable source for sizing.
+  useLayoutEffect(() => {
+    const diagram = diagramRef.current?.querySelector<SVGSVGElement>("svg");
+    if (!diagram) return;
+
+    const viewBox = diagram
+      .getAttribute("viewBox")
+      ?.trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (
+      !viewBox ||
+      viewBox.length !== 4 ||
+      viewBox.slice(2).some((size) => !Number.isFinite(size))
+    ) {
+      return;
+    }
+
+    const width = viewBox[2];
+    const height = viewBox[3];
+    if (width === undefined || height === undefined || width <= 0 || height <= 0) return;
+
+    diagram.style.width = `${width * scale}px`;
+    diagram.style.height = `${height * scale}px`;
+    diagram.style.maxWidth = "none";
+    diagram.style.display = "block";
+  }, [scale]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     setScale((s) => clampScale(s * (e.deltaY < 0 ? 1.1 : 0.9)));
@@ -147,23 +168,12 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <div
+          ref={diagramRef}
           className="mermaid-lightbox-content"
           style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-        >
-          {/* `zoom` (not `transform: scale`) so the SVG is re-laid-out and
-              re-painted at each level instead of the browser stretching a
-              GPU texture rasterized at the natural size — the latter gets
-              blurrier the further you zoom in, regardless of the content
-              being vector. Panning still uses `transform: translate` above,
-              which doesn't need re-rasterization. Falls back to
-              `transform: scale` (blurrier, but still functional) when
-              `zoom` isn't supported. */}
-          <div
-            style={SUPPORTS_ZOOM ? { zoom: scale } : { transform: `scale(${scale})` }}
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
-        </div>
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
       </div>
     </div>,
     document.body,

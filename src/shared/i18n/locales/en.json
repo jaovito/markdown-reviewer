@@ -24,6 +24,48 @@
       "failedTitle": "Couldn't submit the review"
     }
   },
+  "updater": {
+    "header": {
+      "label": "Updates",
+      "checkAria": "Check for software updates",
+      "available": "Update v{{version}}"
+    },
+    "checking": {
+      "title": "Checking for updates",
+      "description": "Checking whether a newer version is available…"
+    },
+    "available": {
+      "title": "New version available",
+      "description": "A new version is available. Would you like to download and install it now?",
+      "releaseNotes": "Release notes"
+    },
+    "downloading": {
+      "title": "Downloading update",
+      "description": "Please wait while the files are transferred…",
+      "progress": "Progress"
+    },
+    "ready": {
+      "title": "Update ready",
+      "description": "The download is complete. Restart the app to apply the update."
+    },
+    "upToDate": {
+      "title": "You're up to date",
+      "description": "You're already running the latest available version."
+    },
+    "error": {
+      "title": "Update failed",
+      "description": "Something went wrong while checking for or installing updates.",
+      "restartFailed": "Couldn't restart the app automatically."
+    },
+    "actions": {
+      "close": "Close",
+      "remindLater": "Remind me later",
+      "downloadAndUpdate": "Download and update",
+      "restartAndUpdate": "Restart to update",
+      "gotIt": "Got it",
+      "tryAgain": "Try again"
+    }
+  },
   "rail": {
     "changes": "Changes",
     "pullRequests": "Pull requests",
@@ -35,7 +77,37 @@
     "title": "Markdown Reviewer",
     "subtitle": "Open a local repository to start reviewing Markdown pull requests.",
     "selectButton": "Select repository folder",
-    "validating": "Validating…"
+    "validating": "Validating…",
+    "recents": {
+      "title": "Recent repositories",
+      "empty": "Nothing here yet — open a repository to see it listed.",
+      "reopenHint": "Click a row to re-open.",
+      "removeAria": "Remove {{name}}"
+    },
+    "validation": {
+      "ready": "Ready",
+      "path": "Path",
+      "remote": "Remote",
+      "branch": "Branch",
+      "detachedHead": "(detached HEAD)",
+      "chooseDifferentFolder": "Choose a different folder",
+      "continue": "Continue",
+      "continueUnavailable": "Available in Phase 2 — pull requests"
+    },
+    "environment": {
+      "title": "Environment",
+      "description": "Tools that Markdown Reviewer needs to read your repositories.",
+      "git": "Git",
+      "githubCli": "GitHub CLI",
+      "githubAuth": "GitHub authentication",
+      "checking": "Checking…",
+      "status": {
+        "ok": "OK",
+        "missing": "Missing",
+        "notAuthenticated": "Not authenticated",
+        "error": "Error"
+      }
+    }
   },
   "pullRequests": {
     "list": {

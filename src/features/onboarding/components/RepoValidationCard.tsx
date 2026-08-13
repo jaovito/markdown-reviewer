@@ -2,6 +2,7 @@ import type { Repository } from "@/shared/ipc/contract";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/ui/card";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   repo: Repository;
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export function RepoValidationCard({ repo, onClear }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
@@ -16,20 +19,23 @@ export function RepoValidationCard({ repo, onClear }: Props) {
           <span>
             {repo.owner}/{repo.repo}
           </span>
-          <Badge tone="success">ready</Badge>
+          <Badge tone="success">{t("onboarding.validation.ready")}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1 text-sm">
-        <Row k="Path" v={repo.path} />
-        <Row k="Remote" v={repo.remoteUrl} />
-        <Row k="Branch" v={repo.currentBranch ?? "(detached HEAD)"} />
+        <Row k={t("onboarding.validation.path")} v={repo.path} />
+        <Row k={t("onboarding.validation.remote")} v={repo.remoteUrl} />
+        <Row
+          k={t("onboarding.validation.branch")}
+          v={repo.currentBranch ?? t("onboarding.validation.detachedHead")}
+        />
       </CardContent>
       <CardFooter>
         <Button variant="outline" size="sm" onClick={onClear}>
-          Choose a different folder
+          {t("onboarding.validation.chooseDifferentFolder")}
         </Button>
-        <Button size="sm" disabled title="Available in Phase 2 — pull requests">
-          Continue
+        <Button size="sm" disabled title={t("onboarding.validation.continueUnavailable")}>
+          {t("onboarding.validation.continue")}
         </Button>
       </CardFooter>
     </Card>

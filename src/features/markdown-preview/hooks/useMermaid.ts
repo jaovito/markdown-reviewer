@@ -75,6 +75,10 @@ export function useMermaid(
           securityLevel: "strict",
           theme: dark ? "dark" : "default",
           fontFamily: "inherit",
+          // HTML labels are placed in SVG `foreignObject` elements. Browser
+          // layout inside those elements can drift when the lightbox scales a
+          // large diagram, causing node labels to overlap. Native SVG text
+          // scales with the diagram's viewBox and remains aligned to its node.
           htmlLabels: false,
           flowchart: { htmlLabels: false },
         });

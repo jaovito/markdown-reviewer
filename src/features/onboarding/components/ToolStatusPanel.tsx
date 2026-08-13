@@ -1,6 +1,7 @@
 import type { ToolCheck, ToolStatus } from "@/shared/ipc/contract";
 import { Badge } from "@/shared/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   status: ToolStatus | undefined;
@@ -8,18 +9,20 @@ interface Props {
 }
 
 export function ToolStatusPanel({ status, isLoading }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Environment</CardTitle>
+        <CardTitle>{t("onboarding.environment.title")}</CardTitle>
         <CardDescription>
-          Tools that Markdown Reviewer needs to read your repositories.
+          {t("onboarding.environment.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <Row label="Git" check={status?.git} loading={isLoading} />
-        <Row label="GitHub CLI" check={status?.gh} loading={isLoading} />
-        <Row label="GitHub auth" check={status?.ghAuth} loading={isLoading} />
+        <Row label={t("onboarding.environment.git")} check={status?.git} loading={isLoading} />
+        <Row label={t("onboarding.environment.githubCli")} check={status?.gh} loading={isLoading} />
+        <Row label={t("onboarding.environment.githubAuth")} check={status?.ghAuth} loading={isLoading} />
       </CardContent>
     </Card>
   );
@@ -34,16 +37,18 @@ function Row({
   check: ToolCheck | undefined;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
         <div className="text-sm font-medium">{label}</div>
         <div className="text-xs text-[hsl(var(--muted-foreground))]">
-          {loading ? "Checking…" : detailFor(check)}
+          {loading ? t("onboarding.environment.checking") : detailFor(check)}
         </div>
       </div>
       {loading ? (
-        <Badge tone="muted">checking</Badge>
+        <Badge tone="muted">{t("onboarding.environment.checking")}</Badge>
       ) : check ? (
         <StatusBadge check={check} />
       ) : null}
@@ -52,15 +57,17 @@ function Row({
 }
 
 function StatusBadge({ check }: { check: ToolCheck }) {
+  const { t } = useTranslation();
+
   switch (check.state) {
     case "ok":
-      return <Badge tone="success">OK</Badge>;
+      return <Badge tone="success">{t("onboarding.environment.status.ok")}</Badge>;
     case "missing":
-      return <Badge tone="destructive">missing</Badge>;
+      return <Badge tone="destructive">{t("onboarding.environment.status.missing")}</Badge>;
     case "notAuthenticated":
-      return <Badge tone="warning">not authenticated</Badge>;
+      return <Badge tone="warning">{t("onboarding.environment.status.notAuthenticated")}</Badge>;
     case "error":
-      return <Badge tone="destructive">error</Badge>;
+      return <Badge tone="destructive">{t("onboarding.environment.status.error")}</Badge>;
   }
 }
 

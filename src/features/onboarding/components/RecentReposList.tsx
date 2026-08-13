@@ -1,6 +1,7 @@
 import type { RecentRepository } from "@/shared/ipc/contract";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   items: RecentRepository[];
@@ -10,14 +11,16 @@ interface Props {
 }
 
 export function RecentReposList({ items, onOpen, onRemove, disabled }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent repositories</CardTitle>
+        <CardTitle>{t("onboarding.recents.title")}</CardTitle>
         <CardDescription>
           {items.length === 0
-            ? "Nothing here yet — open a repository to see it listed."
-            : "Click a row to re-open."}
+            ? t("onboarding.recents.empty")
+            : t("onboarding.recents.reopenHint")}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
@@ -41,7 +44,7 @@ export function RecentReposList({ items, onOpen, onRemove, disabled }: Props) {
               variant="ghost"
               size="sm"
               onClick={() => onRemove(item.path)}
-              aria-label={`Remove ${item.label}`}
+              aria-label={t("onboarding.recents.removeAria", { name: item.label })}
             >
               ×
             </Button>

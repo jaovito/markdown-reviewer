@@ -73,7 +73,7 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
     diagram.style.height = `${height * scale}px`;
     diagram.style.maxWidth = "none";
     diagram.style.display = "block";
-  }, [scale, svg]);
+  }, [scale]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     setScale((s) => clampScale(s * (e.deltaY < 0 ? 1.1 : 0.9)));

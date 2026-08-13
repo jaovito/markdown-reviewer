@@ -18,9 +18,7 @@ export function RecentReposList({ items, onOpen, onRemove, disabled }: Props) {
       <CardHeader>
         <CardTitle>{t("onboarding.recents.title")}</CardTitle>
         <CardDescription>
-          {items.length === 0
-            ? t("onboarding.recents.empty")
-            : t("onboarding.recents.reopenHint")}
+          {items.length === 0 ? t("onboarding.recents.empty") : t("onboarding.recents.reopenHint")}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">

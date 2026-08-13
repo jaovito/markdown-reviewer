@@ -9,8 +9,8 @@ import {
   SparklesIcon,
   XIcon,
 } from "lucide-react";
-import type { useAutoUpdater } from "../hooks/useAutoUpdater";
 import { useTranslation } from "react-i18next";
+import type { useAutoUpdater } from "../hooks/useAutoUpdater";
 
 interface UpdateModalProps {
   updater: ReturnType<typeof useAutoUpdater>;
@@ -70,7 +70,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <ArrowUpCircleIcon className="size-6" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">{t("updater.available.title")}</h3>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {t("updater.available.title")}
+                </h3>
                 <div className="flex items-center gap-2 mt-0.5">
                   <Badge tone="muted" className="text-xs font-mono">
                     v{updateInfo.currentVersion}
@@ -119,7 +121,9 @@ export function UpdateModal({ updater, isOpen, onClose }: UpdateModalProps) {
                 <DownloadIcon className="size-6 animate-bounce" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">{t("updater.downloading.title")}</h3>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {t("updater.downloading.title")}
+                </h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   {t("updater.downloading.description")}
                 </p>

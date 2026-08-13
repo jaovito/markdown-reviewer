@@ -60,8 +60,16 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
     const diagram = diagramRef.current?.querySelector<SVGSVGElement>("svg");
     if (!diagram) return;
 
-    const viewBox = diagram.getAttribute("viewBox")?.trim().split(/[\s,]+/).map(Number);
-    if (!viewBox || viewBox.length !== 4 || viewBox.slice(2).some((size) => !Number.isFinite(size))) {
+    const viewBox = diagram
+      .getAttribute("viewBox")
+      ?.trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (
+      !viewBox ||
+      viewBox.length !== 4 ||
+      viewBox.slice(2).some((size) => !Number.isFinite(size))
+    ) {
       return;
     }
 

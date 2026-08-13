@@ -15,14 +15,16 @@ export function ToolStatusPanel({ status, isLoading }: Props) {
     <Card>
       <CardHeader>
         <CardTitle>{t("onboarding.environment.title")}</CardTitle>
-        <CardDescription>
-          {t("onboarding.environment.description")}
-        </CardDescription>
+        <CardDescription>{t("onboarding.environment.description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <Row label={t("onboarding.environment.git")} check={status?.git} loading={isLoading} />
         <Row label={t("onboarding.environment.githubCli")} check={status?.gh} loading={isLoading} />
-        <Row label={t("onboarding.environment.githubAuth")} check={status?.ghAuth} loading={isLoading} />
+        <Row
+          label={t("onboarding.environment.githubAuth")}
+          check={status?.ghAuth}
+          loading={isLoading}
+        />
       </CardContent>
     </Card>
   );

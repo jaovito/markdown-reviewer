@@ -4,6 +4,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -34,6 +35,7 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const diagramRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
 
@@ -49,6 +51,29 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Resizing the SVG itself makes WebKit render the vector scene at the new
+  // resolution. Transforming its parent instead can promote it to a raster
+  // layer, which makes text blurry at high zoom levels. Mermaid always emits
+  // a viewBox, so its coordinate dimensions are a stable source for sizing.
+  useLayoutEffect(() => {
+    const diagram = diagramRef.current?.querySelector<SVGSVGElement>("svg");
+    if (!diagram) return;
+
+    const viewBox = diagram.getAttribute("viewBox")?.trim().split(/[\s,]+/).map(Number);
+    if (!viewBox || viewBox.length !== 4 || viewBox.slice(2).some((size) => !Number.isFinite(size))) {
+      return;
+    }
+
+    const width = viewBox[2];
+    const height = viewBox[3];
+    if (width === undefined || height === undefined || width <= 0 || height <= 0) return;
+
+    diagram.style.width = `${width * scale}px`;
+    diagram.style.height = `${height * scale}px`;
+    diagram.style.maxWidth = "none";
+    diagram.style.display = "block";
+  }, [scale, svg]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     setScale((s) => clampScale(s * (e.deltaY < 0 ? 1.1 : 0.9)));
@@ -135,12 +160,9 @@ export function MermaidLightbox({ svg, onClose }: MermaidLightboxProps) {
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <div
+          ref={diagramRef}
           className="mermaid-lightbox-content"
-          // CSS `zoom` misplaces native SVG text in WebKit (used by Tauri),
-          // making labels drift out of their nodes. A transform scales the
-          // complete SVG coordinate system consistently; SVG remains vector,
-          // so labels stay sharp.
-          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid SVG rendered under securityLevel "strict".
           dangerouslySetInnerHTML={{ __html: svg }}
         />

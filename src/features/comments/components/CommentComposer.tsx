@@ -49,18 +49,6 @@ export function CommentComposer({
     textareaRef.current?.focus();
   }, []);
 
-  // Click outside dismisses the composer (only when no in-flight save).
-  useEffect(() => {
-    function onPointerDown(event: MouseEvent) {
-      if (create.isPending) return;
-      if (!containerRef.current) return;
-      if (event.target instanceof Node && containerRef.current.contains(event.target)) return;
-      onClose();
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [create.isPending, onClose]);
-
   function handleSubmit() {
     if (!canSubmit) return;
     create.mutate(

@@ -3,6 +3,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Loader2, LogIn } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useLoginGh } from "../hooks/useToolStatus";
 
 interface Props {
@@ -11,21 +12,24 @@ interface Props {
 }
 
 export function ToolStatusPanel({ status, isLoading }: Props) {
+  const { t } = useTranslation();
   const loginGh = useLoginGh();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Environment</CardTitle>
-        <CardDescription>
-          Tools that Markdown Reviewer needs to read your repositories.
-        </CardDescription>
+        <CardTitle>{t("onboarding.environment.title")}</CardTitle>
+        <CardDescription>{t("onboarding.environment.description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <Row label="Git" check={status?.git} loading={isLoading} />
-        <Row label="GitHub CLI" check={status?.gh} loading={isLoading} />
+        <Row label={t("onboarding.environment.git")} check={status?.git} loading={isLoading} />
         <Row
-          label="GitHub auth"
+          label={t("onboarding.environment.githubCli")}
+          check={status?.gh}
+          loading={isLoading}
+        />
+        <Row
+          label={t("onboarding.environment.githubAuth")}
           check={status?.ghAuth}
           loading={isLoading}
           onLogin={() => loginGh.mutate()}
@@ -49,15 +53,17 @@ function Row({
   onLogin?: () => void;
   isLoggingIn?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
         <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-[hsl(var(--muted-foreground))]">
           {loading
-            ? "Checking…"
+            ? t("onboarding.environment.checking")
             : isLoggingIn
-              ? "Opening browser to authorize with GitHub…"
+              ? t("onboarding.environment.loggingIn", "Opening browser to authorize with GitHub…")
               : detailFor(check)}
         </div>
       </div>
@@ -76,12 +82,12 @@ function Row({
             ) : (
               <LogIn className="h-3 w-3" />
             )}
-            Log in with GitHub
+            {t("onboarding.environment.loginButton", "Log in with GitHub")}
           </Button>
         ) : null}
 
         {loading ? (
-          <Badge tone="muted">checking</Badge>
+          <Badge tone="muted">{t("onboarding.environment.checking")}</Badge>
         ) : check ? (
           <StatusBadge check={check} />
         ) : null}
@@ -91,15 +97,17 @@ function Row({
 }
 
 function StatusBadge({ check }: { check: ToolCheck }) {
+  const { t } = useTranslation();
+
   switch (check.state) {
     case "ok":
-      return <Badge tone="success">OK</Badge>;
+      return <Badge tone="success">{t("onboarding.environment.status.ok")}</Badge>;
     case "missing":
-      return <Badge tone="destructive">missing</Badge>;
+      return <Badge tone="destructive">{t("onboarding.environment.status.missing")}</Badge>;
     case "notAuthenticated":
-      return <Badge tone="warning">not authenticated</Badge>;
+      return <Badge tone="warning">{t("onboarding.environment.status.notAuthenticated")}</Badge>;
     case "error":
-      return <Badge tone="destructive">error</Badge>;
+      return <Badge tone="destructive">{t("onboarding.environment.status.error")}</Badge>;
   }
 }
 

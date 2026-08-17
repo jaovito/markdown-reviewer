@@ -63,6 +63,14 @@ impl GhClient for StubGh {
     ) -> markdown_reviewer_core::AppResult<String> {
         Ok(String::new())
     }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> markdown_reviewer_core::AppResult<Vec<u8>> {
+        Ok(Vec::new())
+    }
     async fn submit_review_batch(
         &self,
         _repo_path: &str,

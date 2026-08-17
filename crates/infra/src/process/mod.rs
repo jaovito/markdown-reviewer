@@ -75,6 +75,76 @@ pub async fn run(
     Ok(output)
 }
 
+/// Same shape as `CommandOutput`, but stdout is kept as raw bytes. `run`
+/// decodes stdout with `String::from_utf8_lossy`, which replaces every
+/// invalid byte with U+FFFD — fine for text, silently destructive for the
+/// binary blobs the asset path reads.
+#[derive(Debug, Clone)]
+pub struct BytesOutput {
+    pub status: i32,
+    pub stdout: Vec<u8>,
+    pub stderr: String,
+}
+
+impl BytesOutput {
+    pub fn ok(&self) -> bool {
+        self.status == 0
+    }
+}
+
+/// Byte-preserving sibling of `run`. Same argv discipline, same timeout, same
+/// redaction on stderr.
+pub async fn run_bytes(
+    program: &str,
+    args: &[&str],
+    cwd: Option<&str>,
+    timeout_ms: u64,
+) -> AppResult<BytesOutput> {
+    let mut cmd = Command::new(program);
+    cmd.args(args);
+    if let Some(dir) = cwd {
+        cmd.current_dir(dir);
+    }
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+
+    let fut = cmd.output();
+    let out = match timeout(Duration::from_millis(timeout_ms), fut).await {
+        Ok(Ok(o)) => o,
+        Ok(Err(e)) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                return Err(AppError::MissingTool {
+                    name: program.to_string(),
+                });
+            }
+            return Err(AppError::process(redact(&e.to_string())));
+        }
+        Err(_) => {
+            return Err(AppError::process(format!(
+                "`{program}` timed out after {timeout_ms}ms"
+            )))
+        }
+    };
+
+    let output = BytesOutput {
+        status: out.status.code().unwrap_or(-1),
+        stdout: out.stdout,
+        stderr: String::from_utf8_lossy(&out.stderr).to_string(),
+    };
+
+    tracing::debug!(
+        program,
+        args = ?args,
+        status = output.status,
+        stdout_len = output.stdout.len(),
+        stderr = %redact(&output.stderr),
+        "process exited (bytes)"
+    );
+
+    Ok(output)
+}
+
 /// Same as `run` but returns `Err` when the command exits non-zero.
 pub async fn run_ok(
     program: &str,

@@ -18,6 +18,11 @@ interface RefreshButtonProps {
    * so the user sees the GitHub round-trip when they click Refresh.
    */
   onRefresh?: () => Promise<unknown>;
+  /**
+   * When true, a fetch is already in flight (e.g. the 10s background poll),
+   * so keep the icon spinning to signal that comments are updating.
+   */
+  busy?: boolean;
 }
 
 const DEFAULT_KEYS = [
@@ -29,7 +34,11 @@ const DEFAULT_KEYS = [
   "remote-threads",
 ];
 
-export function RefreshButton({ keys = DEFAULT_KEYS, onRefresh }: RefreshButtonProps) {
+export function RefreshButton({
+  keys = DEFAULT_KEYS,
+  onRefresh,
+  busy = false,
+}: RefreshButtonProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [spinning, setSpinning] = useState(false);
@@ -76,7 +85,7 @@ export function RefreshButton({ keys = DEFAULT_KEYS, onRefresh }: RefreshButtonP
           onClick={handleClick}
           className="size-8"
         >
-          <RefreshCwIcon className={cn("size-3.5", spinning && "animate-spin")} />
+          <RefreshCwIcon className={cn("size-3.5", (busy || spinning) && "animate-spin")} />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">{t("app.actions.refresh")}</TooltipContent>

@@ -1,12 +1,15 @@
 import {
   MarkdownPreview,
+  type RenderContext,
   UnsupportedFile,
   useFileContent,
   useFileDiff,
 } from "@/features/markdown-preview";
+import type { HeadingItem } from "@/features/markdown-preview/lib/extractHeadings";
 import { describeError } from "@/shared/ipc/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { isMarkdownPath } from "../../lib/buildTree";
 import { PreviewSkeleton } from "./skeleton";
@@ -17,6 +20,12 @@ interface PreviewAreaProps {
   filePath: string;
   isDetailLoading: boolean;
   prNumber: number;
+  owner: string;
+  repo: string;
+  /** Repo-relative paths of the PR's changed files. */
+  prFiles: readonly string[];
+  onHeadingsExtracted?: (headings: HeadingItem[]) => void;
+  onRegisterSearchTrigger?: (trigger: () => void) => void;
 }
 
 export function PreviewArea({
@@ -25,6 +34,11 @@ export function PreviewArea({
   filePath,
   isDetailLoading,
   prNumber,
+  owner,
+  repo,
+  prFiles,
+  onHeadingsExtracted,
+  onRegisterSearchTrigger,
 }: PreviewAreaProps) {
   const { t } = useTranslation();
   const supported = isMarkdownPath(filePath);
@@ -38,6 +52,24 @@ export function PreviewArea({
     prNumber,
     filePath: supported ? filePath : undefined,
   });
+
+  // Memoized on identity: the pipeline caches one processor per context
+  // object, so a new object each render would rebuild the unified chain.
+  const renderContext = useMemo<RenderContext | undefined>(
+    () =>
+      repoPath && sha
+        ? {
+            repoPath,
+            sha,
+            filePath,
+            owner,
+            repo,
+            prFiles,
+            basePath: `/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`,
+          }
+        : undefined,
+    [repoPath, sha, filePath, owner, repo, prFiles, prNumber],
+  );
 
   if (!supported) return <UnsupportedFile path={filePath} />;
   if (isDetailLoading || file.isLoading) return <PreviewSkeleton />;
@@ -67,6 +99,9 @@ export function PreviewArea({
       prNumber={prNumber}
       filePath={filePath}
       headSha={sha}
+      renderContext={renderContext}
+      onHeadingsExtracted={onHeadingsExtracted}
+      onRegisterSearchTrigger={onRegisterSearchTrigger}
     />
   );
 }

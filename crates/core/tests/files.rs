@@ -31,6 +31,14 @@ impl GitClient for FakeGit {
     ) -> AppResult<Option<String>> {
         Ok(self.show.clone())
     }
+    async fn show_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Option<Vec<u8>>> {
+        unimplemented!("not used in this test")
+    }
     async fn diff_hunks(
         &self,
         _repo_path: &str,
@@ -85,6 +93,14 @@ impl GhClient for FakeGh {
         _file_path: &str,
     ) -> AppResult<String> {
         self.fallback.clone()
+    }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Vec<u8>> {
+        unimplemented!("not used in this test")
     }
     async fn submit_review_batch(
         &self,

@@ -337,6 +337,39 @@ impl GhClient for GhCli {
             .map_err(|e| AppError::process(format!("gh api contents: invalid UTF-8: {e}")))
     }
 
+    async fn get_file_bytes(
+        &self,
+        repo_path: &str,
+        sha: &str,
+        file_path: &str,
+    ) -> AppResult<Vec<u8>> {
+        // Same endpoint as `get_file_content`, but the base64 payload is
+        // returned as bytes rather than being forced through UTF-8.
+        let endpoint = format!("repos/{{owner}}/{{repo}}/contents/{file_path}?ref={sha}");
+        let out = run(
+            "gh",
+            &["api", "-X", "GET", &endpoint, "--jq", ".content"],
+            Some(repo_path),
+            PR_TIMEOUT_MS,
+        )
+        .await?;
+
+        if !out.ok() {
+            let lower = out.stderr.to_ascii_lowercase();
+            if lower.contains("404") || lower.contains("not found") {
+                return Err(AppError::FileNotFound {
+                    sha: sha.to_string(),
+                    path: file_path.to_string(),
+                });
+            }
+            return Err(AppError::process(redact(out.stderr.trim())));
+        }
+
+        let raw = out.stdout.replace(['\n', '\r'], "");
+        base64_decode(&raw)
+            .map_err(|e| AppError::process(format!("gh api contents: invalid base64: {e}")))
+    }
+
     async fn submit_review_batch(
         &self,
         repo_path: &str,

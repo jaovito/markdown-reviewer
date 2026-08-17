@@ -127,6 +127,13 @@ export interface ReviewComment {
   headSha: string;
   body: string;
   author: string | null;
+  /**
+   * GitHub avatar URL for the author, when known. The Rust backend doesn't
+   * persist this for local drafts (optional, defaults to undefined); the
+   * frontend stamps it on synthetic heads built from remote threads so inline
+   * cards can show the same avatar as the right-rail thread cards.
+   */
+  avatarUrl?: string | null;
   state: CommentState;
   anchor: CommentAnchor;
   createdAt: number;

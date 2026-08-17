@@ -24,6 +24,48 @@
       "failedTitle": "Couldn't submit the review"
     }
   },
+  "updater": {
+    "header": {
+      "label": "Updates",
+      "checkAria": "Check for software updates",
+      "available": "Update v{{version}}"
+    },
+    "checking": {
+      "title": "Checking for updates",
+      "description": "Checking whether a newer version is available…"
+    },
+    "available": {
+      "title": "New version available",
+      "description": "A new version is available. Would you like to download and install it now?",
+      "releaseNotes": "Release notes"
+    },
+    "downloading": {
+      "title": "Downloading update",
+      "description": "Please wait while the files are transferred…",
+      "progress": "Progress"
+    },
+    "ready": {
+      "title": "Update ready",
+      "description": "The download is complete. Restart the app to apply the update."
+    },
+    "upToDate": {
+      "title": "You're up to date",
+      "description": "You're already running the latest available version."
+    },
+    "error": {
+      "title": "Update failed",
+      "description": "Something went wrong while checking for or installing updates.",
+      "restartFailed": "Couldn't restart the app automatically."
+    },
+    "actions": {
+      "close": "Close",
+      "remindLater": "Remind me later",
+      "downloadAndUpdate": "Download and update",
+      "restartAndUpdate": "Restart to update",
+      "gotIt": "Got it",
+      "tryAgain": "Try again"
+    }
+  },
   "rail": {
     "changes": "Changes",
     "pullRequests": "Pull requests",
@@ -39,6 +81,38 @@
     "tabs": {
       "local": "Local & Recents",
       "remote": "GitHub Repositories"
+    },
+    "recents": {
+      "title": "Recent repositories",
+      "empty": "Nothing here yet — open a repository to see it listed.",
+      "reopenHint": "Click a row to re-open.",
+      "removeAria": "Remove {{name}}"
+    },
+    "validation": {
+      "ready": "Ready",
+      "path": "Path",
+      "remote": "Remote",
+      "branch": "Branch",
+      "detachedHead": "(detached HEAD)",
+      "chooseDifferentFolder": "Choose a different folder",
+      "continue": "Continue",
+      "continueUnavailable": "Available in Phase 2 — pull requests"
+    },
+    "environment": {
+      "title": "Environment",
+      "description": "Tools that Markdown Reviewer needs to read your repositories.",
+      "git": "Git",
+      "githubCli": "GitHub CLI",
+      "githubAuth": "GitHub authentication",
+      "checking": "Checking…",
+      "loginButton": "Log in with GitHub",
+      "loggingIn": "Opening browser to authorize with GitHub…",
+      "status": {
+        "ok": "OK",
+        "missing": "Missing",
+        "notAuthenticated": "Not authenticated",
+        "error": "Error"
+      }
     }
   },
   "recents": {
@@ -117,7 +191,25 @@
       "noFileSelected": "Pick a Markdown file from the sidebar to start reading.",
       "unsupportedTitle": "Preview for <code>{{path}}</code> is not supported.",
       "unsupportedDescription": "Markdown Reviewer renders Markdown files only.",
-      "fallbackToolbarLabel": "Pull request #{{number}}"
+      "fallbackToolbarLabel": "Pull request #{{number}}",
+      "toggleLeftSidebar": "Toggle file explorer",
+      "toggleRightSidebar": "Toggle comments panel",
+      "tableOfContents": "Table of contents",
+      "filterHeadings": "Filter headings…",
+      "noHeadingsFound": "No headings match your search.",
+      "noHeadingsInDoc": "No headings in this document.",
+      "searchPlaceholder": "Search in document…",
+      "matchCase": "Match case",
+      "noResults": "No results",
+      "matchCount": "{{current}} of {{total}}",
+      "nextMatch": "Next match (Enter)",
+      "previousMatch": "Previous match (Shift+Enter)",
+      "closeSearch": "Close search (Esc)",
+      "searchAria": "Search in document",
+      "openPrOnGithub": "Open PR on GitHub",
+      "openFileOnGithub": "Open file on GitHub",
+      "copyFileLink": "Copy link to file",
+      "copied": "Copied!"
     },
     "status": {
       "aria": "Change status: {{status}}",
@@ -137,6 +229,7 @@
     "threads": {
       "title": "Review threads",
       "subtitle": "Comments attached to rendered Markdown ranges.",
+      "resizeAria": "Resize comments panel",
       "currentFile": "Current file",
       "allFiles": "All files in PR",
       "loading": "Loading comments…",
@@ -300,6 +393,30 @@
       "threadNotFoundOnReply": "Couldn't find this comment's GitHub thread. Click Refresh and try again.",
       "threadNotFoundOnResolve": "Couldn't find this comment's GitHub thread. Click Refresh and resolve again.",
       "localOnlyHint": "The comment is marked as {{state}} locally, but the GitHub thread didn't sync. The next refresh will reconcile."
+    }
+  },
+  "markdownPreview": {
+    "alerts": {
+      "note": "Note",
+      "tip": "Tip",
+      "important": "Important",
+      "warning": "Warning",
+      "caution": "Caution"
+    },
+    "mermaid": {
+      "error": "Couldn't render this Mermaid diagram. Showing its source instead.",
+      "openAria": "Open diagram in fullscreen",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "reset": "Reset zoom",
+      "close": "Close"
+    },
+    "image": {
+      "unavailable": "Image not available at this commit",
+      "altFallback": "Image"
+    },
+    "links": {
+      "inertTitle": "This link points somewhere Markdown Reviewer can't open"
     }
   },
   "errors": {

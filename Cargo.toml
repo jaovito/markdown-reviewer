@@ -3,7 +3,7 @@ resolver = "2"
 members = ["src-tauri", "crates/core", "crates/infra", "crates/ipc"]
 
 [workspace.package]
-version = "0.2.2"
+version = "0.4.3"
 edition = "2021"
 rust-version = "1.81"
 license = "UNLICENSED"
@@ -24,6 +24,10 @@ tempfile = "3"
 tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+
 
 markdown-reviewer-core = { path = "crates/core" }
 markdown-reviewer-infra = { path = "crates/infra" }

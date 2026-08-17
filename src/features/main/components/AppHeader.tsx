@@ -2,14 +2,24 @@ import { usePullRequestComments } from "@/features/comments/hooks/usePullRequest
 import { usePullRequestDetail } from "@/features/markdown-preview";
 import { useRepoPath } from "@/features/pull-requests/hooks/useRepoPath";
 import { useRemoteThreads } from "@/features/sync";
+import { UpdateModal, useAutoUpdater } from "@/features/updater";
 import { ipc } from "@/shared/ipc/client";
 import { describeError, isAppError } from "@/shared/ipc/errors";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon, GitBranchIcon, Loader2Icon } from "lucide-react";
-import { useMemo } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  ArrowUpCircleIcon,
+  CheckIcon,
+  ExternalLinkIcon,
+  GitBranchIcon,
+  Loader2Icon,
+  RefreshCwIcon,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { usePullRequestTitle } from "../hooks/usePullRequestTitle";
 import { RefreshButton } from "./RefreshButton";
@@ -86,6 +96,15 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
   const canFinish =
     Boolean(repoPath) && prNumber !== undefined && draftIds.length > 0 && !submit.isPending;
 
+  const updater = useAutoUpdater(true);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (updater.status === "available") {
+      setIsUpdateModalOpen(true);
+    }
+  }, [updater.status]);
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-5">
       <div className="flex shrink-0 items-center gap-2.5">
@@ -101,13 +120,56 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
       {prNumber ? (
         <>
           <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">/</span>
-          <span className="shrink-0 text-xs font-medium">PR #{prNumber}</span>
+          <button
+            type="button"
+            onClick={() =>
+              openUrl(`https://github.com/${owner}/${repo}/pull/${prNumber}`).catch(() => undefined)
+            }
+            className="group flex shrink-0 items-center gap-1 text-xs font-medium text-[hsl(var(--foreground))] transition-colors hover:text-[hsl(var(--primary))] hover:underline cursor-pointer"
+            title={t("fileExplorer.preview.openPrOnGithub")}
+          >
+            <span>PR #{prNumber}</span>
+            <ExternalLinkIcon className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
+          </button>
           <PullRequestTitle data={title.data} isLoading={title.isLoading} />
         </>
       ) : null}
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {updater.status === "available" || updater.status === "ready" ? (
+          <Button
+            size="sm"
+            variant="default"
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse"
+            onClick={() => setIsUpdateModalOpen(true)}
+          >
+            <ArrowUpCircleIcon className="size-3.5" />
+            <span>{t("updater.header.available", { version: updater.updateInfo?.version })}</span>
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2 text-xs text-[hsl(var(--muted-foreground))] gap-1.5 hover:text-[hsl(var(--foreground))]"
+            onClick={() => {
+              setIsUpdateModalOpen(true);
+              if (
+                updater.status === "idle" ||
+                updater.status === "up-to-date" ||
+                updater.status === "error"
+              ) {
+                void updater.checkForUpdates();
+              }
+            }}
+            title={t("updater.header.checkAria")}
+          >
+            <RefreshCwIcon
+              className={`size-3.5 ${updater.status === "checking" ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">{t("updater.header.label")}</span>
+          </Button>
+        )}
         {rightAction}
-        <RefreshButton onRefresh={remote.refresh} />
+        <RefreshButton onRefresh={remote.refresh} busy={remote.isFetching} />
         {branch ? (
           <span className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-2.5 text-xs">
             <GitBranchIcon className="size-3.5 text-[hsl(var(--muted-foreground))]" />
@@ -140,6 +202,11 @@ export function AppHeader({ owner, repo, prNumber, branch, rightAction }: AppHea
           </Button>
         ) : null}
       </div>
+      <UpdateModal
+        updater={updater}
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+      />
     </header>
   );
 }

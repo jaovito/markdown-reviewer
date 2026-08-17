@@ -1,4 +1,7 @@
 pub mod read_markdown_file;
+pub mod read_repo_asset;
+
+pub use read_repo_asset::{read_repo_asset, MAX_ASSET_BYTES};
 
 use std::sync::Arc;
 

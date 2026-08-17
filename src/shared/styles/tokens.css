@@ -5,6 +5,8 @@
   --muted-foreground: 215.4 16.3% 46.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 47.4% 11.2%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 47.4% 11.2%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --primary: 222.2 47.4% 11.2%;
@@ -38,6 +40,13 @@
   --comment-open-fg: 142 72% 29%; /* #166534 */
   --comment-draft-bg: 48 100% 96%; /* warm draft yellow */
   --comment-draft-fg: 28 80% 35%;
+
+  /* GitHub alert hues — border + icon color per type (light). */
+  --alert-note: 212 92% 45%;
+  --alert-tip: 137 66% 30%;
+  --alert-important: 261 69% 59%;
+  --alert-warning: 40 100% 30%;
+  --alert-caution: 356 72% 47%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,6 +57,8 @@
     --muted-foreground: 215 20.2% 65.1%;
     --card: 222.2 47.4% 11.2%;
     --card-foreground: 210 40% 98%;
+    --popover: 222.2 47.4% 11.2%;
+    --popover-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --primary: 210 40% 98%;
@@ -79,5 +90,11 @@
     --comment-open-fg: 141 79% 85%;
     --comment-draft-bg: 28 60% 18%;
     --comment-draft-fg: 48 100% 88%;
+
+    --alert-note: 216 84% 52%;
+    --alert-tip: 128 49% 49%;
+    --alert-important: 262 89% 71%;
+    --alert-warning: 41 72% 48%;
+    --alert-caution: 3 93% 63%;
   }
 }

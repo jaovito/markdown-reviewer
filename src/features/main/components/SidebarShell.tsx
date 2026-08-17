@@ -69,7 +69,7 @@ export function SidebarShell({ title, subtitle, emptyHint, children, toolbar }: 
         ) : null}
       </div>
       {toolbar ? <div className="px-4 pb-3">{toolbar}</div> : null}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="px-2 pb-3">
           {children ?? (
             <p className="px-2 py-6 text-xs text-[hsl(var(--muted-foreground))]">

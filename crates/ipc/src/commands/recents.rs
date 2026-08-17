@@ -28,3 +28,17 @@ pub async fn remove_recent_repository(
 ) -> Result<(), AppError> {
     recents::remove(&state.repo_selection, &path).await
 }
+
+#[tauri::command]
+pub async fn pin_recent_repository(
+    state: State<'_, AppState>,
+    path: String,
+    pinned: bool,
+) -> Result<(), AppError> {
+    recents::set_pinned(&state.repo_selection, &path, pinned).await
+}
+
+#[tauri::command]
+pub async fn clear_recent_repositories(state: State<'_, AppState>) -> Result<(), AppError> {
+    recents::clear_all(&state.repo_selection).await
+}

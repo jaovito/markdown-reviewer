@@ -23,11 +23,7 @@ export function ToolStatusPanel({ status, isLoading }: Props) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <Row label={t("onboarding.environment.git")} check={status?.git} loading={isLoading} />
-        <Row
-          label={t("onboarding.environment.githubCli")}
-          check={status?.gh}
-          loading={isLoading}
-        />
+        <Row label={t("onboarding.environment.githubCli")} check={status?.gh} loading={isLoading} />
         <Row
           label={t("onboarding.environment.githubAuth")}
           check={status?.ghAuth}

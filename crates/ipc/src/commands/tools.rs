@@ -27,4 +27,3 @@ pub async fn login_gh(
 ) -> Result<markdown_reviewer_core::ports::GhAuthReport, AppError> {
     check_tools::login_gh(&state.repo_selection).await
 }
-

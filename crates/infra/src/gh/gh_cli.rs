@@ -188,7 +188,6 @@ impl GhClient for GhCli {
         self.auth_status().await
     }
 
-
     async fn list_pull_requests(&self, repo_path: &str) -> AppResult<Vec<PullRequestSummary>> {
         let out = run(
             "gh",

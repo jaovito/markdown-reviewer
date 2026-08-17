@@ -1,9 +1,9 @@
-import { useState } from "react";
 import type { RecentRepository } from "@/shared/ipc/contract";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Pin, Search, Star, Trash2, X } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface Props {

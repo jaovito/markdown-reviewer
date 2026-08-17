@@ -37,4 +37,3 @@ pub async fn check_tools(svc: &RepoSelection) -> AppResult<ToolStatus> {
 pub async fn login_gh(svc: &RepoSelection) -> AppResult<crate::ports::GhAuthReport> {
     svc.gh.auth_login().await
 }
-

@@ -40,6 +40,14 @@ impl GitClient for DummyGit {
     ) -> AppResult<Option<String>> {
         Ok(None)
     }
+    async fn show_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Option<Vec<u8>>> {
+        Ok(None)
+    }
     async fn diff_hunks(
         &self,
         _repo_path: &str,
@@ -106,6 +114,14 @@ impl GhClient for MockGh {
         _file_path: &str,
     ) -> AppResult<String> {
         Ok("".to_string())
+    }
+    async fn get_file_bytes(
+        &self,
+        _repo_path: &str,
+        _sha: &str,
+        _file_path: &str,
+    ) -> AppResult<Vec<u8>> {
+        Ok(Vec::new())
     }
     async fn submit_review_batch(
         &self,

@@ -20,6 +20,12 @@ export interface ToolStatus {
   ghAuth: ToolCheck;
 }
 
+export interface GhAuthReport {
+  authenticated: boolean;
+  username: string | null;
+  detail: string;
+}
+
 export interface Repository {
   path: string;
   remoteUrl: string;
@@ -35,6 +41,20 @@ export interface RecentRepository {
   owner: string | null;
   repo: string | null;
   lastOpenedAt: number;
+  pinned: boolean;
+}
+
+export interface RemoteRepository {
+  name: string;
+  nameWithOwner: string;
+  description: string;
+  url: string;
+  isPrivate: boolean;
+  isFork: boolean;
+  stargazerCount: number;
+  updatedAt: string;
+  primaryLanguage: string | null;
+  defaultBranch: string;
 }
 
 export type PullRequestState = "open" | "closed" | "merged";
@@ -204,11 +224,22 @@ export type AppError =
 export interface Commands {
   check_tools: { args: undefined; result: ToolStatus };
   get_gh_user: { args: undefined; result: string | null };
+  login_gh: { args: undefined; result: GhAuthReport };
   select_repository: { args: undefined; result: string | null };
   validate_repository: { args: { path: string }; result: Repository };
   list_recent_repositories: { args: undefined; result: RecentRepository[] };
   add_recent_repository: { args: { repo: Repository }; result: RecentRepository };
   remove_recent_repository: { args: { path: string }; result: null };
+  pin_recent_repository: { args: { path: string; pinned: boolean }; result: null };
+  clear_recent_repositories: { args: undefined; result: null };
+  list_remote_repositories: {
+    args: { query?: string; limit?: number };
+    result: RemoteRepository[];
+  };
+  clone_repository: {
+    args: { repoNameWithOwner: string; targetParentDir: string };
+    result: Repository;
+  };
   list_pull_requests: { args: { repoPath: string }; result: PullRequestSummary[] };
   load_pull_request: {
     args: { repoPath: string; prNumber: number };

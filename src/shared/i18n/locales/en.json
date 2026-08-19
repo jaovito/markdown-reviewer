@@ -75,9 +75,13 @@
   },
   "onboarding": {
     "title": "Markdown Reviewer",
-    "subtitle": "Open a local repository to start reviewing Markdown pull requests.",
-    "selectButton": "Select repository folder",
+    "subtitle": "Open or clone a repository to start reviewing Markdown pull requests.",
+    "selectButton": "Select local folder",
     "validating": "Validating…",
+    "tabs": {
+      "local": "Local & Recents",
+      "remote": "GitHub Repositories"
+    },
     "recents": {
       "title": "Recent repositories",
       "empty": "Nothing here yet — open a repository to see it listed.",
@@ -101,12 +105,52 @@
       "githubCli": "GitHub CLI",
       "githubAuth": "GitHub authentication",
       "checking": "Checking…",
+      "loginButton": "Log in with GitHub",
+      "loggingIn": "Opening browser to authorize with GitHub…",
       "status": {
         "ok": "OK",
         "missing": "Missing",
         "notAuthenticated": "Not authenticated",
         "error": "Error"
       }
+    }
+  },
+  "recents": {
+    "title": "Recent repositories",
+    "empty": "Nothing here yet — open a repository to see it listed.",
+    "description": "Click a row to re-open.",
+    "searchPlaceholder": "Search recent repositories…",
+    "pin": "Pin repository",
+    "unpin": "Unpin repository",
+    "remove": "Remove from recents",
+    "clear": "Clear recents history",
+    "clearConfirmTitle": "Clear recent repositories?",
+    "clearConfirmDescription": "This will remove all recent repositories from history. Your local files won't be affected.",
+    "pinnedSection": "Pinned",
+    "otherSection": "Recent"
+  },
+  "remoteRepos": {
+    "title": "Search GitHub Repositories",
+    "subtitle": "Clone a repository from your GitHub account directly into a local folder.",
+    "searchPlaceholder": "Search user repositories by name or description…",
+    "filter": {
+      "all": "All",
+      "public": "Public",
+      "private": "Private"
+    },
+    "cloneButton": "Clone",
+    "cloning": "Cloning…",
+    "emptyAll": "No GitHub repositories found.",
+    "emptyFiltered": "No repositories match your search.",
+    "privateBadge": "Private",
+    "forkBadge": "Fork",
+    "cloneModal": {
+      "title": "Clone {{name}}",
+      "selectFolder": "Choose destination directory for {{name}}",
+      "cloningTitle": "Cloning repository…",
+      "cloningDescription": "Running gh repo clone for {{name}}. This may take a moment depending on repository size.",
+      "successTitle": "Repository cloned!",
+      "successDescription": "Opening {{name}} for review."
     }
   },
   "pullRequests": {

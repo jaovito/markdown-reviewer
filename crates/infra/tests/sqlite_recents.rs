@@ -12,6 +12,7 @@ fn sample(path: &str, ts: i64) -> RecentRepository {
         owner: Some("test".to_string()),
         repo: Some("repo".to_string()),
         last_opened_at: ts,
+        pinned: false,
     }
 }
 
@@ -67,4 +68,31 @@ async fn survives_reopen() {
     let list = store.list().await.unwrap();
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].path, "/p");
+}
+
+#[tokio::test]
+#[ignore = "touches a real sqlite file; run with --ignored"]
+async fn pin_and_clear_recents() {
+    let dir = TempDir::new().unwrap();
+    let db = open_and_migrate(&dir.path().join("store.sqlite")).unwrap();
+    let store = SqliteRecentsStore::new(db);
+
+    store
+        .upsert(sample("/unpinned_recent", 2_000))
+        .await
+        .unwrap();
+    store.upsert(sample("/pinned_older", 1_000)).await.unwrap();
+
+    store.set_pinned("/pinned_older", true).await.unwrap();
+
+    let list = store.list().await.unwrap();
+    assert_eq!(list.len(), 2);
+    // Pinned item must appear first despite older timestamp.
+    assert_eq!(list[0].path, "/pinned_older");
+    assert!(list[0].pinned);
+    assert_eq!(list[1].path, "/unpinned_recent");
+    assert!(!list[1].pinned);
+
+    store.clear_all().await.unwrap();
+    assert!(store.list().await.unwrap().is_empty());
 }

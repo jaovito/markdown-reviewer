@@ -20,3 +20,10 @@ pub async fn get_gh_user(state: State<'_, AppState>) -> Result<Option<String>, A
     }
     Ok(report.username)
 }
+
+#[tauri::command]
+pub async fn login_gh(
+    state: State<'_, AppState>,
+) -> Result<markdown_reviewer_core::ports::GhAuthReport, AppError> {
+    check_tools::login_gh(&state.repo_selection).await
+}

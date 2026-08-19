@@ -1,5 +1,5 @@
 import { ipc } from "@/shared/ipc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useToolStatus() {
   return useQuery({
@@ -8,6 +8,20 @@ export function useToolStatus() {
       const res = await ipc.tools.check();
       if (!res.ok) throw res.error;
       return res.value;
+    },
+  });
+}
+
+export function useLoginGh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await ipc.tools.loginGh();
+      if (!res.ok) throw res.error;
+      return res.value;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tool-status"] });
     },
   });
 }

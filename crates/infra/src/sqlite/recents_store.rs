@@ -22,13 +22,14 @@ impl RecentsStore for SqliteRecentsStore {
             let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
             let mut stmt = conn
                 .prepare(
-                    "SELECT path, label, remote_url, owner, repo, last_opened_at
+                    "SELECT path, label, remote_url, owner, repo, last_opened_at, pinned
                      FROM recent_repositories
-                     ORDER BY last_opened_at DESC",
+                     ORDER BY pinned DESC, last_opened_at DESC",
                 )
                 .map_err(AppError::db)?;
             let rows = stmt
                 .query_map([], |row| {
+                    let pinned_int: i32 = row.get(6)?;
                     Ok(RecentRepository {
                         path: row.get(0)?,
                         label: row.get(1)?,
@@ -36,6 +37,7 @@ impl RecentsStore for SqliteRecentsStore {
                         owner: row.get(3)?,
                         repo: row.get(4)?,
                         last_opened_at: row.get(5)?,
+                        pinned: pinned_int != 0,
                     })
                 })
                 .map_err(AppError::db)?;
@@ -54,14 +56,15 @@ impl RecentsStore for SqliteRecentsStore {
         tokio::task::spawn_blocking(move || {
             let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
             conn.execute(
-                "INSERT INTO recent_repositories(path, label, remote_url, owner, repo, last_opened_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                "INSERT INTO recent_repositories(path, label, remote_url, owner, repo, last_opened_at, pinned)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                  ON CONFLICT(path) DO UPDATE SET
                     label = excluded.label,
                     remote_url = excluded.remote_url,
                     owner = excluded.owner,
                     repo = excluded.repo,
-                    last_opened_at = excluded.last_opened_at",
+                    last_opened_at = excluded.last_opened_at,
+                    pinned = excluded.pinned",
                 rusqlite::params![
                     entry.path,
                     entry.label,
@@ -69,6 +72,7 @@ impl RecentsStore for SqliteRecentsStore {
                     entry.owner,
                     entry.repo,
                     entry.last_opened_at,
+                    if entry.pinned { 1 } else { 0 },
                 ],
             )
             .map_err(AppError::db)?;
@@ -88,6 +92,35 @@ impl RecentsStore for SqliteRecentsStore {
                 rusqlite::params![owned],
             )
             .map_err(AppError::db)?;
+            Ok::<_, AppError>(())
+        })
+        .await
+        .map_err(AppError::unexpected)?
+    }
+
+    async fn set_pinned(&self, path: &str, pinned: bool) -> AppResult<()> {
+        let db = self.db.clone();
+        let owned = path.to_string();
+        let pinned_val = if pinned { 1 } else { 0 };
+        tokio::task::spawn_blocking(move || {
+            let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
+            conn.execute(
+                "UPDATE recent_repositories SET pinned = ?2 WHERE path = ?1",
+                rusqlite::params![owned, pinned_val],
+            )
+            .map_err(AppError::db)?;
+            Ok::<_, AppError>(())
+        })
+        .await
+        .map_err(AppError::unexpected)?
+    }
+
+    async fn clear_all(&self) -> AppResult<()> {
+        let db = self.db.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
+            conn.execute("DELETE FROM recent_repositories", [])
+                .map_err(AppError::db)?;
             Ok::<_, AppError>(())
         })
         .await

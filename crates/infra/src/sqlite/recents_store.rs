@@ -72,7 +72,7 @@ impl RecentsStore for SqliteRecentsStore {
                     entry.owner,
                     entry.repo,
                     entry.last_opened_at,
-                    if entry.pinned { 1 } else { 0 },
+                    i32::from(entry.pinned),
                 ],
             )
             .map_err(AppError::db)?;
@@ -101,7 +101,7 @@ impl RecentsStore for SqliteRecentsStore {
     async fn set_pinned(&self, path: &str, pinned: bool) -> AppResult<()> {
         let db = self.db.clone();
         let owned = path.to_string();
-        let pinned_val = if pinned { 1 } else { 0 };
+        let pinned_val = i32::from(pinned);
         tokio::task::spawn_blocking(move || {
             let conn = db.lock().map_err(|e| AppError::db(e.to_string()))?;
             conn.execute(

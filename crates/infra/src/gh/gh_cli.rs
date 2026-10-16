@@ -654,8 +654,7 @@ impl GhClient for GhCli {
                 primary_language: item.primary_language.map(|l| l.name),
                 default_branch: item
                     .default_branch_ref
-                    .map(|b| b.name)
-                    .unwrap_or_else(|| "main".to_string()),
+                    .map_or_else(|| "main".to_string(), |b| b.name),
             })
             .collect();
 

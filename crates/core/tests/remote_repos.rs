@@ -84,7 +84,7 @@ impl GhClient for MockGh {
         Ok(GhAuthReport {
             authenticated: true,
             username: Some("user".to_string()),
-            detail: "".to_string(),
+            detail: String::new(),
         })
     }
     async fn list_pull_requests(
@@ -113,7 +113,7 @@ impl GhClient for MockGh {
         _sha: &str,
         _file_path: &str,
     ) -> AppResult<String> {
-        Ok("".to_string())
+        Ok(String::new())
     }
     async fn get_file_bytes(
         &self,

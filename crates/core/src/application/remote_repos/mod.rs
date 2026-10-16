@@ -30,8 +30,7 @@ pub async fn clone_repository(
     let parent_path = Path::new(target_parent_dir);
     if !parent_path.exists() || !parent_path.is_dir() {
         return Err(AppError::validation(format!(
-            "Target directory does not exist or is not a folder: {}",
-            target_parent_dir
+            "Target directory does not exist or is not a folder: {target_parent_dir}"
         )));
     }
 

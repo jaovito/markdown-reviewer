@@ -13,8 +13,7 @@ pub async fn add(svc: &RepoSelection, repo: &Repository) -> AppResult<RecentRepo
     let pinned = existing
         .into_iter()
         .find(|r| r.path == repo.path)
-        .map(|r| r.pinned)
-        .unwrap_or(false);
+        .is_some_and(|r| r.pinned);
 
     let entry = RecentRepository {
         path: repo.path.clone(),

@@ -9,7 +9,7 @@ pub async fn list(svc: &RepoSelection) -> AppResult<Vec<RecentRepository>> {
 }
 
 pub async fn add(svc: &RepoSelection, repo: &Repository) -> AppResult<RecentRepository> {
-    let existing = svc.recents.list().await.unwrap_or_default();
+    let existing = svc.recents.list().await?;
     let pinned = existing
         .into_iter()
         .find(|r| r.path == repo.path)

@@ -22,6 +22,7 @@ export function useLoginGh() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tool-status"] });
+      qc.invalidateQueries({ queryKey: ["remote-repos"] });
     },
   });
 }

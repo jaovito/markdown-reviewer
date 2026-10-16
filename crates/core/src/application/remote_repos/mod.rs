@@ -7,6 +7,29 @@ use crate::AppResult;
 
 use super::repo_selection::RepoSelection;
 
+pub fn parse_repo_name_with_owner(raw: &str) -> AppResult<(&str, &str)> {
+    let mut parts = raw.split('/');
+    let owner = parts.next().filter(|s| !s.is_empty());
+    let name = parts.next().filter(|s| !s.is_empty());
+    if parts.next().is_some() || owner.is_none() || name.is_none() {
+        return Err(AppError::validation(format!(
+            "Invalid repository name '{raw}'; expected 'owner/name' format"
+        )));
+    }
+    let (owner, name) = (owner.unwrap(), name.unwrap());
+    let is_valid_char = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.';
+    if !owner.chars().all(is_valid_char)
+        || !name.chars().all(is_valid_char)
+        || name == "."
+        || name == ".."
+    {
+        return Err(AppError::validation(format!(
+            "Invalid repository name '{raw}'"
+        )));
+    }
+    Ok((owner, name))
+}
+
 pub async fn list_user_repositories(
     svc: &RepoSelection,
     query: Option<&str>,
@@ -20,21 +43,9 @@ pub async fn clone_repository(
     repo_name_with_owner: &str,
     target_parent_dir: &str,
 ) -> AppResult<Repository> {
-    let parts: Vec<&str> = repo_name_with_owner.split('/').collect();
-    let repo_name = if parts.len() == 2 {
-        parts[1]
-    } else {
-        repo_name_with_owner
-    };
+    let (_owner, repo_name) = parse_repo_name_with_owner(repo_name_with_owner)?;
 
-    let parent_path = Path::new(target_parent_dir);
-    if !parent_path.exists() || !parent_path.is_dir() {
-        return Err(AppError::validation(format!(
-            "Target directory does not exist or is not a folder: {target_parent_dir}"
-        )));
-    }
-
-    let target_path = parent_path.join(repo_name);
+    let target_path = Path::new(target_parent_dir).join(repo_name);
     let target_dir_str = target_path.to_string_lossy().to_string();
 
     svc.gh

@@ -79,6 +79,7 @@
     "selectButton": "Select local folder",
     "validating": "Validating…",
     "tabs": {
+      "ariaLabel": "Repository source",
       "local": "Local & Recents",
       "remote": "GitHub Repositories"
     },
@@ -126,6 +127,8 @@
     "clear": "Clear recents history",
     "clearConfirmTitle": "Clear recent repositories?",
     "clearConfirmDescription": "This will remove all recent repositories from history. Your local files won't be affected.",
+    "cancel": "Cancel",
+    "pinnedBadge": "Pinned",
     "pinnedSection": "Pinned",
     "otherSection": "Recent"
   },
@@ -142,6 +145,7 @@
     "cloning": "Cloning…",
     "emptyAll": "No GitHub repositories found.",
     "emptyFiltered": "No repositories match your search.",
+    "loading": "Loading repositories…",
     "privateBadge": "Private",
     "forkBadge": "Fork",
     "cloneModal": {
@@ -150,7 +154,8 @@
       "cloningTitle": "Cloning repository…",
       "cloningDescription": "Running gh repo clone for {{name}}. This may take a moment depending on repository size.",
       "successTitle": "Repository cloned!",
-      "successDescription": "Opening {{name}} for review."
+      "successDescription": "Opening {{name}} for review.",
+      "cancel": "Cancel"
     }
   },
   "pullRequests": {

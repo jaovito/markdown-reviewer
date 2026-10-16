@@ -631,12 +631,17 @@ impl GhClient for GhCli {
         query: Option<&str>,
         limit: u32,
     ) -> AppResult<Vec<RemoteRepository>> {
-        let limit_str = limit.to_string();
+        let fetch_limit = if query.is_some() {
+            std::cmp::max(limit, 300)
+        } else {
+            limit
+        };
+        let limit_str = fetch_limit.to_string();
         let fields = "name,nameWithOwner,description,url,isPrivate,isFork,stargazerCount,updatedAt,primaryLanguage,defaultBranchRef";
         let args = vec!["repo", "list", "--json", fields, "--limit", &limit_str];
         let out = run("gh", &args, None, PR_FILES_TIMEOUT_MS).await?;
         if !out.ok() {
-            return Err(AppError::process(out.stderr));
+            return Err(map_gh_error(&out.stderr, None));
         }
         let items: Vec<GhRepoItem> = serde_json::from_str(out.stdout.trim())
             .map_err(|e| AppError::process(format!("Failed to parse gh repo list output: {e}")))?;
@@ -645,7 +650,7 @@ impl GhClient for GhCli {
             .map(|item| RemoteRepository {
                 name: item.name,
                 name_with_owner: item.name_with_owner,
-                description: item.description,
+                description: item.description.unwrap_or_default(),
                 url: item.url,
                 is_private: item.is_private,
                 is_fork: item.is_fork,
@@ -686,10 +691,7 @@ impl GhClient for GhCli {
         ];
         let out = run("gh", &args, None, 300_000).await?;
         if !out.ok() {
-            return Err(AppError::process(format!(
-                "Failed to clone repository: {}",
-                out.stderr
-            )));
+            return Err(map_gh_error(&out.stderr, None));
         }
         Ok(())
     }
@@ -713,7 +715,7 @@ struct GhRepoItem {
     name: String,
     name_with_owner: String,
     #[serde(default)]
-    description: String,
+    description: Option<String>,
     url: String,
     #[serde(default)]
     is_private: bool,

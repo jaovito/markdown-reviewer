@@ -2,7 +2,7 @@ import { ipc } from "@/shared/ipc/client";
 import type { AppError, RemoteRepository, Repository } from "@/shared/ipc/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export function useRemoteRepos(query?: string) {
+export function useRemoteRepos(query?: string, options?: { enabled?: boolean }) {
   return useQuery<RemoteRepository[], AppError>({
     queryKey: ["remote-repos", query],
     queryFn: async () => {
@@ -11,6 +11,7 @@ export function useRemoteRepos(query?: string) {
       return res.value;
     },
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

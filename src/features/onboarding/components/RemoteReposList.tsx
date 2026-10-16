@@ -12,9 +12,17 @@ interface Props {
   onClone: (repo: RemoteRepository) => void;
   query: string;
   onQueryChange: (q: string) => void;
+  isCloning?: boolean;
 }
 
-export function RemoteReposList({ items, isLoading, onClone, query, onQueryChange }: Props) {
+export function RemoteReposList({
+  items,
+  isLoading,
+  onClone,
+  query,
+  onQueryChange,
+  isCloning,
+}: Props) {
   const { t } = useTranslation();
   const [filterVisibility, setFilterVisibility] = useState<"all" | "public" | "private">("all");
 
@@ -46,6 +54,7 @@ export function RemoteReposList({ items, isLoading, onClone, query, onQueryChang
           <div className="flex items-center gap-1 rounded-md border p-1 text-xs">
             <button
               type="button"
+              aria-pressed={filterVisibility === "all"}
               onClick={() => setFilterVisibility("all")}
               className={`rounded px-2.5 py-1 font-medium ${
                 filterVisibility === "all"
@@ -57,6 +66,7 @@ export function RemoteReposList({ items, isLoading, onClone, query, onQueryChang
             </button>
             <button
               type="button"
+              aria-pressed={filterVisibility === "public"}
               onClick={() => setFilterVisibility("public")}
               className={`rounded px-2.5 py-1 font-medium ${
                 filterVisibility === "public"
@@ -68,6 +78,7 @@ export function RemoteReposList({ items, isLoading, onClone, query, onQueryChang
             </button>
             <button
               type="button"
+              aria-pressed={filterVisibility === "private"}
               onClick={() => setFilterVisibility("private")}
               className={`rounded px-2.5 py-1 font-medium ${
                 filterVisibility === "private"
@@ -82,7 +93,7 @@ export function RemoteReposList({ items, isLoading, onClone, query, onQueryChang
 
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            Loading repositories…
+            {t("remoteRepos.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
@@ -132,7 +143,12 @@ export function RemoteReposList({ items, isLoading, onClone, query, onQueryChang
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button size="sm" className="gap-1.5" onClick={() => onClone(item)}>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => onClone(item)}
+                    disabled={isCloning}
+                  >
                     <Download className="h-3.5 w-3.5" />
                     {t("remoteRepos.cloneButton")}
                   </Button>

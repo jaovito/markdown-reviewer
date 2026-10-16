@@ -260,3 +260,51 @@ async fn test_list_user_repositories() {
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0].name, "markdown-reviewer");
 }
+
+#[tokio::test]
+async fn test_clone_repository_success() {
+    let svc = RepoSelection {
+        git: Arc::new(DummyGit),
+        gh: Arc::new(MockGh),
+        recents: Arc::new(DummyRecents),
+        clock: Arc::new(FixedClock),
+    };
+
+    let repo = remote_repos::clone_repository(&svc, "owner/repo", "/tmp")
+        .await
+        .unwrap();
+    assert_eq!(repo.owner, "owner");
+    assert_eq!(repo.repo, "repo");
+    assert_eq!(repo.current_branch, Some("main".to_string()));
+}
+
+#[tokio::test]
+async fn test_clone_repository_invalid_repo_name() {
+    let svc = RepoSelection {
+        git: Arc::new(DummyGit),
+        gh: Arc::new(MockGh),
+        recents: Arc::new(DummyRecents),
+        clock: Arc::new(FixedClock),
+    };
+
+    let cases = vec![
+        "no-owner-just-repo",
+        "owner/../escape",
+        "owner/./dot",
+        "owner/repo/extra",
+        "owner/bad$name",
+        "",
+        "/repo",
+        "owner/",
+    ];
+
+    for case in cases {
+        let err = remote_repos::clone_repository(&svc, case, "/tmp")
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, markdown_reviewer_core::AppError::Validation { .. }),
+            "Expected Validation error for case '{case}', got {err:?}"
+        );
+    }
+}

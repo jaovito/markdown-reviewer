@@ -1,4 +1,5 @@
 import type { ToolCheck, ToolStatus } from "@/shared/ipc/contract";
+import { describeError, isAppError } from "@/shared/ipc/errors";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -31,6 +32,18 @@ export function ToolStatusPanel({ status, isLoading }: Props) {
           onLogin={() => loginGh.mutate()}
           isLoggingIn={loginGh.isPending}
         />
+        {loginGh.error ? (
+          <div className="rounded-md bg-destructive/10 p-3 text-xs text-destructive">
+            {isAppError(loginGh.error) ? (
+              <>
+                <div className="font-semibold">{describeError(loginGh.error).title}</div>
+                <div>{describeError(loginGh.error).description}</div>
+              </>
+            ) : (
+              <div>{(loginGh.error as Error)?.message ?? String(loginGh.error)}</div>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -59,7 +72,7 @@ function Row({
           {loading
             ? t("onboarding.environment.checking")
             : isLoggingIn
-              ? t("onboarding.environment.loggingIn", "Opening browser to authorize with GitHub…")
+              ? t("onboarding.environment.loggingIn")
               : detailFor(check)}
         </div>
       </div>
@@ -78,7 +91,7 @@ function Row({
             ) : (
               <LogIn className="h-3 w-3" />
             )}
-            {t("onboarding.environment.loginButton", "Log in with GitHub")}
+            {t("onboarding.environment.loginButton")}
           </Button>
         ) : null}
 

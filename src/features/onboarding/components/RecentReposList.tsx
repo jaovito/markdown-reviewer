@@ -83,7 +83,7 @@ export function RecentReposList({
             </div>
             <div className="flex gap-2 justify-end mt-1">
               <Button variant="ghost" size="sm" onClick={() => setShowConfirmClear(false)}>
-                Cancel
+                {t("recents.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -169,7 +169,7 @@ function RecentRow({
           <span className="text-sm font-medium truncate">{item.label}</span>
           {item.pinned ? (
             <Badge tone="muted" className="text-[10px] px-1.5 py-0">
-              Pinned
+              {t("recents.pinnedBadge")}
             </Badge>
           ) : null}
         </div>
@@ -182,6 +182,7 @@ function RecentRow({
           size="sm"
           onClick={() => onTogglePin(item.path, !item.pinned)}
           aria-label={item.pinned ? t("recents.unpin") : t("recents.pin")}
+          aria-pressed={item.pinned}
           title={item.pinned ? t("recents.unpin") : t("recents.pin")}
           className="h-8 w-8 p-0"
         >

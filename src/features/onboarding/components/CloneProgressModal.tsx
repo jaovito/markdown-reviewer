@@ -19,10 +19,16 @@ export function CloneProgressModal({ repoName, isOpen, isCloning, error, onCance
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div
+      // biome-ignore lint/a11y/useSemanticElements: custom modal overlay
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clone-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+    >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle id="clone-modal-title" className="flex items-center gap-2">
             {isCloning ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : null}
             {t("remoteRepos.cloneModal.title", { name: repoName })}
           </CardTitle>
@@ -33,16 +39,22 @@ export function CloneProgressModal({ repoName, isOpen, isCloning, error, onCance
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {error && isAppError(error) ? (
+          {error ? (
             <div className="rounded-md bg-destructive/10 p-3 text-xs text-destructive">
-              <div className="font-semibold">{describeError(error).title}</div>
-              <div>{describeError(error).description}</div>
+              {isAppError(error) ? (
+                <>
+                  <div className="font-semibold">{describeError(error).title}</div>
+                  <div>{describeError(error).description}</div>
+                </>
+              ) : (
+                <div>{(error as Error)?.message ?? String(error)}</div>
+              )}
             </div>
           ) : null}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onCancel} disabled={isCloning}>
-              Cancel
+              {t("remoteRepos.cloneModal.cancel")}
             </Button>
           </div>
         </CardContent>

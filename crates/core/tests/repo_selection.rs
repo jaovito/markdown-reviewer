@@ -322,5 +322,5 @@ async fn recents_round_trip() {
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].label, "a/b");
     recents::remove(&svc, "/tmp/x").await.unwrap();
-    assert!(recents::list(&svc).await.unwrap().is_empty());
+    assert_eq!(recents::list(&svc).await.unwrap().len(), 0);
 }

@@ -1,5 +1,4 @@
 import { Input } from "@/shared/ui/input";
-import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
 import { ListFilterIcon, ListTreeIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -107,7 +106,7 @@ export function DocumentOutlinePopover({ headings, onSelectHeading }: DocumentOu
               className="h-7 border-none bg-transparent p-0 text-xs focus-visible:ring-0"
             />
           </div>
-          <ScrollArea className="flex-1 p-1">
+          <div className="min-h-0 flex-1 overflow-y-auto p-1">
             {headings.length === 0 ? (
               <div className="p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
                 {t("fileExplorer.preview.noHeadingsInDoc")}
@@ -135,7 +134,7 @@ export function DocumentOutlinePopover({ headings, onSelectHeading }: DocumentOu
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       ) : null}
     </div>

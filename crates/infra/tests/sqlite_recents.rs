@@ -47,7 +47,7 @@ async fn upsert_overwrites_and_remove_clears() {
     assert_eq!(list[0].last_opened_at, 9_999);
 
     store.remove("/x").await.unwrap();
-    assert!(store.list().await.unwrap().is_empty());
+    assert_eq!(store.list().await.unwrap().len(), 0);
 }
 
 #[tokio::test]
@@ -94,5 +94,5 @@ async fn pin_and_clear_recents() {
     assert!(!list[1].pinned);
 
     store.clear_all().await.unwrap();
-    assert!(store.list().await.unwrap().is_empty());
+    assert_eq!(store.list().await.unwrap().len(), 0);
 }

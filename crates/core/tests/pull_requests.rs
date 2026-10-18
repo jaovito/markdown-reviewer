@@ -225,7 +225,7 @@ fn svc_with_git(gh: FakeGh, git: FakeGit) -> PullRequests {
 async fn list_returns_empty_vec() {
     let svc = svc_with(FakeGh::new(vec![], None));
     let prs = list_pull_requests(&svc, "/repo").await.unwrap();
-    assert!(prs.is_empty());
+    assert_eq!(prs.len(), 0);
 }
 
 #[tokio::test]
@@ -286,7 +286,7 @@ fn changed(path: &str, status: ChangeStatus, additions: u32, deletions: u32) -> 
 async fn changed_files_empty_vec() {
     let svc = svc_with(FakeGh::new(vec![], None));
     let files = list_changed_files(&svc, "/repo", 1).await.unwrap();
-    assert!(files.is_empty());
+    assert_eq!(files.len(), 0);
 }
 
 #[tokio::test]
@@ -353,5 +353,5 @@ async fn file_diff_empty_when_refs_missing_locally() {
     };
     let svc = svc_with_git(FakeGh::new(vec![], Some(detail)), FakeGit { hunks: None });
     let diff = load_file_diff(&svc, "/repo", 7, "README.md").await.unwrap();
-    assert!(diff.hunks.is_empty());
+    assert_eq!(diff.hunks.len(), 0);
 }

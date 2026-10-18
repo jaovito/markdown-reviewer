@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use markdown_reviewer_core::domain::{
     ChangeStatus, ChangedFile, PullRequestDetail, PullRequestState, PullRequestSummary,
+    RemoteRepository,
 };
 use markdown_reviewer_core::ports::{GhAuthReport, GhClient, ReviewCommentInput};
 use markdown_reviewer_core::{AppError, AppResult};
@@ -174,6 +175,25 @@ impl GhClient for GhCli {
             username,
             detail: text.trim().to_string(),
         })
+    }
+
+    async fn auth_login(&self) -> AppResult<GhAuthReport> {
+        let out = run(
+            "gh",
+            &["auth", "login", "--web", "-h", "github.com"],
+            None,
+            120_000,
+        )
+        .await?;
+        if !out.ok() {
+            let err_text = if out.stderr.trim().is_empty() {
+                &out.stdout
+            } else {
+                &out.stderr
+            };
+            return Err(map_gh_error(err_text, None));
+        }
+        self.auth_status().await
     }
 
     async fn list_pull_requests(&self, repo_path: &str) -> AppResult<Vec<PullRequestSummary>> {
@@ -613,6 +633,108 @@ impl GhClient for GhCli {
         .await?;
         refetch_thread(repo_path, thread_id).await
     }
+
+    async fn list_user_repositories(
+        &self,
+        query: Option<&str>,
+        limit: u32,
+    ) -> AppResult<Vec<RemoteRepository>> {
+        let fetch_limit = if query.is_some() {
+            std::cmp::max(limit, 300)
+        } else {
+            limit
+        };
+        let limit_str = fetch_limit.to_string();
+        let fields = "name,nameWithOwner,description,url,isPrivate,isFork,stargazerCount,updatedAt,primaryLanguage,defaultBranchRef";
+        let args = vec!["repo", "list", "--json", fields, "--limit", &limit_str];
+        let out = run("gh", &args, None, PR_FILES_TIMEOUT_MS).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, None));
+        }
+        let items: Vec<GhRepoItem> = serde_json::from_str(out.stdout.trim())
+            .map_err(|e| AppError::process(format!("Failed to parse gh repo list output: {e}")))?;
+        let mut result: Vec<_> = items
+            .into_iter()
+            .map(|item| RemoteRepository {
+                name: item.name,
+                name_with_owner: item.name_with_owner,
+                description: item.description.unwrap_or_default(),
+                url: item.url,
+                is_private: item.is_private,
+                is_fork: item.is_fork,
+                stargazer_count: item.stargazer_count,
+                updated_at: item.updated_at,
+                primary_language: item.primary_language.map(|l| l.name),
+                default_branch: item
+                    .default_branch_ref
+                    .map_or_else(|| "main".to_string(), |b| b.name),
+            })
+            .collect();
+
+        if let Some(q) = query {
+            let q_lower = q.to_lowercase();
+            if !q_lower.is_empty() {
+                result.retain(|r| {
+                    r.name.to_lowercase().contains(&q_lower)
+                        || r.name_with_owner.to_lowercase().contains(&q_lower)
+                        || r.description.to_lowercase().contains(&q_lower)
+                });
+            }
+        }
+        Ok(result)
+    }
+
+    async fn clone_repository(
+        &self,
+        repo_name_with_owner: &str,
+        target_dir: &str,
+    ) -> AppResult<()> {
+        let args = vec![
+            "repo",
+            "clone",
+            repo_name_with_owner,
+            target_dir,
+            "--",
+            "--progress",
+        ];
+        let out = run("gh", &args, None, 300_000).await?;
+        if !out.ok() {
+            return Err(map_gh_error(&out.stderr, None));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GhRepoPrimaryLanguage {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GhRepoDefaultBranchRef {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GhRepoItem {
+    name: String,
+    name_with_owner: String,
+    #[serde(default)]
+    description: Option<String>,
+    url: String,
+    #[serde(default)]
+    is_private: bool,
+    #[serde(default)]
+    is_fork: bool,
+    #[serde(default)]
+    stargazer_count: u32,
+    #[serde(default)]
+    updated_at: String,
+    primary_language: Option<GhRepoPrimaryLanguage>,
+    default_branch_ref: Option<GhRepoDefaultBranchRef>,
 }
 
 fn classify_rest_error(stderr: &str) -> AppError {

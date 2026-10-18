@@ -1,0 +1,1 @@
+ALTER TABLE recent_repositories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;

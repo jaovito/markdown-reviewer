@@ -281,6 +281,7 @@ mod tests {
             owner: None,
             repo: None,
             last_opened_at: 0,
+            pinned: false,
         }
     }
 

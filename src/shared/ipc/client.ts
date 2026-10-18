@@ -34,6 +34,7 @@ export const ipc = {
   tools: {
     check: () => call("check_tools", undefined),
     ghUser: () => call("get_gh_user", undefined),
+    loginGh: () => call("login_gh", undefined),
   },
   repo: {
     select: () => call("select_repository", undefined),
@@ -43,6 +44,13 @@ export const ipc = {
     list: () => call("list_recent_repositories", undefined),
     add: (repo: Repository) => call("add_recent_repository", { repo }),
     remove: (path: string) => call("remove_recent_repository", { path }),
+    pin: (path: string, pinned: boolean) => call("pin_recent_repository", { path, pinned }),
+    clear: () => call("clear_recent_repositories", undefined),
+  },
+  remoteRepos: {
+    list: (query?: string, limit?: number) => call("list_remote_repositories", { query, limit }),
+    clone: (repoNameWithOwner: string, targetParentDir: string) =>
+      call("clone_repository", { repoNameWithOwner, targetParentDir }),
   },
   pullRequests: {
     list: (repoPath: string) => call("list_pull_requests", { repoPath }),

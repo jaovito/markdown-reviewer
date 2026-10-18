@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use markdown_reviewer_core::application::repo_selection::{
-    check_tools::check_tools, recents, validate_repository::validate_repository, RepoSelection,
+    check_tools::{check_tools, login_gh},
+    recents,
+    validate_repository::validate_repository,
+    RepoSelection,
 };
 use markdown_reviewer_core::ports::{
     Clock, GhAuthReport, GhClient, GitClient, RecentRepository, RecentsStore, ReviewCommentInput,
@@ -322,5 +325,37 @@ async fn recents_round_trip() {
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].label, "a/b");
     recents::remove(&svc, "/tmp/x").await.unwrap();
-    assert!(recents::list(&svc).await.unwrap().is_empty());
+    assert_eq!(recents::list(&svc).await.unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn login_gh_requires_authenticated_report() {
+    let unauth_svc = svc_with(
+        FakeGit {
+            is_repo: true,
+            remote: None,
+            branch: None,
+        },
+        FakeGh {
+            version_ok: true,
+            auth: false,
+        },
+    );
+    let err = login_gh(&unauth_svc).await.unwrap_err();
+    assert!(matches!(err, AppError::GhNotAuthenticated));
+
+    let auth_svc = svc_with(
+        FakeGit {
+            is_repo: true,
+            remote: None,
+            branch: None,
+        },
+        FakeGh {
+            version_ok: true,
+            auth: true,
+        },
+    );
+    let report = login_gh(&auth_svc).await.unwrap();
+    assert!(report.authenticated);
+    assert_eq!(report.username.as_deref(), Some("octocat"));
 }

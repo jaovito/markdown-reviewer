@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{
-    ChangedFile, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteThread,
+    ChangedFile, PullRequestDetail, PullRequestSummary, RemoteComment, RemoteRepository,
+    RemoteThread,
 };
 use crate::AppResult;
 
@@ -65,6 +66,9 @@ pub struct FetchedReviewThreads {
 pub trait GhClient: Send + Sync {
     async fn version(&self) -> AppResult<String>;
     async fn auth_status(&self) -> AppResult<GhAuthReport>;
+    async fn auth_login(&self) -> AppResult<GhAuthReport> {
+        self.auth_status().await
+    }
     async fn list_pull_requests(&self, repo_path: &str) -> AppResult<Vec<PullRequestSummary>>;
     async fn load_pull_request(&self, repo_path: &str, number: u64)
         -> AppResult<PullRequestDetail>;
@@ -160,4 +164,22 @@ pub trait GhClient: Send + Sync {
         repo_path: &str,
         thread_id: &str,
     ) -> AppResult<RemoteThread>;
+
+    /// Lists repositories accessible to the authenticated user via `gh repo list`.
+    async fn list_user_repositories(
+        &self,
+        _query: Option<&str>,
+        _limit: u32,
+    ) -> AppResult<Vec<RemoteRepository>> {
+        Ok(Vec::new())
+    }
+
+    /// Clones a repository via `gh repo clone <repo_name_with_owner> <target_dir>`.
+    async fn clone_repository(
+        &self,
+        _repo_name_with_owner: &str,
+        _target_dir: &str,
+    ) -> AppResult<()> {
+        Ok(())
+    }
 }

@@ -178,13 +178,21 @@ impl GhClient for GhCli {
     }
 
     async fn auth_login(&self) -> AppResult<GhAuthReport> {
-        let _ = run(
+        let out = run(
             "gh",
             &["auth", "login", "--web", "-h", "github.com"],
             None,
             120_000,
         )
-        .await;
+        .await?;
+        if !out.ok() {
+            let err_text = if out.stderr.trim().is_empty() {
+                &out.stdout
+            } else {
+                &out.stderr
+            };
+            return Err(map_gh_error(err_text, None));
+        }
         self.auth_status().await
     }
 
